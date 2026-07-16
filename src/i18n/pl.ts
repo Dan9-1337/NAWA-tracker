@@ -191,4 +191,10 @@ export const pl = {
     decisionDate: 'Podaj prawidłową datę decyzji.',
     invalid: 'Wartość pola jest nieprawidłowa.',
   },
+  language: {
+    label: 'Język',
+    pl: 'Polski',
+    en: 'English',
+    ru: 'Русский',
+  },
 } as const;

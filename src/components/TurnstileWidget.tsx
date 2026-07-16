@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
-import { pl } from '../i18n/pl';
+import { useI18n } from '../i18n/context';
 
 type TurnstileWidgetProps = {
   siteKey?: string;
@@ -17,6 +17,7 @@ export function TurnstileWidget({
   onError,
   resetKey = 0,
 }: TurnstileWidgetProps) {
+  const { t } = useI18n();
   const widget = useRef<TurnstileInstance>();
   const previousResetKey = useRef(resetKey);
 
@@ -30,7 +31,7 @@ export function TurnstileWidget({
   if (!siteKey) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-        {pl.turnstile.disabled}
+        {t.turnstile.disabled}
       </div>
     );
   }

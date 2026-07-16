@@ -22,7 +22,7 @@ import {
   updateResponseResultSchema,
 } from '../../shared/validation';
 import type { ZodType } from 'zod';
-import { pl } from '../i18n/pl';
+import { getMessages } from '../i18n';
 
 export class ApiClientError extends Error {
   constructor(
@@ -39,7 +39,7 @@ async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
   } catch {
-    throw new ApiClientError(response.status, 'INVALID_RESPONSE', pl.api.invalidResponse);
+    throw new ApiClientError(response.status, 'INVALID_RESPONSE', getMessages().api.invalidResponse);
   }
 }
 
@@ -58,12 +58,12 @@ async function request<T>(path: string, method: 'POST' | 'PUT', body: unknown, s
       const apiError: ApiError = parsedError.data;
       throw new ApiClientError(response.status, apiError.error.code, apiError.error.message);
     }
-    throw new ApiClientError(response.status, 'INVALID_RESPONSE', pl.api.invalidResponse);
+    throw new ApiClientError(response.status, 'INVALID_RESPONSE', getMessages().api.invalidResponse);
   }
 
   const parsedResult = schema.safeParse(payload);
   if (!parsedResult.success) {
-    throw new ApiClientError(response.status, 'INVALID_RESPONSE', pl.api.invalidResponse);
+    throw new ApiClientError(response.status, 'INVALID_RESPONSE', getMessages().api.invalidResponse);
   }
   return parsedResult.data;
 }

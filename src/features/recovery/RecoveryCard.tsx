@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import type { RecoveryCredential } from '../../../shared/contracts';
 import { canonicalOpaqueTokenPattern } from '../../../shared/validation';
-import { pl } from '../../i18n/pl';
+import { useI18n } from '../../i18n/context';
 
 type RecoveryCardProps = {
   credential: RecoveryCredential;
@@ -38,6 +38,7 @@ export function isSafeRecoveryCredential(credential: RecoveryCredential): boolea
 }
 
 export function RecoveryCard({ credential, onConfirm, rotated = false }: RecoveryCardProps) {
+  const { t } = useI18n();
   const identity = `${credential.recoveryToken}\n${credential.recoveryUrl}`;
   const [confirmed, setConfirmed] = useState(false);
   const [qrState, setQrState] = useState<ScopedState | null>(null);
@@ -89,13 +90,13 @@ export function RecoveryCard({ credential, onConfirm, rotated = false }: Recover
           activeIdentity.current === identity &&
           generation.current === currentGeneration
         ) {
-          setErrorState({ identity, value: pl.recovery.qrFailed });
+          setErrorState({ identity, value: t.recovery.qrFailed });
         }
       });
     return () => {
       if (generation.current === currentGeneration) generation.current += 1;
     };
-  }, [cleared, credential.recoveryUrl, credentialIsSafe, identity]);
+  }, [cleared, credential.recoveryUrl, credentialIsSafe, identity, t.recovery.qrFailed]);
 
   if (cleared) return null;
 
@@ -104,11 +105,11 @@ export function RecoveryCard({ credential, onConfirm, rotated = false }: Recover
     try {
       await navigator.clipboard.writeText(token);
       if (mounted.current && activeIdentity.current === identity) {
-        setCopyState({ identity, value: pl.recovery.copied });
+        setCopyState({ identity, value: t.recovery.copied });
       }
     } catch {
       if (mounted.current && activeIdentity.current === identity) {
-        setCopyState({ identity, value: pl.recovery.copyFailed });
+        setCopyState({ identity, value: t.recovery.copyFailed });
       }
     }
   }
@@ -135,7 +136,7 @@ export function RecoveryCard({ credential, onConfirm, rotated = false }: Recover
       link.click();
     } catch {
       if (mounted.current && activeIdentity.current === identity) {
-        setErrorState({ identity, value: pl.recovery.downloadFailed });
+        setErrorState({ identity, value: t.recovery.downloadFailed });
       }
     } finally {
       link?.remove();
@@ -155,54 +156,54 @@ export function RecoveryCard({ credential, onConfirm, rotated = false }: Recover
 
   return (
     <section className="rounded-[2rem] border border-amber-200 bg-white/95 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">{pl.recovery.eyebrow}</p>
-      <h2 className="mt-3 text-2xl font-semibold text-slate-950">{pl.recovery.title}</h2>
-      <p className="mt-3 text-sm leading-7 text-slate-600">{pl.recovery.description}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">{t.recovery.eyebrow}</p>
+      <h2 className="mt-3 text-2xl font-semibold text-slate-950">{t.recovery.title}</h2>
+      <p className="mt-3 text-sm leading-7 text-slate-600">{t.recovery.description}</p>
 
       {rotated ? (
         <p className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-950">
-          {pl.recovery.rotationWarning}
+          {t.recovery.rotationWarning}
         </p>
       ) : null}
 
       <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,20rem)_1fr]">
         <div className="flex min-h-72 items-center justify-center rounded-3xl border border-slate-200 bg-white p-4">
           {qrDataUrl ? (
-            <img className="h-auto w-full max-w-72" src={qrDataUrl} alt={pl.recovery.qrAlt} />
+            <img className="h-auto w-full max-w-72" src={qrDataUrl} alt={t.recovery.qrAlt} />
           ) : operationError || !credentialIsSafe ? (
-            <span className="text-sm text-slate-500">{pl.recovery.qrUnavailable}</span>
+            <span className="text-sm text-slate-500">{t.recovery.qrUnavailable}</span>
           ) : (
-            <span className="text-sm text-slate-500">{pl.recovery.qrLoading}</span>
+            <span className="text-sm text-slate-500">{t.recovery.qrLoading}</span>
           )}
         </div>
 
         <div>
-          <p className="text-sm font-medium text-slate-700">{pl.recovery.codeLabel}</p>
+          <p className="text-sm font-medium text-slate-700">{t.recovery.codeLabel}</p>
           <code className="mt-2 block break-all rounded-2xl bg-slate-950 px-4 py-4 font-mono text-sm leading-6 text-white">
             {credential.recoveryToken}
           </code>
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" className="rounded-full bg-sky-700 px-5 py-2.5 text-sm font-semibold text-white" onClick={copyCode}>
-              {pl.recovery.copyCode}
+              {t.recovery.copyCode}
             </button>
             <button type="button" className="rounded-full border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50" onClick={downloadQr} disabled={!credentialIsSafe}>
-              {pl.recovery.downloadQr}
+              {t.recovery.downloadQr}
             </button>
           </div>
           {copyStatus ? <p className="mt-3 text-sm text-slate-600" role="status" aria-live="polite">{copyStatus}</p> : null}
           {!credentialIsSafe || operationError ? (
             <p className="mt-3 text-sm text-rose-800" role="alert">
-              {!credentialIsSafe ? pl.recovery.invalidCredential : operationError}
+              {!credentialIsSafe ? t.recovery.invalidCredential : operationError}
             </p>
           ) : null}
         </div>
       </div>
 
       <p className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm font-medium leading-6 text-rose-950">
-        {pl.recovery.requiredWarning}
+        {t.recovery.requiredWarning}
       </p>
       <button type="button" className="mt-5 w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white sm:w-auto" onClick={confirmSaved}>
-        {pl.recovery.confirmSaved}
+        {t.recovery.confirmSaved}
       </button>
     </section>
   );

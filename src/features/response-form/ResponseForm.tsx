@@ -6,7 +6,8 @@ import { FieldError } from '../../components/FieldError';
 import { FormSection } from '../../components/FormSection';
 import { TurnstileWidget } from '../../components/TurnstileWidget';
 import studyFields from '../../data/study-fields.json';
-import { pl } from '../../i18n/pl';
+import { useI18n } from '../../i18n/context';
+import type { Messages } from '../../i18n/types';
 import { calculateGradePercentage } from '../../lib/grade';
 
 const gradeScales: GradeScaleInput[] = [5, 10, 12, 20, 100, 'custom'];
@@ -33,6 +34,7 @@ type ResponseFormProps = {
 };
 
 export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disabled = false }: ResponseFormProps) {
+  const { t } = useI18n();
   const [form, setForm] = useState<ResponseFormInput>(initialValue ?? initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [turnstileToken, setTurnstileToken] = useState('');
@@ -111,7 +113,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
       for (const issue of result.error.issues) {
         const path = issue.path[0];
         if (typeof path === 'string' && !nextErrors[path]) {
-          nextErrors[path] = validationMessage(path);
+          nextErrors[path] = validationMessage(path, t);
         }
       }
       setErrors(nextErrors);
@@ -125,7 +127,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
     try {
       await onSubmit(result.data, mode === 'create' ? turnstileToken : undefined);
     } catch {
-      if (mounted.current) setServerError(pl.form.submitError);
+      if (mounted.current) setServerError(t.form.submitError);
     } finally {
       if (mounted.current) {
         if (mode === 'create') {
@@ -142,28 +144,28 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
       <fieldset className="min-w-0 space-y-5 border-0 p-0" disabled={pending || disabled}>
       <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-slate-200 bg-white/80 px-5 py-4 shadow-sm">
         <div className="mr-auto">
-          <h2 id="response-form-title" className="text-lg font-semibold text-slate-950">{pl.form.title}</h2>
-          <p className="text-sm leading-6 text-slate-600">{pl.form.description}</p>
+          <h2 id="response-form-title" className="text-lg font-semibold text-slate-950">{t.form.title}</h2>
+          <p className="text-sm leading-6 text-slate-600">{t.form.description}</p>
         </div>
-        <span className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{pl.form.preview}</span>
+        <span className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{t.form.preview}</span>
         <span className="rounded-full bg-slate-900 px-3 py-1 text-sm font-medium text-white">
-          {mode === 'create' ? pl.form.modeCreate : pl.form.modeUpdate}
+          {mode === 'create' ? t.form.modeCreate : t.form.modeUpdate}
         </span>
         <span className="text-sm text-slate-600">
-          {pl.form.calculatedPercent}: <strong>{calculatedPercentage.toFixed(1)}%</strong>
+          {t.form.calculatedPercent}: <strong>{calculatedPercentage.toFixed(1)}%</strong>
         </span>
       </div>
 
-      <FormSection title={pl.form.programSectionTitle} description={pl.form.programSectionDescription}>
+      <FormSection title={t.form.programSectionTitle} description={t.form.programSectionDescription}>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.labels.scholarshipTrack}</span>
+            <span>{t.labels.scholarshipTrack}</span>
             <select
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.scholarshipTrack}
               onChange={(event) => updateField('scholarshipTrack', event.target.value as ResponseFormInput['scholarshipTrack'])}
             >
-              {Object.entries(pl.choices.scholarshipTrack).map(([value, label]) => (
+              {Object.entries(t.choices.scholarshipTrack).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -172,13 +174,13 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
           </label>
 
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.labels.studyRoute}</span>
+            <span>{t.labels.studyRoute}</span>
             <select
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.studyRoute}
               onChange={(event) => updateField('studyRoute', event.target.value as ResponseFormInput['studyRoute'])}
             >
-              {Object.entries(pl.choices.studyRoute).map(([value, label]) => (
+              {Object.entries(t.choices.studyRoute).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -187,13 +189,13 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
           </label>
 
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.labels.studyType}</span>
+            <span>{t.labels.studyType}</span>
             <select
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.studyType}
               onChange={(event) => updateField('studyType', event.target.value as ResponseFormInput['studyType'])}
             >
-              {Object.entries(pl.choices.studyType).map(([value, label]) => (
+              {Object.entries(t.choices.studyType).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -202,14 +204,14 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
           </label>
 
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.labels.country}</span>
+            <span>{t.labels.country}</span>
             <input
               id="response-country"
-              aria-label={pl.labels.country}
+              aria-label={t.labels.country}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.country}
               onChange={(event) => updateField('country', event.target.value)}
-              placeholder={pl.form.countryPlaceholder}
+              placeholder={t.form.countryPlaceholder}
               aria-invalid={Boolean(errors.country)}
               aria-describedby={errors.country ? 'response-country-error' : undefined}
             />
@@ -217,35 +219,35 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
           </label>
 
           <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-            <span>{pl.labels.university}</span>
+            <span>{t.labels.university}</span>
             <input
               id="response-university"
-              aria-label={pl.labels.university}
+              aria-label={t.labels.university}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.university}
               list="university-suggestions"
               onChange={(event) => updateField('university', event.target.value)}
-              placeholder={pl.form.universityPlaceholder}
+              placeholder={t.form.universityPlaceholder}
               aria-invalid={Boolean(errors.university)}
               aria-describedby={errors.university ? 'response-university-hint response-university-error' : 'response-university-hint'}
             />
             <datalist id="university-suggestions">
               {universities.map((university) => <option key={university} value={university} />)}
             </datalist>
-            <p id="response-university-hint" className="text-xs leading-5 text-slate-500">{pl.form.universityHint}</p>
+            <p id="response-university-hint" className="text-xs leading-5 text-slate-500">{t.form.universityHint}</p>
             <FieldError id="response-university-error" message={errors.university} />
           </label>
 
           <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-            <span>{pl.labels.studyField}</span>
+            <span>{t.labels.studyField}</span>
             <input
               id="response-study-field"
-              aria-label={pl.labels.studyField}
+              aria-label={t.labels.studyField}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.studyField}
               list="study-field-suggestions"
               onChange={(event) => updateField('studyField', event.target.value)}
-              placeholder={pl.form.studyFieldPlaceholder}
+              placeholder={t.form.studyFieldPlaceholder}
               aria-invalid={Boolean(errors.studyField)}
               aria-describedby={errors.studyField ? 'response-study-field-error' : undefined}
             />
@@ -257,15 +259,15 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
         </div>
       </FormSection>
 
-      <FormSection title={pl.form.choiceSectionTitle} description={pl.form.choiceSectionDescription}>
+      <FormSection title={t.form.choiceSectionTitle} description={t.form.choiceSectionDescription}>
         <label className="space-y-2 text-sm font-medium text-slate-700">
-          <span>{pl.labels.choicePriority}</span>
+          <span>{t.labels.choicePriority}</span>
           <select
             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
             value={form.choicePriority}
             onChange={(event) => updateField('choicePriority', event.target.value as ChoicePriority)}
           >
-            {Object.entries(pl.choices.choicePriority).map(([value, label]) => (
+            {Object.entries(t.choices.choicePriority).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -274,9 +276,9 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
         </label>
       </FormSection>
 
-      <FormSection title={pl.form.gradesSectionTitle} description={pl.form.gradesSectionDescription}>
+      <FormSection title={t.form.gradesSectionTitle} description={t.form.gradesSectionDescription}>
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-slate-700">{pl.labels.gradeScale}</legend>
+          <legend className="text-sm font-medium text-slate-700">{t.labels.gradeScale}</legend>
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {gradeScales.map((scale) => (
               <label
@@ -294,7 +296,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
                     }
                   }}
                 />
-                <span>{pl.choices.gradeScale[String(scale) as keyof typeof pl.choices.gradeScale]}</span>
+                <span>{t.choices.gradeScale[String(scale) as keyof typeof t.choices.gradeScale]}</span>
               </label>
             ))}
           </div>
@@ -302,10 +304,10 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
 
         {form.gradeScale === 'custom' ? (
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.form.customScaleLabel}</span>
+            <span>{t.form.customScaleLabel}</span>
             <input
               id="response-custom-grade-scale"
-              aria-label={pl.form.customScaleLabel}
+              aria-label={t.form.customScaleLabel}
               type="number"
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               min={1}
@@ -320,10 +322,10 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
         ) : null}
 
         <label className="space-y-2 text-sm font-medium text-slate-700">
-          <span>{pl.labels.gradeValue}</span>
+          <span>{t.labels.gradeValue}</span>
           <input
             id="response-grade-value"
-            aria-label={pl.labels.gradeValue}
+            aria-label={t.labels.gradeValue}
             type="number"
             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
             min={0}
@@ -337,15 +339,15 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
         </label>
       </FormSection>
 
-      <FormSection title={pl.form.statusSectionTitle} description={pl.form.statusSectionDescription}>
+      <FormSection title={t.form.statusSectionTitle} description={t.form.statusSectionDescription}>
         <label className="space-y-2 text-sm font-medium text-slate-700">
-          <span>{pl.labels.applicationStatus}</span>
+          <span>{t.labels.applicationStatus}</span>
           <select
             className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
             value={form.applicationStatus}
             onChange={(event) => updateField('applicationStatus', event.target.value as ApplicationStatus)}
           >
-            {Object.entries(pl.choices.applicationStatus).map(([value, label]) => (
+            {Object.entries(t.choices.applicationStatus).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -355,10 +357,10 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
 
         {canShowDecisionDate ? (
           <label className="space-y-2 text-sm font-medium text-slate-700">
-            <span>{pl.form.decisionDateLabel}</span>
+            <span>{t.form.decisionDateLabel}</span>
             <input
               id="response-decision-date"
-              aria-label={pl.form.decisionDateLabel}
+              aria-label={t.form.decisionDateLabel}
               type="date"
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
               value={form.decisionDate ?? ''}
@@ -366,7 +368,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
               aria-invalid={Boolean(errors.decisionDate)}
               aria-describedby={errors.decisionDate ? 'response-decision-date-hint response-decision-date-error' : 'response-decision-date-hint'}
             />
-            <p id="response-decision-date-hint" className="text-xs leading-5 text-slate-500">{pl.form.decisionDateHint}</p>
+            <p id="response-decision-date-hint" className="text-xs leading-5 text-slate-500">{t.form.decisionDateHint}</p>
             <FieldError id="response-decision-date-error" message={errors.decisionDate} />
           </label>
         ) : null}
@@ -374,7 +376,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
 
       {mode === 'create' ? (
         <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-sm">
-          <p className="text-sm leading-6 text-slate-600">{pl.form.turnstileHint}</p>
+          <p className="text-sm leading-6 text-slate-600">{t.form.turnstileHint}</p>
           <div className="mt-4">
             <TurnstileWidget
               key={turnstileResetKey}
@@ -384,7 +386,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
                 const challengeToken = token.trim();
                 if (!challengeToken) {
                   resetTurnstile();
-                  setServerError(pl.turnstile.error);
+                  setServerError(t.turnstile.error);
                   return;
                 }
                 setTurnstileToken(challengeToken);
@@ -393,12 +395,12 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
               onExpire={() => {
                 if (callbackGeneration !== turnstileGeneration.current || inFlight.current) return;
                 resetTurnstile();
-                setServerError(pl.turnstile.expired);
+                setServerError(t.turnstile.expired);
               }}
               onError={() => {
                 if (callbackGeneration !== turnstileGeneration.current || inFlight.current) return;
                 resetTurnstile();
-                setServerError(pl.turnstile.error);
+                setServerError(t.turnstile.error);
               }}
               resetKey={turnstileResetKey}
             />
@@ -408,7 +410,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
 
       {Object.keys(errors).length > 0 ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900" role="alert">
-          {pl.form.validationPrefix}
+          {t.form.validationPrefix}
           <ul className="mt-2 list-disc pl-5">
             {Object.values(errors).map((message) => <li key={message}>{message}</li>)}
           </ul>
@@ -421,7 +423,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
         </div>
       ) : null}
 
-      {pending ? <p className="text-sm font-medium text-slate-600" role="status" aria-live="polite">{pl.form.submitting}</p> : null}
+      {pending ? <p className="text-sm font-medium text-slate-600" role="status" aria-live="polite">{t.form.submitting}</p> : null}
 
       <div className="flex flex-wrap gap-3">
         <button
@@ -429,7 +431,7 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
           className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5"
           disabled={pending || disabled || (mode === 'create' && !turnstileToken)}
         >
-          {pending ? pl.form.submitting : mode === 'create' ? pl.form.submitCreate : pl.form.submitUpdate}
+          {pending ? t.form.submitting : mode === 'create' ? t.form.submitCreate : t.form.submitUpdate}
         </button>
       </div>
       </fieldset>
@@ -437,14 +439,14 @@ export function ResponseForm({ mode, initialValue, onSubmit, onDraftChange, disa
   );
 }
 
-function validationMessage(path: string): string {
+function validationMessage(path: string, t: Messages): string {
   const messages: Record<string, string> = {
-    country: pl.validation.country,
-    university: pl.validation.university,
-    studyField: pl.validation.studyField,
-    customGradeScale: pl.validation.customGradeScale,
-    gradeValue: pl.validation.gradeValue,
-    decisionDate: pl.validation.decisionDate,
+    country: t.validation.country,
+    university: t.validation.university,
+    studyField: t.validation.studyField,
+    customGradeScale: t.validation.customGradeScale,
+    gradeValue: t.validation.gradeValue,
+    decisionDate: t.validation.decisionDate,
   };
-  return messages[path] ?? pl.validation.invalid;
+  return messages[path] ?? t.validation.invalid;
 }
