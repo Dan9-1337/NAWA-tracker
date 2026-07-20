@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scholarshipTracks, studyRoutes, studyTypes } from './contracts';
+import { applicationStatuses, polishSchoolLevels, scholarshipTracks, studyRoutes } from './contracts';
 import {
   createResponseRequestSchema,
   responseFormInputSchema,
@@ -7,29 +7,42 @@ import {
 } from './validation';
 
 const validForm = {
-  scholarshipTrack: 'nawa_mnisw',
+  hasPolishCitizenship: false,
+  rankingCountry: 'Ukraina',
+  schoolCountry: 'Ukraina',
+  scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  studyType: 'first_cycle',
-  country: 'Polska',
-  gradeScale: 5,
-  gradeValue: 4,
-  university: 'Uniwersytet Warszawski',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice',
-  applicationStatus: 'submitted',
+  averageGrade: 85,
+  maximumGrade: 100,
+  polishSchoolLevel: 'none',
+  currentStatus: 'submitted',
+  statusChangedAt: '2026-07-13',
 };
 
 describe('responseFormInputSchema', () => {
   it('uses only the active questionnaire scope enums', () => {
-    expect(scholarshipTracks).toEqual(['nawa_mnisw', 'minister_health', 'minister_culture']);
+    expect(scholarshipTracks).toEqual(['nawa_director', 'health_minister', 'culture_minister']);
     expect(studyRoutes).toEqual(['preparatory_course', 'direct_studies']);
-    expect(studyTypes).toEqual(['first_cycle', 'uniform_masters']);
+    expect(polishSchoolLevels).toEqual(['none', 'primary', 'secondary']);
+    expect(applicationStatuses).toEqual([
+      'submitted',
+      'formal_review_in_progress',
+      'correction_requested',
+      'formal_review_completed',
+      'merit_review_in_progress',
+      'merit_review_positive',
+      'merit_review_negative',
+      'awaiting_decision',
+      'scholarship_awarded',
+      'scholarship_not_awarded',
+    ]);
   });
 
   it.each([
-    ['scholarshipTrack', 'scholarship'],
+    ['scholarshipTrack', 'nawa_mnisw'],
     ['studyRoute', 'second_cycle'],
-    ['studyType', 'full_time'],
+    ['polishSchoolLevel', 'university'],
+    ['currentStatus', 'positive_decision'],
   ] as const)('rejects former %s value %s', (field, value) => {
     expect(responseFormInputSchema.safeParse({ ...validForm, [field]: value }).success).toBe(false);
   });
@@ -46,38 +59,57 @@ describe('responseFormInputSchema', () => {
     expect(() => responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'invalid' })).toThrow();
   });
 
-  it('rejects too-long text', () => {
-    expect(() => responseFormInputSchema.parse({ ...validForm, country: 'a'.repeat(101) })).toThrow();
+  it('rejects too-long country text', () => {
+    expect(() => responseFormInputSchema.parse({ ...validForm, rankingCountry: 'a'.repeat(101) })).toThrow();
   });
 
-  it('rejects universities outside the canonical suggestion set', () => {
-    expect(
-      responseFormInputSchema.safeParse({ ...validForm, university: 'Uczelnia spoza listy' }).success,
-    ).toBe(false);
+  it('rejects averageGrade above maximumGrade', () => {
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, averageGrade: 101, maximumGrade: 100 }),
+    ).toThrow();
   });
 
-  it('requires custom scale bounds', () => {
-    expect(() => responseFormInputSchema.parse({ ...validForm, gradeScale: 'custom', customGradeScale: 0 })).toThrow();
-    expect(() => responseFormInputSchema.parse({ ...validForm, gradeScale: 'custom', customGradeScale: 1001 })).toThrow();
+  it('requires polishSchoolLevel only for nawa_director', () => {
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'nawa_director', polishSchoolLevel: undefined }),
+    ).toThrow();
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'health_minister', polishSchoolLevel: undefined, studyRoute: 'preparatory_course' }),
+    ).not.toThrow();
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'health_minister', polishSchoolLevel: 'none', studyRoute: 'preparatory_course' }),
+    ).toThrow();
   });
 
-  it('rejects grades above fixed scale maximum', () => {
-    expect(() => responseFormInputSchema.parse({ ...validForm, gradeValue: 6 })).toThrow();
-  });
-
-  it('rejects grades above a custom scale maximum', () => {
+  it('forces the preparatory course route for health_minister', () => {
     expect(() =>
       responseFormInputSchema.parse({
         ...validForm,
-        gradeScale: 'custom',
-        customGradeScale: 7,
-        gradeValue: 8,
+        scholarshipTrack: 'health_minister',
+        studyRoute: 'direct_studies',
+        polishSchoolLevel: undefined,
       }),
     ).toThrow();
   });
 
-  it('rejects decision dates for non-final statuses', () => {
-    expect(() => responseFormInputSchema.parse({ ...validForm, decisionDate: '2026-07-13' })).toThrow();
+  it('limits dual Polish citizenship to the nawa_director track', () => {
+    expect(() =>
+      responseFormInputSchema.parse({
+        ...validForm,
+        hasPolishCitizenship: true,
+        scholarshipTrack: 'health_minister',
+        studyRoute: 'preparatory_course',
+        polishSchoolLevel: undefined,
+      }),
+    ).toThrow();
+    expect(
+      responseFormInputSchema.safeParse({ ...validForm, hasPolishCitizenship: true, scholarshipTrack: 'nawa_director' })
+        .success,
+    ).toBe(true);
+  });
+
+  it('rejects a malformed statusChangedAt date', () => {
+    expect(() => responseFormInputSchema.parse({ ...validForm, statusChangedAt: 'not-a-date' })).toThrow();
   });
 });
 

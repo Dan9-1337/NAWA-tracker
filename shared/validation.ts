@@ -1,63 +1,75 @@
 import { z } from 'zod';
 import {
   applicationStatuses,
-  choicePriorities,
+  comparisonGroups,
+  polishSchoolLevels,
   scholarshipTracks,
   studyRoutes,
-  studyTypes,
   type ApiError,
+  type ApplicationStatus,
   type CreateResponseRequest,
   type CreateResponseResult,
   type CurrentResponseResult,
   type LogoutSessionResult,
+  type PublicStatisticsRequest,
+  type PublicStatisticsResult,
   type RecoveryCredential,
   type RestoreSessionRequest,
   type StatisticsResult,
+  type StatusCounts,
   type UpdateResponseRequest,
   type UpdateResponseResult,
 } from './contracts';
-import { universities } from './universities';
 
 const baseFormSchema = z
   .object({
+    hasPolishCitizenship: z.boolean(),
+    rankingCountry: z.string().trim().min(1).max(100),
+    schoolCountry: z.string().trim().min(1).max(100),
     scholarshipTrack: z.enum(scholarshipTracks),
     studyRoute: z.enum(studyRoutes),
-    studyType: z.enum(studyTypes),
-    country: z.string().trim().min(1).max(100),
-    gradeScale: z.union([z.literal(5), z.literal(10), z.literal(12), z.literal(20), z.literal(100), z.literal('custom')]),
-    customGradeScale: z.number().int().min(1).max(1000).optional(),
-    gradeValue: z.number().min(0),
-    university: z.enum(universities),
-    studyField: z.string().trim().min(1).max(200),
-    choicePriority: z.enum(choicePriorities),
-    applicationStatus: z.enum(applicationStatuses),
-    decisionDate: z.string().date().nullable().optional(),
+    averageGrade: z.number().min(0).max(1000),
+    maximumGrade: z.number().positive().max(1000),
+    polishSchoolLevel: z.enum(polishSchoolLevels).optional(),
+    currentStatus: z.enum(applicationStatuses),
+    statusChangedAt: z.string().date(),
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.gradeScale === 'custom') {
-      if (value.customGradeScale === undefined) {
-        ctx.addIssue({ code: 'custom', path: ['customGradeScale'], message: 'customGradeScale is required for custom scales' });
+    if (value.averageGrade > value.maximumGrade) {
+      ctx.addIssue({ code: 'custom', path: ['averageGrade'], message: 'averageGrade must not exceed maximumGrade' });
+    }
+
+    if (value.hasPolishCitizenship && value.scholarshipTrack !== 'nawa_director') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scholarshipTrack'],
+        message: 'dual Polish citizenship is limited to the nawa_director track',
+      });
+    }
+
+    if (value.scholarshipTrack === 'nawa_director') {
+      if (value.polishSchoolLevel === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['polishSchoolLevel'],
+          message: 'polishSchoolLevel is required for nawa_director',
+        });
       }
-    } else if (value.customGradeScale !== undefined) {
-      ctx.addIssue({ code: 'custom', path: ['customGradeScale'], message: 'customGradeScale is only allowed for custom scales' });
+    } else if (value.polishSchoolLevel !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['polishSchoolLevel'],
+        message: 'polishSchoolLevel is only allowed for nawa_director',
+      });
     }
 
-    if (value.gradeScale !== 'custom' && value.gradeValue > value.gradeScale) {
-      ctx.addIssue({ code: 'custom', path: ['gradeValue'], message: 'gradeValue must not exceed the selected scale' });
-    }
-
-    if (
-      value.gradeScale === 'custom' &&
-      value.customGradeScale !== undefined &&
-      value.gradeValue > value.customGradeScale
-    ) {
-      ctx.addIssue({ code: 'custom', path: ['gradeValue'], message: 'gradeValue must not exceed the selected scale' });
-    }
-
-    const finalStatuses = new Set(['positive_decision', 'negative_decision']);
-    if (!finalStatuses.has(value.applicationStatus) && value.decisionDate != null) {
-      ctx.addIssue({ code: 'custom', path: ['decisionDate'], message: 'decisionDate is only allowed for final decisions' });
+    if (value.scholarshipTrack === 'health_minister' && value.studyRoute !== 'preparatory_course') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['studyRoute'],
+        message: 'health_minister currently supports only the preparatory course route',
+      });
     }
   });
 
@@ -94,24 +106,93 @@ export const statisticsRequestSchema = emptyRequestSchema;
 export const logoutSessionRequestSchema = emptyRequestSchema;
 export const rotateRecoveryRequestSchema = emptyRequestSchema;
 
+const statusCountsShape = Object.fromEntries(
+  applicationStatuses.map((status) => [status, z.number().int().nonnegative()]),
+) as Record<ApplicationStatus, z.ZodNumber>;
+
+export const statusCountsSchema = z.object(statusCountsShape).strict() satisfies z.ZodType<StatusCounts>;
+
 export const statisticsResultSchema = z
   .object({
     detailsAvailable: z.boolean(),
-    group: z
-      .enum(['track-route-type-university-field', 'track-route-type-university', 'track-route-type'])
-      .nullable(),
+    group: z.enum(comparisonGroups).nullable(),
     totalValidResponses: z.number().int().nonnegative(),
     sameTrackCount: z.number().int().nonnegative(),
-    sameUniversityCount: z.number().int().min(10).nullable(),
-    sameUniversityAndFieldCount: z.number().int().min(10).nullable(),
+    sameCountryCount: z.number().int().min(10).nullable(),
     groupResponseCount: z.number().int().nonnegative(),
-    medianGradePercentage: z.number().min(0).max(100).nullable(),
-    lowerGradePercentage: z.number().min(0).max(100).nullable(),
-    waitingForDecisionCount: z.number().int().nonnegative().nullable(),
-    positiveDecisionCount: z.number().int().nonnegative().nullable(),
-    negativeDecisionCount: z.number().int().nonnegative().nullable(),
+    medianScore: z.number().min(0).nullable(),
+    lowerScorePercentage: z.number().min(0).max(100).nullable(),
+    statusCounts: statusCountsSchema.nullable(),
   })
-  .strict() satisfies z.ZodType<StatisticsResult>;
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.sameTrackCount > value.totalValidResponses) {
+      ctx.addIssue({ code: 'custom', path: ['sameTrackCount'], message: 'sameTrackCount cannot exceed totalValidResponses' });
+    }
+    if (value.groupResponseCount > value.sameTrackCount) {
+      ctx.addIssue({ code: 'custom', path: ['groupResponseCount'], message: 'groupResponseCount cannot exceed sameTrackCount' });
+    }
+    if (value.sameCountryCount !== null && value.sameCountryCount > value.sameTrackCount) {
+      ctx.addIssue({ code: 'custom', path: ['sameCountryCount'], message: 'sameCountryCount cannot exceed sameTrackCount' });
+    }
+
+    if (value.detailsAvailable) {
+      if (
+        value.group === null ||
+        value.groupResponseCount < 10 ||
+        value.medianScore === null ||
+        value.lowerScorePercentage === null ||
+        value.statusCounts === null
+      ) {
+        ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require every detailed field' });
+        return;
+      }
+      const total = Object.values(value.statusCounts).reduce((sum, count) => sum + count, 0);
+      if (total !== value.groupResponseCount) {
+        ctx.addIssue({ code: 'custom', path: ['statusCounts'], message: 'statusCounts must sum to groupResponseCount' });
+      }
+    } else if (
+      value.group !== null ||
+      value.groupResponseCount !== 0 ||
+      value.medianScore !== null ||
+      value.lowerScorePercentage !== null ||
+      value.statusCounts !== null
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'suppressed statistics cannot retain detailed fields' });
+    }
+  }) satisfies z.ZodType<StatisticsResult>;
+
+export const publicStatisticsRequestSchema = z
+  .object({
+    scholarshipTrack: z.enum(scholarshipTracks),
+    rankingCountry: z.string().trim().min(1).max(100),
+    averageGrade: z.number().min(0).max(1000),
+    maximumGrade: z.number().positive().max(1000),
+    polishSchoolLevel: z.enum(polishSchoolLevels).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.averageGrade > value.maximumGrade) {
+      ctx.addIssue({ code: 'custom', path: ['averageGrade'], message: 'averageGrade must not exceed maximumGrade' });
+    }
+    if (value.scholarshipTrack === 'nawa_director') {
+      if (value.polishSchoolLevel === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['polishSchoolLevel'],
+          message: 'polishSchoolLevel is required for nawa_director',
+        });
+      }
+    } else if (value.polishSchoolLevel !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['polishSchoolLevel'],
+        message: 'polishSchoolLevel is only allowed for nawa_director',
+      });
+    }
+  }) satisfies z.ZodType<PublicStatisticsRequest>;
+
+export const publicStatisticsResultSchema = statisticsResultSchema satisfies z.ZodType<PublicStatisticsResult>;
 
 export const recoveryCredentialSchema = z
   .object({

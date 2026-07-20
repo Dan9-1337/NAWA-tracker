@@ -9,6 +9,8 @@ import {
   currentResponseResultSchema,
   logoutSessionRequestSchema,
   logoutSessionResultSchema,
+  publicStatisticsRequestSchema,
+  publicStatisticsResultSchema,
   restoreSessionRequestSchema,
   restoreSessionResultSchema,
   rotateRecoveryRequestSchema,
@@ -20,31 +22,41 @@ import {
 } from './validation';
 
 const validForm = {
-  scholarshipTrack: 'nawa_mnisw',
+  hasPolishCitizenship: false,
+  rankingCountry: 'Ukraina',
+  schoolCountry: 'Ukraina',
+  scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  studyType: 'first_cycle',
-  country: 'Polska',
-  gradeScale: 5,
-  gradeValue: 4,
-  university: 'Uniwersytet Warszawski',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice',
-  applicationStatus: 'submitted',
+  averageGrade: 85,
+  maximumGrade: 100,
+  polishSchoolLevel: 'none',
+  currentStatus: 'submitted',
+  statusChangedAt: '2026-07-13',
+} as const;
+
+const validStatusCounts = {
+  submitted: 2,
+  formal_review_in_progress: 2,
+  correction_requested: 0,
+  formal_review_completed: 2,
+  merit_review_in_progress: 1,
+  merit_review_positive: 1,
+  merit_review_negative: 0,
+  awaiting_decision: 1,
+  scholarship_awarded: 1,
+  scholarship_not_awarded: 0,
 } as const;
 
 const validStatistics = {
   detailsAvailable: true,
-  group: 'track-route-type-university-field',
+  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
-  sameUniversityCount: 12,
-  sameUniversityAndFieldCount: 10,
+  sameCountryCount: 10,
   groupResponseCount: 10,
-  medianGradePercentage: 82.5,
-  lowerGradePercentage: 40,
-  waitingForDecisionCount: 4,
-  positiveDecisionCount: 5,
-  negativeDecisionCount: 1,
+  medianScore: 82.5,
+  lowerScorePercentage: 40,
+  statusCounts: validStatusCounts,
 } as const;
 
 const recoveryToken = 'A'.repeat(43);
@@ -134,6 +146,24 @@ describe('API request contracts', () => {
       expect(() => schema.parse({ ...body, [field]: value })).toThrow();
     }
   });
+
+  it('validates the public statistics request shape', () => {
+    const request = {
+      scholarshipTrack: 'nawa_director',
+      rankingCountry: 'Białoruś',
+      averageGrade: 90,
+      maximumGrade: 100,
+      polishSchoolLevel: 'secondary',
+    };
+
+    expect(publicStatisticsRequestSchema.parse(request)).toEqual(request);
+    expect(
+      publicStatisticsRequestSchema.safeParse({ ...request, scholarshipTrack: 'health_minister' }).success,
+    ).toBe(false);
+    expect(
+      publicStatisticsRequestSchema.safeParse({ ...request, polishSchoolLevel: undefined }).success,
+    ).toBe(false);
+  });
 });
 
 describe('API response contracts', () => {
@@ -185,32 +215,35 @@ describe('API response contracts', () => {
     });
     expect(currentResponseResultSchema.parse({ response: validForm })).toEqual({ response: validForm });
     expect(statisticsResultSchema.parse(validStatistics)).toEqual(validStatistics);
+    expect(publicStatisticsResultSchema.parse(validStatistics)).toEqual(validStatistics);
     expect(restoreSessionResultSchema.parse({ response: validForm })).toEqual({ response: validForm });
     expect(rotateRecoveryResultSchema.parse(recoveryCredential)).toEqual(recoveryCredential);
     expect(logoutSessionResultSchema.parse({ loggedOut: true })).toEqual({ loggedOut: true });
   });
 
-  it('accepts null for university counts suppressed below ten', () => {
+  it('accepts null for the country count suppressed below ten', () => {
     const suppressedStatistics = {
       ...validStatistics,
-      sameUniversityCount: null,
-      sameUniversityAndFieldCount: null,
+      sameCountryCount: null,
     };
 
     expect(statisticsResultSchema.parse(suppressedStatistics)).toEqual(suppressedStatistics);
   });
 
-  it('rejects exact university counts below ten', () => {
+  it('rejects an exact country count below ten', () => {
     expect(
       statisticsResultSchema.safeParse({
         ...validStatistics,
-        sameUniversityCount: 9,
+        sameCountryCount: 9,
       }).success,
     ).toBe(false);
+  });
+
+  it('rejects statusCounts that do not sum to groupResponseCount', () => {
     expect(
       statisticsResultSchema.safeParse({
         ...validStatistics,
-        sameUniversityAndFieldCount: 9,
+        statusCounts: { ...validStatusCounts, submitted: 99 },
       }).success,
     ).toBe(false);
   });

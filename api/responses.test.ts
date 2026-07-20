@@ -6,35 +6,45 @@ import {
   type ResponsesHandlerDependencies,
 } from './responses';
 import { createCurrentResponseHandler } from './responses/current';
+import { createPublicStatisticsHandler } from './statistics/public';
 import { createStatisticsHandler } from './statistics';
 
 const validForm = {
-  scholarshipTrack: 'nawa_mnisw',
+  hasPolishCitizenship: false,
+  rankingCountry: 'Ukraina',
+  schoolCountry: 'Ukraina',
+  scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  studyType: 'first_cycle',
-  country: 'Polska',
-  gradeScale: 'custom',
-  customGradeScale: 7,
-  gradeValue: 6,
-  university: 'Uniwersytet Warszawski',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice',
-  applicationStatus: 'submitted',
+  averageGrade: 4.5,
+  maximumGrade: 5,
+  polishSchoolLevel: 'secondary',
+  currentStatus: 'submitted',
+  statusChangedAt: '2026-07-01',
+} as const;
+
+const statusCounts = {
+  submitted: 2,
+  formal_review_in_progress: 1,
+  correction_requested: 0,
+  formal_review_completed: 1,
+  merit_review_in_progress: 1,
+  merit_review_positive: 1,
+  merit_review_negative: 1,
+  awaiting_decision: 1,
+  scholarship_awarded: 1,
+  scholarship_not_awarded: 1,
 } as const;
 
 const statistics = {
   detailsAvailable: true,
-  group: 'track-route-type-university-field',
+  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
-  sameUniversityCount: 12,
-  sameUniversityAndFieldCount: 10,
+  sameCountryCount: 12,
   groupResponseCount: 10,
-  medianGradePercentage: 82.5,
-  lowerGradePercentage: 40,
-  waitingForDecisionCount: 4,
-  positiveDecisionCount: 5,
-  negativeDecisionCount: 1,
+  medianScore: 82.5,
+  lowerScorePercentage: 40,
+  statusCounts,
 } as const;
 
 type Request = {
@@ -162,15 +172,13 @@ describe('POST /api/responses', () => {
     expect(dependencies.verifyTurnstile).not.toHaveBeenCalled();
   });
 
-  it('rejects a university outside the canonical server allowlist', async () => {
+  it('rejects nawa_director responses that omit polishSchoolLevel', async () => {
     const dependencies = responsesDependencies();
     const { response, state } = createResponseDouble();
+    const { polishSchoolLevel: _omitted, ...incompleteForm } = validForm;
 
     await createResponsesHandler(dependencies)(
-      request('POST', {
-        response: { ...validForm, university: 'Uczelnia spoza listy' },
-        turnstileToken: 'proof',
-      }),
+      request('POST', { response: incompleteForm, turnstileToken: 'proof' }),
       response,
     );
 
@@ -208,17 +216,16 @@ describe('POST /api/responses', () => {
         p_session_expires_at: '2027-01-09T12:00:00.000Z',
         p_ip_hash: 'ip-hash',
         p_response_fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
-        p_scholarship_track: 'nawa_mnisw',
+        p_has_polish_citizenship: false,
+        p_ranking_country: 'Ukraina',
+        p_school_country: 'Ukraina',
+        p_scholarship_track: 'nawa_director',
         p_study_route: 'direct_studies',
-        p_study_type: 'first_cycle',
-        p_country: 'Polska',
-        p_grade_scale: 7,
-        p_grade_value: 6,
-        p_university: 'Uniwersytet Warszawski',
-        p_study_field: 'Informatyka',
-        p_choice_priority: 'first_choice',
-        p_application_status: 'submitted',
-        p_decision_date: null,
+        p_average_grade: 4.5,
+        p_maximum_grade: 5,
+        p_polish_school_level: 'secondary',
+        p_current_status: 'submitted',
+        p_status_changed_at: '2026-07-01',
       },
     ]);
     expect(calls).toHaveLength(1);
@@ -242,7 +249,7 @@ describe('POST /api/responses', () => {
     const dependencies = responsesDependencies(() => ({
       data: {
         created: true,
-        statistics: { ...statistics, sameUniversityCount: 2 },
+        statistics: { ...statistics, sameCountryCount: 2 },
         recoveryToken: 'database-secret',
       },
       error: null,
@@ -337,17 +344,16 @@ describe('PUT /api/responses', () => {
       'update_current_response',
       {
         p_session_token_hash: 'owned-session-hash',
-        p_scholarship_track: 'nawa_mnisw',
+        p_has_polish_citizenship: false,
+        p_ranking_country: 'Ukraina',
+        p_school_country: 'Ukraina',
+        p_scholarship_track: 'nawa_director',
         p_study_route: 'direct_studies',
-        p_study_type: 'first_cycle',
-        p_country: 'Polska',
-        p_grade_scale: 7,
-        p_grade_value: 6,
-        p_university: 'Uniwersytet Warszawski',
-        p_study_field: 'Informatyka',
-        p_choice_priority: 'first_choice',
-        p_application_status: 'submitted',
-        p_decision_date: null,
+        p_average_grade: 4.5,
+        p_maximum_grade: 5,
+        p_polish_school_level: 'secondary',
+        p_current_status: 'submitted',
+        p_status_changed_at: '2026-07-01',
       },
     ]);
     expect(calls).toHaveLength(1);
@@ -483,7 +489,7 @@ describe('POST /api/statistics', () => {
   it('fails closed when outgoing RPC statistics violate the shared schema', async () => {
     const handler = createStatisticsHandler({
       getClient: () => ({
-        rpc: vi.fn().mockResolvedValue({ data: { ...statistics, sameUniversityCount: 2 }, error: null }),
+        rpc: vi.fn().mockResolvedValue({ data: { ...statistics, sameCountryCount: 2 }, error: null }),
       }),
       requireSession: vi.fn().mockResolvedValue({
         responseId: crypto.randomUUID(),
@@ -497,6 +503,72 @@ describe('POST /api/statistics', () => {
     expect(state.status).toBe(500);
     expect(state.body).toEqual({
       error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
+    });
+  });
+});
+
+describe('POST /api/statistics/public', () => {
+  const publicRequest = {
+    scholarshipTrack: 'nawa_director',
+    rankingCountry: 'Ukraina',
+    averageGrade: 4.5,
+    maximumGrade: 5,
+    polishSchoolLevel: 'secondary',
+  } as const;
+
+  it('returns an Allow header for unsupported methods', async () => {
+    const handler = createPublicStatisticsHandler();
+    const { response, state } = createResponseDouble();
+
+    await handler(request('GET'), response);
+
+    expect(state.status).toBe(405);
+    expect(state.headers.get('Allow')).toBe('POST');
+  });
+
+  it('calls get_public_statistics with normalized questionnaire fields', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: statistics, error: null });
+    const handler = createPublicStatisticsHandler({
+      getClient: () => ({ rpc }),
+      assertSameOrigin: vi.fn(),
+      getClientIp: vi.fn(() => '203.0.113.9'),
+      hashIp: vi.fn(() => 'ip-hash'),
+    });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST', publicRequest), response);
+
+    expect(rpc).toHaveBeenCalledWith('get_public_statistics', {
+      p_scholarship_track: 'nawa_director',
+      p_ranking_country: 'Ukraina',
+      p_average_grade: 4.5,
+      p_maximum_grade: 5,
+      p_polish_school_level: 'secondary',
+      p_ip_hash: 'ip-hash',
+    });
+    expect(state.status).toBe(200);
+    expect(state.body).toEqual(statistics);
+  });
+
+  it('maps the public statistics rate limit to a stable 429', async () => {
+    const handler = createPublicStatisticsHandler({
+      getClient: () => ({
+        rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'public_stats_rate_limited' } }),
+      }),
+      assertSameOrigin: vi.fn(),
+      getClientIp: vi.fn(() => '203.0.113.9'),
+      hashIp: vi.fn(() => 'ip-hash'),
+    });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST', publicRequest), response);
+
+    expect(state.status).toBe(429);
+    expect(state.body).toEqual({
+      error: {
+        code: 'PUBLIC_STATS_RATE_LIMITED',
+        message: 'Przekroczono limit zapytań o statystyki. Spróbuj ponownie później.',
+      },
     });
   });
 });

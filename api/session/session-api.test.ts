@@ -10,16 +10,16 @@ const replacementRecoveryToken = `${'N'.repeat(42)}g`;
 const sessionToken = `${'S'.repeat(42)}w`;
 
 const questionnaire = {
-  scholarshipTrack: 'nawa_mnisw',
+  hasPolishCitizenship: false,
+  rankingCountry: 'Ukraina',
+  schoolCountry: 'Ukraina',
+  scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  studyType: 'first_cycle',
-  country: 'Polska',
-  gradeScale: 5,
-  gradeValue: 4.5,
-  university: 'Uniwersytet Warszawski',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice',
-  applicationStatus: 'submitted',
+  averageGrade: 4.5,
+  maximumGrade: 5,
+  polishSchoolLevel: 'secondary',
+  currentStatus: 'submitted',
+  statusChangedAt: '2026-07-01',
 } as const;
 
 type Request = {
@@ -316,7 +316,7 @@ describe('POST /api/session/restore', () => {
       () => ({ data: { restored: true }, error: null }),
       (name: string) => name === 'restore_anonymous_session'
         ? { data: { restored: true, rateLimited: false }, error: null }
-        : { data: { ...questionnaire, gradeValue: 9 }, error: null },
+        : { data: { ...questionnaire, polishSchoolLevel: undefined }, error: null },
     ]) {
       const dependencies = restoreDependencies(rpcImplementation);
       const result = createResponseDouble();

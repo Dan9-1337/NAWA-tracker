@@ -1,19 +1,19 @@
 # NAWA Tracker
 
-Polish-first, anonymous scholarship questionnaire and privacy-safe community statistics. The browser talks only to same-origin Vercel Functions. Supabase is accessed server-side with a service-role credential; recovery uses one-time-displayed credentials and HttpOnly cookie sessions rather than accounts or browser storage.
+Polish-first, pseudonymous scholarship questionnaire and privacy-safe community statistics by passport country. The browser talks only to same-origin Vercel Functions. Supabase is accessed server-side with a service-role credential; recovery uses one-time-displayed credentials and HttpOnly cookie sessions rather than accounts or browser storage of recovery codes.
 
-The active questionnaire scope is fixed to three programme tracks (`nawa_mnisw`, `minister_health`, `minister_culture`), two study routes (`preparatory_course`, `direct_studies`), and two study types (`first_cycle`, `uniform_masters`). These internal values are shared by the browser, API validation, and PostgreSQL constraints; there are no legacy aliases.
+The active questionnaire scope is fixed to three programme tracks (`nawa_director`, `health_minister`, `culture_minister`), two study routes (`preparatory_course`, `direct_studies`), and ten application statuses from `submitted` through `scholarship_awarded` / `scholarship_not_awarded`. These internal values are shared by the browser, API validation, and PostgreSQL constraints; there are no legacy aliases.
 
-The university autocomplete is intentionally limited to this small canonical set: Uniwersytet Warszawski, Uniwersytet Jagielloński, Politechnika Warszawska, Akademia Górniczo-Hutnicza w Krakowie, Uniwersytet im. Adama Mickiewicza w Poznaniu, Politechnika Wrocławska, Uniwersytet Wrocławski, Uniwersytet Gdański, Warszawski Uniwersytet Medyczny, and Akademia Sztuk Pięknych w Warszawie. The browser and API reject universities outside this shared allowlist so aggregate groups use consistent names. Study-field values remain free text.
+Statistics compare declared grades (or the NAWA orientation score for `nawa_director`) within the same scholarship track and ranking citizenship country, with a track-wide fallback when a country cohort is too small. Aggregates are never an official ranking or seat-limit forecast.
 
 ## Requirements
 
 - Node.js 20.19 or newer (or 22.12 or newer) and npm
-- A Supabase project
+- A Supabase project (remote) **or** Docker Desktop for local Supabase
 - A Cloudflare Turnstile widget
 - A Vercel account; the lockfile-pinned local Vercel CLI is invoked through `npx vercel`
 
-Docker and a local Supabase stack are not required. The instructions below apply migrations and run integration tests against remote Supabase projects.
+Remote Supabase is enough for day-to-day work. Local Docker is optional and useful when you want seeded mock data and offline database tests.
 
 ## Environment
 
@@ -91,20 +91,43 @@ Use the test site key and test secret together. Production secrets reject dummy 
 
 ## Local Development
 
-Install dependencies, create `.env.local`, apply the migration to a development Supabase project, then start the complete SPA and API runtime:
+### Option A — Local Supabase in Docker (seeded mock data)
+
+Requires Docker Desktop. Starts the local stack from `supabase/config.toml`, applies migrations, and loads `supabase/seed.sql`:
 
 ```bash
 npm install
-npx vercel dev --listen 3000
+npm run db:start
+npm run local:env
+npm run local:dev
 ```
 
-Open `http://localhost:3000`. Use `npx vercel link` and `npx vercel env pull .env.local` if the project environment is already managed by Vercel. Because `vercel` is a locked development dependency, these commands use the repository's installed CLI version rather than downloading the latest release. Plain `npm run dev` starts Vite only and is suitable for UI work, but it does not provide the `/api` functions.
+`npm run local:env` writes `.env.local` with the local API URL, service-role key, Cloudflare always-pass Turnstile keys, and fixed HMAC secrets that match the seeded demo credentials. `npm run local:dev` starts the Vite SPA on port 3000 and a local `/api` server on port 3001 — no Vercel login required. (`npx vercel dev` still works if the project is already linked to a Vercel account.)
+
+Open `http://localhost:3000` and restore the demo applicant:
+
+```text
+http://localhost:3000/#restore=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE
+```
+
+That row is `nawa_director` / ranking citizenship `Ukraina` with twelve peers in the same country cohort, so the statistics panel shows detailed aggregates. Reset and re-seed any time with `npm run db:reset`. Stop containers with `npm run db:stop`.
+
+### Option B — Remote development project
+
+Install dependencies, create `.env.local` (copy from `.env.example` or pull from Vercel), apply the migration to a development Supabase project, then start the SPA and API:
+
+```bash
+npm install
+npm run local:dev
+```
+
+Open `http://localhost:3000`. Use `npx vercel link` and `npx vercel env pull .env.local` if the project environment is already managed by Vercel. For a Vercel-linked project you can still use `npx vercel dev --listen 3000` instead. Plain `npm run dev` (Vite alone) is suitable for UI work, but without `local:dev` it only proxies `/api` and needs the local API process.
 
 The session cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and gains `Secure` in production. With the current runtime, Vercel preview is non-production, so preview cookies do not include `Secure`. Its `Max-Age` matches `SESSION_MAX_AGE_DAYS`. Browser JavaScript cannot read it. Recovery credentials are displayed after creation or rotation, retained only in memory while that screen is open, and cannot be shown again. Losing both the cookie and saved recovery code permanently loses access. Rotating a recovery code invalidates the old code but does not revoke existing sessions; logout revokes only the current session.
 
 ## Database Tests
 
-Use a separate, disposable Supabase project with the migration already applied. Obtain its direct or session-pooler PostgreSQL connection string from **Connect**, ensure SSL is required by the connection string, and run:
+Use a separate, disposable Supabase project with the migration already applied, or the local Docker database from `npm run db:start` (its `DATABASE_URL` is written by `npm run local:env`). Obtain a remote project's direct or session-pooler PostgreSQL connection string from **Connect**, ensure SSL is required by the connection string, and run:
 
 ```bash
 DATABASE_URL='postgresql://...' npm run test:db
@@ -123,6 +146,8 @@ npm run build
 npm run audit:prod
 git diff --check
 ```
+
+GitHub Actions runs the same checks on pushes to `main`/`master` and on pull requests (`.github/workflows/ci.yml`). Database integration tests (`npm run test:db`) stay manual: they need an isolated migrated Postgres with `pgtap` and must never target production.
 
 After `npm run build`, inspect `dist/` for server-only variable names, service-role values, and API implementation code before deployment. Never search by printing real secret values into shell history; use known non-secret markers or a local secret scanner.
 

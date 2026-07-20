@@ -61,22 +61,33 @@ export function StatisticsPanel({ state }: StatisticsPanelProps) {
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <StatCard label={t.stats.totalResponses} value={String(data.totalValidResponses)} />
             <StatCard label={t.stats.sameTrack} value={String(data.sameTrackCount)} />
-            <StatCard label={t.stats.sameUniversity} value={data.sameUniversityCount == null ? t.stats.noValue : String(data.sameUniversityCount)} />
-            <StatCard label={t.stats.sameUniversityAndField} value={data.sameUniversityAndFieldCount == null ? t.stats.noValue : String(data.sameUniversityAndFieldCount)} />
+            <StatCard label={t.stats.sameCountry} value={data.sameCountryCount == null ? t.stats.noValue : String(data.sameCountryCount)} />
             <StatCard label={t.stats.groupResponseCount} value={String(data.groupResponseCount)} />
             <StatCard
               label={t.stats.percentileLabel}
-              value={data.lowerGradePercentage == null
+              value={data.lowerScorePercentage == null
                 ? t.stats.noValue
-                : t.stats.percentileSentence(data.lowerGradePercentage.toFixed(1))}
-              hint={data.medianGradePercentage == null
+                : t.stats.percentileSentence(data.lowerScorePercentage.toFixed(1))}
+              hint={data.medianScore == null
                 ? t.stats.medianUnavailable
-                : t.stats.medianSentence(data.medianGradePercentage.toFixed(1))}
+                : t.stats.medianSentence(data.medianScore.toFixed(2))}
             />
-            <StatCard label={t.stats.waitingLabel} value={data.waitingForDecisionCount == null ? t.stats.noValue : String(data.waitingForDecisionCount)} />
-            <StatCard label={t.stats.positiveLabel} value={data.positiveDecisionCount == null ? t.stats.noValue : String(data.positiveDecisionCount)} />
-            <StatCard label={t.stats.negativeLabel} value={data.negativeDecisionCount == null ? t.stats.noValue : String(data.negativeDecisionCount)} />
           </div>
+          {data.statusCounts ? (
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-slate-700">{t.stats.statusBreakdown}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(data.statusCounts).map(([status, count]) => (
+                  <StatCard
+                    key={status}
+                    label={t.choices.currentStatus[status as keyof typeof t.choices.currentStatus]}
+                    value={String(count)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <p className="mt-6 text-xs leading-5 text-slate-500">{t.stats.disclaimer}</p>
         </>
       ) : null}
     </section>

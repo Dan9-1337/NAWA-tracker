@@ -26,18 +26,16 @@ const updateMutationResultSchema = z
   .strict();
 
 const responseFields = [
+  'hasPolishCitizenship',
+  'rankingCountry',
+  'schoolCountry',
   'scholarshipTrack',
   'studyRoute',
-  'studyType',
-  'country',
-  'gradeScale',
-  'customGradeScale',
-  'gradeValue',
-  'university',
-  'studyField',
-  'choicePriority',
-  'applicationStatus',
-  'decisionDate',
+  'averageGrade',
+  'maximumGrade',
+  'polishSchoolLevel',
+  'currentStatus',
+  'statusChangedAt',
 ] as const;
 
 const statisticsFields = [
@@ -45,14 +43,11 @@ const statisticsFields = [
   'group',
   'totalValidResponses',
   'sameTrackCount',
-  'sameUniversityCount',
-  'sameUniversityAndFieldCount',
+  'sameCountryCount',
   'groupResponseCount',
-  'medianGradePercentage',
-  'lowerGradePercentage',
-  'waitingForDecisionCount',
-  'positiveDecisionCount',
-  'negativeDecisionCount',
+  'medianScore',
+  'lowerScorePercentage',
+  'statusCounts',
 ] as const;
 
 function projectFields(value: unknown, fields: readonly string[]): Record<string, unknown> {
@@ -69,21 +64,17 @@ function projectFields(value: unknown, fields: readonly string[]): Record<string
 }
 
 export function normalizeQuestionnaire(response: ResponseFormInput) {
-  const gradeScale = response.gradeScale === 'custom' ? response.customGradeScale : response.gradeScale;
-  if (gradeScale === undefined) throw new Error('Invalid normalized grade scale');
-
   return {
+    p_has_polish_citizenship: response.hasPolishCitizenship,
+    p_ranking_country: response.rankingCountry,
+    p_school_country: response.schoolCountry,
     p_scholarship_track: response.scholarshipTrack,
     p_study_route: response.studyRoute,
-    p_study_type: response.studyType,
-    p_country: response.country,
-    p_grade_scale: gradeScale,
-    p_grade_value: response.gradeValue,
-    p_university: response.university,
-    p_study_field: response.studyField,
-    p_choice_priority: response.choicePriority,
-    p_application_status: response.applicationStatus,
-    p_decision_date: response.decisionDate ?? null,
+    p_average_grade: response.averageGrade,
+    p_maximum_grade: response.maximumGrade,
+    p_polish_school_level: response.polishSchoolLevel ?? null,
+    p_current_status: response.currentStatus,
+    p_status_changed_at: response.statusChangedAt,
   };
 }
 

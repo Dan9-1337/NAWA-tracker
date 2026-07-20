@@ -24,8 +24,10 @@ async function createResponse(index) {
     const result = await pool.query(
       `select public.create_response_with_session(
         $1, $2, now() + interval '1 day', $3, null,
-        'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL', 5, 4,
-        'Concurrent University', 'Concurrent Field', 'first_choice', 'submitted', null
+        false, 'Polska', 'Polska',
+        'nawa_director', 'direct_studies',
+        4, 5, 'none',
+        'submitted', current_date
       ) as result`,
       [`${recoveryPrefix}-${index}`, `${sessionPrefix}-${index}`, createIpHash],
     );
@@ -49,8 +51,10 @@ async function createRotationFixture() {
   const result = await pool.query(
     `select public.create_response_with_session(
       $1, $2, now() + interval '1 day', $3, null,
-      'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL', 5, 4,
-      'Rotation University', 'Rotation Field', 'first_choice', 'submitted', null
+      false, 'Polska', 'Polska',
+      'nawa_director', 'direct_studies',
+      4, 5, 'none',
+      'submitted', current_date
     ) as result`,
     [rotationRecoveryHash, rotationSessionHash, `rotation-ip-${suffix}`],
   );

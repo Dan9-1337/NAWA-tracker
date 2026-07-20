@@ -1,61 +1,71 @@
-export const scholarshipTracks = ['nawa_mnisw', 'minister_health', 'minister_culture'] as const;
+export const scholarshipTracks = ['nawa_director', 'health_minister', 'culture_minister'] as const;
 export type ScholarshipTrack = (typeof scholarshipTracks)[number];
 
 export const studyRoutes = ['preparatory_course', 'direct_studies'] as const;
 export type StudyRoute = (typeof studyRoutes)[number];
 
-export const studyTypes = ['first_cycle', 'uniform_masters'] as const;
-export type StudyType = (typeof studyTypes)[number];
-
-export const choicePriorities = ['first_choice', 'second_choice', 'other'] as const;
-export type ChoicePriority = (typeof choicePriorities)[number];
+export const polishSchoolLevels = ['none', 'primary', 'secondary'] as const;
+export type PolishSchoolLevel = (typeof polishSchoolLevels)[number];
 
 export const applicationStatuses = [
   'submitted',
-  'under_review',
-  'documents_requested',
-  'waiting_for_decision',
-  'positive_decision',
-  'negative_decision',
+  'formal_review_in_progress',
+  'correction_requested',
+  'formal_review_completed',
+  'merit_review_in_progress',
+  'merit_review_positive',
+  'merit_review_negative',
+  'awaiting_decision',
+  'scholarship_awarded',
+  'scholarship_not_awarded',
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
-export type GradeScaleInput = 5 | 10 | 12 | 20 | 100 | 'custom';
+export const terminalApplicationStatuses = [
+  'merit_review_negative',
+  'scholarship_awarded',
+  'scholarship_not_awarded',
+] as const;
 
 export type ResponseFormInput = {
+  hasPolishCitizenship: boolean;
+  rankingCountry: string;
+  schoolCountry: string;
   scholarshipTrack: ScholarshipTrack;
   studyRoute: StudyRoute;
-  studyType: StudyType;
-  country: string;
-  gradeScale: GradeScaleInput;
-  customGradeScale?: number;
-  gradeValue: number;
-  university: string;
-  studyField: string;
-  choicePriority: ChoicePriority;
-  applicationStatus: ApplicationStatus;
-  decisionDate?: string | null;
+  averageGrade: number;
+  maximumGrade: number;
+  polishSchoolLevel?: PolishSchoolLevel;
+  currentStatus: ApplicationStatus;
+  statusChangedAt: string;
 };
 
-export type ComparisonGroup =
-  | 'track-route-type-university-field'
-  | 'track-route-type-university'
-  | 'track-route-type';
+export const comparisonGroups = ['track-country', 'track'] as const;
+export type ComparisonGroup = (typeof comparisonGroups)[number];
+
+export type StatusCounts = Record<ApplicationStatus, number>;
 
 export type StatisticsResult = {
   detailsAvailable: boolean;
   group: ComparisonGroup | null;
   totalValidResponses: number;
   sameTrackCount: number;
-  sameUniversityCount: number | null;
-  sameUniversityAndFieldCount: number | null;
+  sameCountryCount: number | null;
   groupResponseCount: number;
-  medianGradePercentage: number | null;
-  lowerGradePercentage: number | null;
-  waitingForDecisionCount: number | null;
-  positiveDecisionCount: number | null;
-  negativeDecisionCount: number | null;
+  medianScore: number | null;
+  lowerScorePercentage: number | null;
+  statusCounts: StatusCounts | null;
 };
+
+export type PublicStatisticsRequest = {
+  scholarshipTrack: ScholarshipTrack;
+  rankingCountry: string;
+  averageGrade: number;
+  maximumGrade: number;
+  polishSchoolLevel?: PolishSchoolLevel;
+};
+
+export type PublicStatisticsResult = StatisticsResult;
 
 export type CreateResponseRequest = {
   response: ResponseFormInput;

@@ -5,36 +5,50 @@ create table public.responses (
   recovery_token_hash text not null unique check (length(recovery_token_hash) > 0),
   recovery_token_created_at timestamptz not null default now(),
   recovery_token_rotated_at timestamptz,
-  scholarship_track text not null check (scholarship_track in ('nawa_mnisw', 'minister_health', 'minister_culture')),
+  has_polish_citizenship boolean not null,
+  ranking_country text not null check (length(ranking_country) between 1 and 100),
+  school_country text not null check (length(school_country) between 1 and 100),
+  scholarship_track text not null check (scholarship_track in ('nawa_director', 'health_minister', 'culture_minister')),
   study_route text not null check (study_route in ('preparatory_course', 'direct_studies')),
-  study_type text not null check (study_type in ('first_cycle', 'uniform_masters')),
-  country text not null check (length(country) between 1 and 100),
-  grade_scale numeric not null check (grade_scale between 1 and 1000),
-  grade_value numeric not null check (grade_value between 0 and grade_scale),
+  average_grade numeric not null check (average_grade >= 0),
+  maximum_grade numeric not null check (maximum_grade between 1 and 1000),
   grade_percentage numeric not null check (
     grade_percentage between 0 and 100
-    and grade_percentage = grade_value / grade_scale * 100
+    and grade_percentage = average_grade / maximum_grade * 100
   ),
-  university text not null check (length(university) between 1 and 200),
-  study_field text not null check (length(study_field) between 1 and 200),
-  choice_priority text not null check (choice_priority in ('first_choice', 'second_choice', 'other')),
-  application_status text not null check (
-    application_status in (
+  polish_school_level text check (polish_school_level in ('none', 'primary', 'secondary')),
+  nawa_orientation_score numeric check (nawa_orientation_score >= 0),
+  current_status text not null check (
+    current_status in (
       'submitted',
-      'under_review',
-      'documents_requested',
-      'waiting_for_decision',
-      'positive_decision',
-      'negative_decision'
+      'formal_review_in_progress',
+      'correction_requested',
+      'formal_review_completed',
+      'merit_review_in_progress',
+      'merit_review_positive',
+      'merit_review_negative',
+      'awaiting_decision',
+      'scholarship_awarded',
+      'scholarship_not_awarded'
     )
   ),
-  decision_date date,
+  status_changed_at date not null,
   is_suspicious boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  check (average_grade <= maximum_grade),
   check (
-    (application_status in ('positive_decision', 'negative_decision'))
-    or decision_date is null
+    (scholarship_track = 'nawa_director' and polish_school_level is not null)
+    or (scholarship_track <> 'nawa_director' and polish_school_level is null)
+  ),
+  check (
+    (scholarship_track = 'nawa_director') = (nawa_orientation_score is not null)
+  ),
+  check (
+    scholarship_track <> 'health_minister' or study_route = 'preparatory_course'
+  ),
+  check (
+    not has_polish_citizenship or scholarship_track = 'nawa_director'
   )
 );
 
@@ -50,19 +64,17 @@ create table public.anonymous_sessions (
 create table public.submission_limits (
   id uuid primary key default gen_random_uuid(),
   ip_hash text not null check (length(ip_hash) > 0),
-  limit_type text not null check (limit_type in ('create', 'restore')),
+  limit_type text not null check (limit_type in ('create', 'restore', 'public_stats')),
   response_fingerprint text,
   created_at timestamptz not null default now()
 );
 
 create index responses_scholarship_track_idx on public.responses (scholarship_track);
 create index responses_study_route_idx on public.responses (study_route);
-create index responses_study_type_idx on public.responses (study_type);
-create index responses_country_idx on public.responses (country);
-create index responses_university_idx on public.responses (university);
-create index responses_study_field_idx on public.responses (study_field);
-create index responses_application_status_idx on public.responses (application_status);
+create index responses_ranking_country_idx on public.responses (ranking_country);
+create index responses_current_status_idx on public.responses (current_status);
 create index responses_grade_percentage_idx on public.responses (grade_percentage);
+create index responses_nawa_orientation_score_idx on public.responses (nawa_orientation_score);
 create index anonymous_sessions_response_id_idx on public.anonymous_sessions (response_id);
 create index anonymous_sessions_expires_at_idx on public.anonymous_sessions (expires_at);
 create index submission_limits_lookup_idx on public.submission_limits (ip_hash, limit_type, created_at);
@@ -98,6 +110,109 @@ as $$
   limit 1;
 $$;
 
+-- Pure aggregate helper shared by the authenticated and public statistics
+-- entry points. `p_metric_value` is the orientation score for nawa_director
+-- or the grade percentage for the other two tracks. This never reproduces an
+-- official NAWA seat-limit ranking: the comparison group is only the public,
+-- user-declared passport-country cohort (see docs/superpowers/specs).
+create function public.compute_country_statistics(
+  p_scholarship_track text,
+  p_ranking_country text,
+  p_metric_value numeric
+)
+returns jsonb
+language plpgsql
+volatile
+security invoker
+set search_path = pg_catalog
+as $$
+declare
+  v_group text;
+  v_group_count bigint := 0;
+  v_total_count bigint;
+  v_same_track_count bigint;
+  v_same_country_count bigint;
+  v_median numeric;
+  v_lower_percentage numeric;
+  v_status_counts jsonb;
+  v_status text;
+  v_all_statuses text[] := array[
+    'submitted', 'formal_review_in_progress', 'correction_requested', 'formal_review_completed',
+    'merit_review_in_progress', 'merit_review_positive', 'merit_review_negative',
+    'awaiting_decision', 'scholarship_awarded', 'scholarship_not_awarded'
+  ];
+begin
+  select count(*), count(*) filter (where scholarship_track = p_scholarship_track)
+  into v_total_count, v_same_track_count
+  from public.responses
+  where not is_suspicious;
+
+  select count(*) into v_same_country_count
+  from public.responses
+  where not is_suspicious
+    and scholarship_track = p_scholarship_track
+    and ranking_country = p_ranking_country;
+
+  if v_same_country_count >= 10 then
+    v_group := 'track-country';
+    v_group_count := v_same_country_count;
+  else
+    select count(*) into v_group_count
+    from public.responses
+    where not is_suspicious and scholarship_track = p_scholarship_track;
+
+    if v_group_count >= 10 then
+      v_group := 'track';
+    else
+      v_group := null;
+      v_group_count := 0;
+    end if;
+  end if;
+
+  if v_group is not null then
+    select
+      percentile_cont(0.5) within group (
+        order by (case when p_scholarship_track = 'nawa_director' then nawa_orientation_score else grade_percentage end)
+      ),
+      count(*) filter (
+        where (case when p_scholarship_track = 'nawa_director' then nawa_orientation_score else grade_percentage end) < p_metric_value
+      )::numeric / count(*) * 100
+    into v_median, v_lower_percentage
+    from public.responses
+    where not is_suspicious
+      and scholarship_track = p_scholarship_track
+      and (v_group = 'track' or ranking_country = p_ranking_country);
+
+    v_status_counts := '{}'::jsonb;
+    foreach v_status in array v_all_statuses loop
+      v_status_counts := v_status_counts || jsonb_build_object(
+        v_status,
+        (
+          select count(*)
+          from public.responses
+          where not is_suspicious
+            and scholarship_track = p_scholarship_track
+            and (v_group = 'track' or ranking_country = p_ranking_country)
+            and current_status = v_status
+        )
+      );
+    end loop;
+  end if;
+
+  return jsonb_build_object(
+    'detailsAvailable', v_group is not null,
+    'group', v_group,
+    'totalValidResponses', v_total_count,
+    'sameTrackCount', v_same_track_count,
+    'sameCountryCount', case when v_same_country_count >= 10 then v_same_country_count else null end,
+    'groupResponseCount', v_group_count,
+    'medianScore', v_median,
+    'lowerScorePercentage', v_lower_percentage,
+    'statusCounts', v_status_counts
+  );
+end;
+$$;
+
 create function public.get_response_statistics(p_response_id uuid)
 returns jsonb
 language plpgsql
@@ -107,17 +222,7 @@ set search_path = pg_catalog
 as $$
 declare
   v_target public.responses%rowtype;
-  v_group text;
-  v_group_count bigint := 0;
-  v_total_count bigint;
-  v_same_track_count bigint;
-  v_same_university_count bigint;
-  v_same_university_field_count bigint;
-  v_median numeric;
-  v_lower_percentage numeric;
-  v_waiting_count bigint;
-  v_positive_count bigint;
-  v_negative_count bigint;
+  v_metric numeric;
 begin
   select r.* into v_target
   from public.responses r
@@ -127,93 +232,12 @@ begin
     return null;
   end if;
 
-  select
-    count(*),
-    count(*) filter (where scholarship_track = v_target.scholarship_track),
-    count(*) filter (where university = v_target.university),
-    count(*) filter (where university = v_target.university and study_field = v_target.study_field)
-  into v_total_count, v_same_track_count, v_same_university_count, v_same_university_field_count
-  from public.responses
-  where not is_suspicious;
+  v_metric := case
+    when v_target.scholarship_track = 'nawa_director' then v_target.nawa_orientation_score
+    else v_target.grade_percentage
+  end;
 
-  select count(*) into v_group_count
-  from public.responses
-  where not is_suspicious
-    and scholarship_track = v_target.scholarship_track
-    and study_route = v_target.study_route
-    and study_type = v_target.study_type
-    and university = v_target.university
-    and study_field = v_target.study_field;
-
-  if v_group_count >= 10 then
-    v_group := 'track-route-type-university-field';
-  else
-    select count(*) into v_group_count
-    from public.responses
-    where not is_suspicious
-      and scholarship_track = v_target.scholarship_track
-      and study_route = v_target.study_route
-      and study_type = v_target.study_type
-      and university = v_target.university;
-
-    if v_group_count >= 10 then
-      v_group := 'track-route-type-university';
-    else
-      select count(*) into v_group_count
-      from public.responses
-      where not is_suspicious
-        and scholarship_track = v_target.scholarship_track
-        and study_route = v_target.study_route
-        and study_type = v_target.study_type;
-
-      if v_group_count >= 10 then
-        v_group := 'track-route-type';
-      else
-        v_group := null;
-        v_group_count := 0;
-      end if;
-    end if;
-  end if;
-
-  if v_group is not null then
-    select
-      percentile_cont(0.5) within group (order by grade_percentage),
-      count(*) filter (where grade_percentage < v_target.grade_percentage)::numeric / count(*) * 100,
-      count(*) filter (
-        where application_status in ('submitted', 'under_review', 'documents_requested', 'waiting_for_decision')
-      ),
-      count(*) filter (where application_status = 'positive_decision'),
-      count(*) filter (where application_status = 'negative_decision')
-    into v_median, v_lower_percentage, v_waiting_count, v_positive_count, v_negative_count
-    from public.responses
-    where not is_suspicious
-      and scholarship_track = v_target.scholarship_track
-      and study_route = v_target.study_route
-      and study_type = v_target.study_type
-      and (v_group = 'track-route-type' or university = v_target.university)
-      and (v_group <> 'track-route-type-university-field' or study_field = v_target.study_field);
-  end if;
-
-  return jsonb_build_object(
-    'detailsAvailable', v_group is not null,
-    'group', v_group,
-    'totalValidResponses', v_total_count,
-    'sameTrackCount', v_same_track_count,
-    'sameUniversityCount', case
-      when v_same_university_count >= 10 then v_same_university_count
-      else null
-    end,
-    'sameUniversityAndFieldCount', case
-      when v_same_university_field_count >= 10 then v_same_university_field_count
-      else null
-    end,
-    'groupResponseCount', v_group_count,
-    'medianGradePercentage', v_median,
-    'lowerGradePercentage', v_lower_percentage,
-    'waitingForDecisionCount', v_waiting_count,
-    'positiveDecisionCount', v_positive_count,
-    'negativeDecisionCount', v_negative_count
-  );
+  return public.compute_country_statistics(v_target.scholarship_track, v_target.ranking_country, v_metric);
 end;
 $$;
 
@@ -226,37 +250,38 @@ set search_path = pg_catalog
 as $$
 declare
   v_key text;
+  v_status text;
   v_number numeric;
   v_details_available boolean;
   v_group text;
   v_total_count numeric;
   v_same_track_count numeric;
-  v_same_university_count numeric;
-  v_same_university_field_count numeric;
+  v_same_country_count numeric;
   v_group_count numeric;
-  v_waiting_count numeric;
-  v_positive_count numeric;
-  v_negative_count numeric;
+  v_status_counts jsonb;
+  v_status_total numeric := 0;
+  v_all_statuses text[] := array[
+    'submitted', 'formal_review_in_progress', 'correction_requested', 'formal_review_completed',
+    'merit_review_in_progress', 'merit_review_positive', 'merit_review_negative',
+    'awaiting_decision', 'scholarship_awarded', 'scholarship_not_awarded'
+  ];
 begin
   if p_statistics is null then
     raise exception using errcode = 'P0001', message = 'statistics_unavailable';
   end if;
 
   if jsonb_typeof(p_statistics) <> 'object'
-    or (select count(*) from jsonb_object_keys(p_statistics)) <> 12
+    or (select count(*) from jsonb_object_keys(p_statistics)) <> 9
     or not p_statistics ?& array[
       'detailsAvailable',
       'group',
       'totalValidResponses',
       'sameTrackCount',
-      'sameUniversityCount',
-      'sameUniversityAndFieldCount',
+      'sameCountryCount',
       'groupResponseCount',
-      'medianGradePercentage',
-      'lowerGradePercentage',
-      'waitingForDecisionCount',
-      'positiveDecisionCount',
-      'negativeDecisionCount'
+      'medianScore',
+      'lowerScorePercentage',
+      'statusCounts'
     ]
   then
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
@@ -267,22 +292,14 @@ begin
       jsonb_typeof(p_statistics->'group') = 'null'
       or (
         jsonb_typeof(p_statistics->'group') = 'string'
-        and p_statistics->>'group' in (
-          'track-route-type-university-field',
-          'track-route-type-university',
-          'track-route-type'
-        )
+        and p_statistics->>'group' in ('track-country', 'track')
       )
     )
   then
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
   end if;
 
-  foreach v_key in array array[
-    'totalValidResponses',
-    'sameTrackCount',
-    'groupResponseCount'
-  ]
+  foreach v_key in array array['totalValidResponses', 'sameTrackCount', 'groupResponseCount']
   loop
     if jsonb_typeof(p_statistics->v_key) <> 'number' then
       raise exception using errcode = 'P0001', message = 'statistics_invalid';
@@ -293,74 +310,60 @@ begin
     end if;
   end loop;
 
-  foreach v_key in array array[
-    'sameUniversityCount',
-    'sameUniversityAndFieldCount'
-  ]
+  if jsonb_typeof(p_statistics->'sameCountryCount') <> 'null' then
+    if jsonb_typeof(p_statistics->'sameCountryCount') <> 'number' then
+      raise exception using errcode = 'P0001', message = 'statistics_invalid';
+    end if;
+    v_number := (p_statistics->>'sameCountryCount')::numeric;
+    if v_number < 10 or trunc(v_number) <> v_number then
+      raise exception using errcode = 'P0001', message = 'statistics_invalid';
+    end if;
+  end if;
+
+  foreach v_key in array array['medianScore', 'lowerScorePercentage']
   loop
     if jsonb_typeof(p_statistics->v_key) <> 'null' then
       if jsonb_typeof(p_statistics->v_key) <> 'number' then
         raise exception using errcode = 'P0001', message = 'statistics_invalid';
       end if;
       v_number := (p_statistics->>v_key)::numeric;
-      if v_number < 10 or trunc(v_number) <> v_number then
+      if v_number < 0 or (v_key = 'lowerScorePercentage' and v_number > 100) then
         raise exception using errcode = 'P0001', message = 'statistics_invalid';
       end if;
     end if;
   end loop;
 
-  foreach v_key in array array[
-    'waitingForDecisionCount',
-    'positiveDecisionCount',
-    'negativeDecisionCount'
-  ]
-  loop
-    if jsonb_typeof(p_statistics->v_key) <> 'null' then
-      if jsonb_typeof(p_statistics->v_key) <> 'number' then
+  if jsonb_typeof(p_statistics->'statusCounts') <> 'null' then
+    if jsonb_typeof(p_statistics->'statusCounts') <> 'object'
+      or (select count(*) from jsonb_object_keys(p_statistics->'statusCounts')) <> 10
+      or not (p_statistics->'statusCounts') ?& v_all_statuses
+    then
+      raise exception using errcode = 'P0001', message = 'statistics_invalid';
+    end if;
+
+    v_status_counts := p_statistics->'statusCounts';
+    foreach v_status in array v_all_statuses loop
+      if jsonb_typeof(v_status_counts->v_status) <> 'number' then
         raise exception using errcode = 'P0001', message = 'statistics_invalid';
       end if;
-      v_number := (p_statistics->>v_key)::numeric;
+      v_number := (v_status_counts->>v_status)::numeric;
       if v_number < 0 or trunc(v_number) <> v_number then
         raise exception using errcode = 'P0001', message = 'statistics_invalid';
       end if;
-    end if;
-  end loop;
-
-  foreach v_key in array array[
-    'medianGradePercentage',
-    'lowerGradePercentage'
-  ]
-  loop
-    if jsonb_typeof(p_statistics->v_key) <> 'null' then
-      if jsonb_typeof(p_statistics->v_key) <> 'number' then
-        raise exception using errcode = 'P0001', message = 'statistics_invalid';
-      end if;
-      v_number := (p_statistics->>v_key)::numeric;
-      if v_number not between 0 and 100 then
-        raise exception using errcode = 'P0001', message = 'statistics_invalid';
-      end if;
-    end if;
-  end loop;
+      v_status_total := v_status_total + v_number;
+    end loop;
+  end if;
 
   v_details_available := (p_statistics->>'detailsAvailable')::boolean;
   v_group := p_statistics->>'group';
   v_total_count := (p_statistics->>'totalValidResponses')::numeric;
   v_same_track_count := (p_statistics->>'sameTrackCount')::numeric;
-  v_same_university_count := (p_statistics->>'sameUniversityCount')::numeric;
-  v_same_university_field_count := (p_statistics->>'sameUniversityAndFieldCount')::numeric;
+  v_same_country_count := (p_statistics->>'sameCountryCount')::numeric;
   v_group_count := (p_statistics->>'groupResponseCount')::numeric;
-  v_waiting_count := (p_statistics->>'waitingForDecisionCount')::numeric;
-  v_positive_count := (p_statistics->>'positiveDecisionCount')::numeric;
-  v_negative_count := (p_statistics->>'negativeDecisionCount')::numeric;
 
   if v_same_track_count > v_total_count
     or v_group_count > v_same_track_count
-    or (v_same_university_count is not null and v_same_university_count > v_total_count)
-    or (v_same_university_field_count is not null and v_same_university_count is null)
-    or (
-      v_same_university_field_count is not null
-      and v_same_university_field_count > v_same_university_count
-    )
+    or (v_same_country_count is not null and v_same_country_count > v_same_track_count)
   then
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
   end if;
@@ -368,22 +371,18 @@ begin
   if v_details_available then
     if v_group is null
       or v_group_count < 10
-      or p_statistics->'medianGradePercentage' = 'null'::jsonb
-      or p_statistics->'lowerGradePercentage' = 'null'::jsonb
-      or v_waiting_count is null
-      or v_positive_count is null
-      or v_negative_count is null
-      or v_waiting_count + v_positive_count + v_negative_count <> v_group_count
+      or p_statistics->'medianScore' = 'null'::jsonb
+      or p_statistics->'lowerScorePercentage' = 'null'::jsonb
+      or p_statistics->'statusCounts' = 'null'::jsonb
+      or v_status_total <> v_group_count
     then
       raise exception using errcode = 'P0001', message = 'statistics_invalid';
     end if;
   elsif v_group is not null
     or v_group_count <> 0
-    or p_statistics->'medianGradePercentage' <> 'null'::jsonb
-    or p_statistics->'lowerGradePercentage' <> 'null'::jsonb
-    or v_waiting_count is not null
-    or v_positive_count is not null
-    or v_negative_count is not null
+    or p_statistics->'medianScore' <> 'null'::jsonb
+    or p_statistics->'lowerScorePercentage' <> 'null'::jsonb
+    or p_statistics->'statusCounts' <> 'null'::jsonb
   then
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
   end if;
@@ -410,23 +409,76 @@ begin
 end;
 $$;
 
+-- Public, session-free passport-country cohort comparison. Callers supply the
+-- questionnaire values they intend to declare (or already declared); no raw
+-- rows or identifiers are ever returned. Rate limited per IP like create/restore.
+create function public.get_public_statistics(
+  p_scholarship_track text,
+  p_ranking_country text,
+  p_average_grade numeric,
+  p_maximum_grade numeric,
+  p_polish_school_level text,
+  p_ip_hash text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_metric numeric;
+  v_bonus numeric;
+begin
+  if p_maximum_grade <= 0 or p_average_grade < 0 or p_average_grade > p_maximum_grade then
+    raise exception using errcode = 'P0001', message = 'invalid_response';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_ip_hash, 2));
+
+  delete from public.submission_limits
+  where created_at < now() - interval '24 hours';
+
+  if (
+    select count(*)
+    from public.submission_limits
+    where ip_hash = p_ip_hash
+      and limit_type = 'public_stats'
+      and created_at >= now() - interval '15 minutes'
+  ) >= 30 then
+    raise exception using errcode = 'P0001', message = 'public_stats_rate_limited';
+  end if;
+
+  insert into public.submission_limits (ip_hash, limit_type) values (p_ip_hash, 'public_stats');
+
+  if p_scholarship_track = 'nawa_director' then
+    v_bonus := case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end;
+    v_metric := round(p_average_grade / p_maximum_grade * 90 + v_bonus, 2);
+  else
+    v_metric := round(p_average_grade / p_maximum_grade * 100, 2);
+  end if;
+
+  return public.assert_statistics_result(
+    public.compute_country_statistics(p_scholarship_track, p_ranking_country, v_metric)
+  );
+end;
+$$;
+
 create function public.create_response_with_session(
   p_recovery_token_hash text,
   p_session_token_hash text,
   p_session_expires_at timestamptz,
   p_ip_hash text,
   p_response_fingerprint text,
+  p_has_polish_citizenship boolean,
+  p_ranking_country text,
+  p_school_country text,
   p_scholarship_track text,
   p_study_route text,
-  p_study_type text,
-  p_country text,
-  p_grade_scale numeric,
-  p_grade_value numeric,
-  p_university text,
-  p_study_field text,
-  p_choice_priority text,
-  p_application_status text,
-  p_decision_date date
+  p_average_grade numeric,
+  p_maximum_grade numeric,
+  p_polish_school_level text,
+  p_current_status text,
+  p_status_changed_at date
 )
 returns jsonb
 language plpgsql
@@ -436,8 +488,9 @@ as $$
 declare
   v_response_id uuid;
   v_statistics jsonb;
+  v_nawa_score numeric;
 begin
-  if p_grade_scale <= 0 or p_grade_value < 0 or p_grade_value > p_grade_scale then
+  if p_maximum_grade <= 0 or p_average_grade < 0 or p_average_grade > p_maximum_grade then
     raise exception using errcode = 'P0001', message = 'invalid_response';
   end if;
 
@@ -456,37 +509,43 @@ begin
     raise exception using errcode = 'P0001', message = 'create_rate_limited';
   end if;
 
+  v_nawa_score := case
+    when p_scholarship_track = 'nawa_director' then round(
+      p_average_grade / p_maximum_grade * 90
+        + case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end,
+      2
+    )
+    else null
+  end;
+
   insert into public.responses (
     recovery_token_hash,
+    has_polish_citizenship,
+    ranking_country,
+    school_country,
     scholarship_track,
     study_route,
-    study_type,
-    country,
-    grade_scale,
-    grade_value,
+    average_grade,
+    maximum_grade,
     grade_percentage,
-    university,
-    study_field,
-    choice_priority,
-    application_status,
-    decision_date
+    polish_school_level,
+    nawa_orientation_score,
+    current_status,
+    status_changed_at
   ) values (
     p_recovery_token_hash,
+    p_has_polish_citizenship,
+    p_ranking_country,
+    p_school_country,
     p_scholarship_track,
     p_study_route,
-    p_study_type,
-    p_country,
-    p_grade_scale,
-    p_grade_value,
-    p_grade_value / p_grade_scale * 100,
-    p_university,
-    p_study_field,
-    p_choice_priority,
-    p_application_status,
-    case
-      when p_application_status in ('positive_decision', 'negative_decision') then p_decision_date
-      else null
-    end
+    p_average_grade,
+    p_maximum_grade,
+    p_average_grade / p_maximum_grade * 100,
+    p_polish_school_level,
+    v_nawa_score,
+    p_current_status,
+    p_status_changed_at
   )
   returning id into v_response_id;
 
@@ -583,24 +642,16 @@ security definer
 set search_path = pg_catalog
 as $$
   select jsonb_strip_nulls(jsonb_build_object(
+    'hasPolishCitizenship', r.has_polish_citizenship,
+    'rankingCountry', r.ranking_country,
+    'schoolCountry', r.school_country,
     'scholarshipTrack', r.scholarship_track,
     'studyRoute', r.study_route,
-    'studyType', r.study_type,
-    'country', r.country,
-    'gradeScale', case
-      when r.grade_scale in (5, 10, 12, 20, 100) then to_jsonb(r.grade_scale)
-      else to_jsonb('custom'::text)
-    end,
-    'customGradeScale', case
-      when r.grade_scale in (5, 10, 12, 20, 100) then null
-      else to_jsonb(r.grade_scale)
-    end,
-    'gradeValue', r.grade_value,
-    'university', r.university,
-    'studyField', r.study_field,
-    'choicePriority', r.choice_priority,
-    'applicationStatus', r.application_status,
-    'decisionDate', r.decision_date
+    'averageGrade', r.average_grade,
+    'maximumGrade', r.maximum_grade,
+    'polishSchoolLevel', r.polish_school_level,
+    'currentStatus', r.current_status,
+    'statusChangedAt', r.status_changed_at
   ))
   from public.responses r
   where r.id = public.resolve_anonymous_session(p_session_token_hash);
@@ -608,17 +659,16 @@ $$;
 
 create function public.update_current_response(
   p_session_token_hash text,
+  p_has_polish_citizenship boolean,
+  p_ranking_country text,
+  p_school_country text,
   p_scholarship_track text,
   p_study_route text,
-  p_study_type text,
-  p_country text,
-  p_grade_scale numeric,
-  p_grade_value numeric,
-  p_university text,
-  p_study_field text,
-  p_choice_priority text,
-  p_application_status text,
-  p_decision_date date
+  p_average_grade numeric,
+  p_maximum_grade numeric,
+  p_polish_school_level text,
+  p_current_status text,
+  p_status_changed_at date
 )
 returns jsonb
 language plpgsql
@@ -628,10 +678,13 @@ as $$
 declare
   v_response public.responses%rowtype;
   v_response_id uuid;
-  v_opposing_final_decision boolean;
+  v_suspicious_transition boolean;
+  v_nawa_score numeric;
+  v_terminal_statuses text[] := array['merit_review_negative', 'scholarship_awarded', 'scholarship_not_awarded'];
+  v_opposing_award_statuses text[] := array['scholarship_awarded', 'scholarship_not_awarded'];
   v_statistics jsonb;
 begin
-  if p_grade_scale <= 0 or p_grade_value < 0 or p_grade_value > p_grade_scale then
+  if p_maximum_grade <= 0 or p_average_grade < 0 or p_average_grade > p_maximum_grade then
     raise exception using errcode = 'P0001', message = 'invalid_response';
   end if;
 
@@ -646,27 +699,35 @@ begin
 
   v_response_id := v_response.id;
 
-  v_opposing_final_decision :=
-    (v_response.application_status = 'positive_decision' and p_application_status = 'negative_decision')
-    or (v_response.application_status = 'negative_decision' and p_application_status = 'positive_decision');
+  v_suspicious_transition := v_response.current_status <> p_current_status and (
+    (v_response.current_status = any(v_terminal_statuses) and p_current_status <> any(v_terminal_statuses))
+    or (v_response.current_status = any(v_opposing_award_statuses) and p_current_status = any(v_opposing_award_statuses))
+    or p_status_changed_at < v_response.status_changed_at
+  );
+
+  v_nawa_score := case
+    when p_scholarship_track = 'nawa_director' then round(
+      p_average_grade / p_maximum_grade * 90
+        + case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end,
+      2
+    )
+    else null
+  end;
 
   update public.responses
-  set scholarship_track = p_scholarship_track,
+  set has_polish_citizenship = p_has_polish_citizenship,
+      ranking_country = p_ranking_country,
+      school_country = p_school_country,
+      scholarship_track = p_scholarship_track,
       study_route = p_study_route,
-      study_type = p_study_type,
-      country = p_country,
-      grade_scale = p_grade_scale,
-      grade_value = p_grade_value,
-      grade_percentage = p_grade_value / p_grade_scale * 100,
-      university = p_university,
-      study_field = p_study_field,
-      choice_priority = p_choice_priority,
-      application_status = p_application_status,
-      decision_date = case
-        when p_application_status in ('positive_decision', 'negative_decision') then p_decision_date
-        else null
-      end,
-      is_suspicious = v_response.is_suspicious or v_opposing_final_decision
+      average_grade = p_average_grade,
+      maximum_grade = p_maximum_grade,
+      grade_percentage = p_average_grade / p_maximum_grade * 100,
+      polish_school_level = p_polish_school_level,
+      nawa_orientation_score = v_nawa_score,
+      current_status = p_current_status,
+      status_changed_at = p_status_changed_at,
+      is_suspicious = v_response.is_suspicious or v_suspicious_transition
   where id = v_response.id;
 
   v_statistics := public.assert_statistics_result(public.get_response_statistics(v_response_id));
@@ -740,23 +801,26 @@ alter table public.submission_limits enable row level security;
 revoke all on table public.responses, public.anonymous_sessions, public.submission_limits from public, anon, authenticated;
 revoke all on all sequences in schema public from public, anon, authenticated;
 revoke all on function public.set_updated_at() from public, anon, authenticated;
-revoke all on function public.create_response_with_session(text, text, timestamptz, text, text, text, text, text, text, numeric, numeric, text, text, text, text, date) from public, anon, authenticated;
+revoke all on function public.create_response_with_session(text, text, timestamptz, text, text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
 revoke all on function public.restore_anonymous_session(text, text, timestamptz, text) from public, anon, authenticated;
 revoke all on function public.resolve_anonymous_session(text) from public, anon, authenticated;
 revoke all on function public.get_current_response(text) from public, anon, authenticated;
-revoke all on function public.update_current_response(text, text, text, text, text, numeric, numeric, text, text, text, text, date) from public, anon, authenticated;
+revoke all on function public.update_current_response(text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
 revoke all on function public.rotate_recovery_token(text, text) from public, anon, authenticated;
 revoke all on function public.revoke_anonymous_session(text) from public, anon, authenticated;
 revoke all on function public.get_current_statistics(text) from public, anon, authenticated;
+revoke all on function public.get_public_statistics(text, text, numeric, numeric, text, text) from public, anon, authenticated;
 revoke all on function public.get_response_statistics(uuid) from public, anon, authenticated, service_role;
+revoke all on function public.compute_country_statistics(text, text, numeric) from public, anon, authenticated, service_role;
 revoke all on function public.assert_statistics_result(jsonb) from public, anon, authenticated, service_role;
 
 grant select, insert, update, delete on table public.responses, public.anonymous_sessions, public.submission_limits to service_role;
-grant execute on function public.create_response_with_session(text, text, timestamptz, text, text, text, text, text, text, numeric, numeric, text, text, text, text, date) to service_role;
+grant execute on function public.create_response_with_session(text, text, timestamptz, text, text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
 grant execute on function public.restore_anonymous_session(text, text, timestamptz, text) to service_role;
 grant execute on function public.resolve_anonymous_session(text) to service_role;
 grant execute on function public.get_current_response(text) to service_role;
-grant execute on function public.update_current_response(text, text, text, text, text, numeric, numeric, text, text, text, text, date) to service_role;
+grant execute on function public.update_current_response(text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
 grant execute on function public.rotate_recovery_token(text, text) to service_role;
 grant execute on function public.revoke_anonymous_session(text) to service_role;
 grant execute on function public.get_current_statistics(text) to service_role;
+grant execute on function public.get_public_statistics(text, text, numeric, numeric, text, text) to service_role;

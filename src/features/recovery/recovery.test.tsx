@@ -54,16 +54,16 @@ const canonicalToken = 'A'.repeat(42) + 'E';
 const recoveryUrl = `${window.location.origin}/#restore=${canonicalToken}`;
 
 const response = {
-  scholarshipTrack: 'nawa_mnisw' as const,
+  hasPolishCitizenship: false,
+  rankingCountry: 'Polska',
+  schoolCountry: 'Polska',
+  scholarshipTrack: 'nawa_director' as const,
   studyRoute: 'direct_studies' as const,
-  studyType: 'first_cycle' as const,
-  country: 'Polska',
-  gradeScale: 5 as const,
-  gradeValue: 4.5,
-  university: 'Uniwersytet Warszawski',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice' as const,
-  applicationStatus: 'submitted' as const,
+  averageGrade: 85,
+  maximumGrade: 100,
+  polishSchoolLevel: 'secondary' as const,
+  currentStatus: 'submitted' as const,
+  statusChangedAt: '2026-07-13',
 };
 
 describe('typed API client', () => {
@@ -142,7 +142,7 @@ describe('privacy notice', () => {
 
     expect(screen.getByRole('complementary', { name: pl.privacyNotice.title })).toBeInTheDocument();
     expect(screen.getByText(/ciasteczko sesyjne HttpOnly/)).toBeInTheDocument();
-    expect(screen.getByText(/pokazywany tylko raz/)).toBeInTheDocument();
+    expect(screen.getByText(/pokazywany jest tylko raz/)).toBeInTheDocument();
     expect(screen.getByText(/Nie przechowujemy surowych kodów dostępu ani surowych adresów IP/)).toBeInTheDocument();
   });
 });
@@ -217,7 +217,7 @@ describe('RecoveryCard', () => {
     render(<Harness />);
 
     await waitFor(() => expect(qrCode.toDataURL).toHaveBeenCalledWith(recoveryUrl, expect.any(Object)));
-    expect(qrCode.toDataURL).not.toHaveBeenCalledWith(expect.stringContaining(response.university), expect.anything());
+    expect(qrCode.toDataURL).not.toHaveBeenCalledWith(expect.stringContaining(response.rankingCountry), expect.anything());
     expect(screen.getByText(canonicalToken)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: pl.recovery.confirmSaved }));
@@ -418,10 +418,11 @@ describe('RestoreAccess', () => {
     vi.restoreAllMocks();
   });
 
-  it('moves the fragment token to child memory, clears its parent, and never uses browser storage', async () => {
-    const storageSpies = ['getItem', 'setItem', 'removeItem', 'clear', 'key'].map((method) =>
-      vi.spyOn(Storage.prototype, method as 'getItem'),
-    );
+  it('moves the fragment token to child memory, clears its parent, and never stores recovery credentials', async () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem');
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+    const clear = vi.spyOn(Storage.prototype, 'clear');
     const restore = vi.fn(async (): Promise<RestoreSessionResult> => ({ response }));
     const onRestored = vi.fn();
     const onRecoveryTokenConsumed = vi.fn();
@@ -448,7 +449,15 @@ describe('RestoreAccess', () => {
       turnstileToken: 'turnstile-token',
     }));
     expect(onRestored).toHaveBeenCalledWith({ response });
-    for (const spy of storageSpies) expect(spy).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+    for (const call of getItem.mock.calls) {
+      expect(call[0]).toBe('nawa-locale');
+    }
+    for (const call of setItem.mock.calls) {
+      expect(call[0]).toBe('nawa-locale');
+      expect(String(call[1])).not.toContain(canonicalToken);
+    }
   });
 
   it('preserves the consumed fragment token when rendered in React Strict Mode', async () => {

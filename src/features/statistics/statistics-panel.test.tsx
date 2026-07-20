@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { StatisticsResult } from '../../../shared/contracts';
 import { StatisticsPanel } from './StatisticsPanel';
 
 describe('StatisticsPanel', () => {
@@ -11,10 +12,10 @@ describe('StatisticsPanel', () => {
 
     rerender(<StatisticsPanel state={{ status: 'loading' }} />);
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie statystyk…');
-    expect(screen.getByRole('region', { name: 'Twoje wyniki na tle innych uczestników' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('region', { name: 'Twój wynik na tle innych zgłoszeń' })).toHaveAttribute('aria-busy', 'true');
 
     rerender(<StatisticsPanel state={{ status: 'error' }} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać statystyk.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać statystyk. Spróbuj ponownie później.');
     expect(screen.queryByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).not.toBeInTheDocument();
   });
 
@@ -24,56 +25,56 @@ describe('StatisticsPanel', () => {
     expect(screen.getByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).toBeInTheDocument();
   });
 
-  it('renders suppressed university counts as unavailable', () => {
-    render(
-      <StatisticsPanel
-        state={{ status: 'suppressed', data: suppressedStatistics }}
-      />,
-    );
+  it('renders a suppressed country count as unavailable', () => {
+    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} />);
 
-    expect(screen.getByText('Na tej samej uczelni').parentElement).toHaveTextContent('—');
-    expect(screen.getByText('Na tej samej uczelni i kierunku').parentElement).toHaveTextContent('—');
+    expect(screen.getByText('Ten sam kraj obywatelstwa').parentElement).toHaveTextContent('—');
     expect(screen.queryByText('null')).not.toBeInTheDocument();
   });
 
-  it('renders the complete localized percentile sentence', () => {
+  it('renders the complete localized percentile sentence and status breakdown', () => {
     render(<StatisticsPanel state={{ status: 'success', data: detailedStatistics }} />);
 
     expect(
       screen.getByText('Twój wynik jest wyższy niż wynik 40.0% uczestników tej grupy.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Liczba odpowiedzi w grupie')).toBeInTheDocument();
-    expect(screen.getByText('Mediana w tej grupie: 82.5%')).toBeInTheDocument();
+    expect(screen.getByText('Mediana wyniku w tej grupie: 82.50')).toBeInTheDocument();
+    expect(screen.getByText('Rozkład statusów w grupie')).toBeInTheDocument();
   });
 });
 
-const suppressedStatistics = {
+const suppressedStatistics: StatisticsResult = {
   detailsAvailable: false,
   group: null,
   totalValidResponses: 9,
   sameTrackCount: 9,
-  sameUniversityCount: null,
-  sameUniversityAndFieldCount: null,
+  sameCountryCount: null,
   groupResponseCount: 0,
-  medianGradePercentage: null,
-  lowerGradePercentage: null,
-  waitingForDecisionCount: null,
-  positiveDecisionCount: null,
-  negativeDecisionCount: null,
-} as const;
+  medianScore: null,
+  lowerScorePercentage: null,
+  statusCounts: null,
+};
 
-const detailedStatistics = {
-  ...suppressedStatistics,
+const detailedStatistics: StatisticsResult = {
   detailsAvailable: true,
-  group: 'track-route-type' as const,
+  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
-  sameUniversityCount: 12,
-  sameUniversityAndFieldCount: 10,
+  sameCountryCount: 12,
   groupResponseCount: 10,
-  medianGradePercentage: 82.5,
-  lowerGradePercentage: 40,
-  waitingForDecisionCount: 4,
-  positiveDecisionCount: 5,
-  negativeDecisionCount: 1,
+  medianScore: 82.5,
+  lowerScorePercentage: 40,
+  statusCounts: {
+    submitted: 2,
+    formal_review_in_progress: 2,
+    correction_requested: 0,
+    formal_review_completed: 2,
+    merit_review_in_progress: 1,
+    merit_review_positive: 1,
+    merit_review_negative: 0,
+    awaiting_decision: 1,
+    scholarship_awarded: 1,
+    scholarship_not_awarded: 0,
+  },
 };

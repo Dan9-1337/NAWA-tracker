@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(60);
+select plan(62);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.responses'::regclass),
@@ -44,6 +44,12 @@ select ok(
   'statistics function is executable only by the service role'
 );
 select ok(
+  not has_function_privilege('anon', 'public.get_public_statistics(text, text, numeric, numeric, text, text)', 'execute')
+    and not has_function_privilege('authenticated', 'public.get_public_statistics(text, text, numeric, numeric, text, text)', 'execute')
+    and has_function_privilege('service_role', 'public.get_public_statistics(text, text, numeric, numeric, text, text)', 'execute'),
+  'public statistics function is executable only by the service role'
+);
+select ok(
   not has_function_privilege('anon', 'public.get_response_statistics(uuid)', 'execute')
     and not has_function_privilege('authenticated', 'public.get_response_statistics(uuid)', 'execute')
     and not has_function_privilege('service_role', 'public.get_response_statistics(uuid)', 'execute')
@@ -61,7 +67,7 @@ select is(
       and p.proname in (
         'create_response_with_session', 'restore_anonymous_session', 'resolve_anonymous_session',
         'get_current_response', 'update_current_response', 'rotate_recovery_token',
-        'revoke_anonymous_session', 'get_current_statistics'
+        'revoke_anonymous_session', 'get_current_statistics', 'get_public_statistics'
       )
       and (
         has_function_privilege('anon', p.oid, 'execute')
@@ -80,11 +86,11 @@ select is(
       and p.proname in (
         'create_response_with_session', 'restore_anonymous_session', 'resolve_anonymous_session',
         'get_current_response', 'update_current_response', 'rotate_recovery_token',
-        'revoke_anonymous_session', 'get_current_statistics'
+        'revoke_anonymous_session', 'get_current_statistics', 'get_public_statistics'
       )
       and has_function_privilege('service_role', p.oid, 'execute')
   ),
-  8,
+  9,
   'service role can execute every private RPC'
 );
 select is(
@@ -97,7 +103,8 @@ select is(
       and p.proname in (
         'set_updated_at', 'create_response_with_session', 'restore_anonymous_session',
         'resolve_anonymous_session', 'get_current_response', 'update_current_response',
-        'rotate_recovery_token', 'revoke_anonymous_session', 'get_current_statistics'
+        'rotate_recovery_token', 'revoke_anonymous_session', 'get_current_statistics',
+        'get_public_statistics'
       )
       and acl.grantee = 0
       and acl.privilege_type = 'EXECUTE'
@@ -114,22 +121,22 @@ select is(
       and p.proname in (
         'create_response_with_session', 'restore_anonymous_session', 'resolve_anonymous_session',
         'get_current_response', 'update_current_response', 'rotate_recovery_token',
-        'revoke_anonymous_session', 'get_current_statistics'
+        'revoke_anonymous_session', 'get_current_statistics', 'get_public_statistics'
       )
       and array_to_string(p.proconfig, ',') = 'search_path=pg_catalog'
   ),
-  8,
+  9,
   'security definer RPCs use only pg_catalog in search_path'
 );
 
 select throws_ok(
   $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
     ) values (
-      'constraint-grade', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-      5, 6, 120, 'U', 'F', 'first_choice', 'submitted'
+      'constraint-grade', false, 'Polska', 'Polska',
+      'nawa_director', 'direct_studies', 6, 5, 120, 'none', 54, 'submitted', current_date
     )$$,
   '23514',
   null,
@@ -137,25 +144,12 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status, decision_date
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
     ) values (
-      'constraint-date', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-      5, 4, 80, 'U', 'F', 'first_choice', 'submitted', current_date
-    )$$,
-  '23514',
-  null,
-  'decision dates are limited to final statuses'
-);
-select throws_ok(
-  $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status
-    ) values (
-      'constraint-old-track', 'scholarship', 'direct_studies', 'first_cycle', 'PL',
-      5, 4, 80, 'U', 'F', 'first_choice', 'submitted'
+      'constraint-old-track', false, 'Polska', 'Polska',
+      'scholarship', 'direct_studies', 4, 5, 80, 'none', 72, 'submitted', current_date
     )$$,
   '23514',
   null,
@@ -163,12 +157,12 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
     ) values (
-      'constraint-old-route', 'nawa_mnisw', 'second_cycle', 'first_cycle', 'PL',
-      5, 4, 80, 'U', 'F', 'first_choice', 'submitted'
+      'constraint-old-route', false, 'Polska', 'Polska',
+      'nawa_director', 'second_cycle', 4, 5, 80, 'none', 72, 'submitted', current_date
     )$$,
   '23514',
   null,
@@ -176,34 +170,60 @@ select throws_ok(
 );
 select throws_ok(
   $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
     ) values (
-      'constraint-old-type', 'nawa_mnisw', 'direct_studies', 'full_time', 'PL',
-      5, 4, 80, 'U', 'F', 'first_choice', 'submitted'
+      'constraint-health-route', false, 'Polska', 'Polska',
+      'health_minister', 'direct_studies', 4, 5, 80, null, null, 'submitted', current_date
     )$$,
   '23514',
   null,
-  'former study types are rejected'
-);
-
-insert into public.responses (
-  recovery_token_hash, scholarship_track, study_route, study_type, country,
-  grade_scale, grade_value, grade_percentage, university, study_field,
-  choice_priority, application_status
-) values (
-  'unique-recovery', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-  5, 4, 80, 'U', 'F', 'first_choice', 'submitted'
+  'health_minister currently supports only the preparatory course route'
 );
 select throws_ok(
   $$insert into public.responses (
-      recovery_token_hash, scholarship_track, study_route, study_type, country,
-      grade_scale, grade_value, grade_percentage, university, study_field,
-      choice_priority, application_status
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
     ) values (
-      'unique-recovery', 'minister_health', 'preparatory_course', 'uniform_masters', 'DE',
-      10, 7, 70, 'U2', 'F2', 'other', 'under_review'
+      'constraint-polish-level', false, 'Polska', 'Polska',
+      'nawa_director', 'direct_studies', 4, 5, 80, null, null, 'submitted', current_date
+    )$$,
+  '23514',
+  null,
+  'nawa_director requires a polish school level'
+);
+select throws_ok(
+  $$insert into public.responses (
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
+    ) values (
+      'constraint-dual-citizenship', true, 'Polska', 'Polska',
+      'health_minister', 'preparatory_course', 4, 5, 80, null, null, 'submitted', current_date
+    )$$,
+  '23514',
+  null,
+  'dual Polish citizenship is limited to the nawa_director track'
+);
+
+insert into public.responses (
+  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at
+) values (
+  'unique-recovery', false, 'Polska', 'Polska',
+  'nawa_director', 'direct_studies', 4, 5, 80, 'none', 72, 'submitted', current_date
+);
+select throws_ok(
+  $$insert into public.responses (
+      recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+      scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+      polish_school_level, nawa_orientation_score, current_status, status_changed_at
+    ) values (
+      'unique-recovery', false, 'Niemcy', 'Niemcy',
+      'health_minister', 'preparatory_course', 7, 10, 70, null, null, 'merit_review_in_progress', current_date
     )$$,
   '23505',
   null,
@@ -213,15 +233,18 @@ select throws_ok(
   $$insert into public.submission_limits (ip_hash, limit_type) values ('ip-invalid', 'update')$$,
   '23514',
   null,
-  'rate events accept only create and restore categories'
+  'rate events accept only create, restore, and public_stats categories'
 );
 
 create temporary table create_mutation_result(result jsonb) on commit drop;
 insert into create_mutation_result(result)
 select public.create_response_with_session(
     'recovery-create-1', 'session-create-1', now() + interval '1 day',
-    'ip-create', 'fingerprint-1', 'nawa_mnisw', 'direct_studies', 'first_cycle',
-    'PL', 5, 4, 'University', 'Field', 'first_choice', 'submitted', null
+    'ip-create', 'fingerprint-1',
+    false, 'Polska', 'Polska',
+    'nawa_director', 'direct_studies',
+    4, 5, 'none',
+    'submitted', current_date
   );
 select is(
   (select result->>'created' from create_mutation_result),
@@ -256,21 +279,30 @@ do $$
 begin
   perform public.create_response_with_session(
     'recovery-create-2', 'session-create-2', now() + interval '1 day',
-    'ip-create', null, 'nawa_mnisw', 'direct_studies', 'first_cycle',
-    'PL', 5, 4, 'University', 'Field', 'first_choice', 'submitted', null
+    'ip-create', null,
+    false, 'Polska', 'Polska',
+    'nawa_director', 'direct_studies',
+    4, 5, 'none',
+    'submitted', current_date
   );
   perform public.create_response_with_session(
     'recovery-create-3', 'session-create-3', now() + interval '1 day',
-    'ip-create', null, 'nawa_mnisw', 'direct_studies', 'first_cycle',
-    'PL', 5, 4, 'University', 'Field', 'first_choice', 'submitted', null
+    'ip-create', null,
+    false, 'Polska', 'Polska',
+    'nawa_director', 'direct_studies',
+    4, 5, 'none',
+    'submitted', current_date
   );
 end;
 $$;
 select throws_ok(
   $$select public.create_response_with_session(
       'recovery-create-4', 'session-create-4', now() + interval '1 day',
-      'ip-create', null, 'nawa_mnisw', 'direct_studies', 'first_cycle',
-      'PL', 5, 4, 'University', 'Field', 'first_choice', 'submitted', null
+      'ip-create', null,
+      false, 'Polska', 'Polska',
+      'nawa_director', 'direct_studies',
+      4, 5, 'none',
+      'submitted', current_date
     )$$,
   'P0001',
   'create_rate_limited',
@@ -448,8 +480,11 @@ $$;
 select throws_ok(
   $$select public.create_response_with_session(
       'recovery-stats-failure', 'session-stats-failure', now() + interval '1 day',
-      'ip-stats-failure', null, 'nawa_mnisw', 'direct_studies', 'first_cycle',
-      'PL', 5, 4, 'University', 'Field', 'first_choice', 'submitted', null
+      'ip-stats-failure', null,
+      false, 'Polska', 'Polska',
+      'nawa_director', 'direct_studies',
+      4, 5, 'none',
+      'submitted', current_date
     )$$,
   'P0001',
   'statistics_invalid',

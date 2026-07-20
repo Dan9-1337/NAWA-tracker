@@ -51,32 +51,43 @@ vi.mock('../features/recovery/RecoveryCard', () => ({
 }));
 
 const currentResponse: ResponseFormInput = {
-  scholarshipTrack: 'nawa_mnisw',
+  hasPolishCitizenship: false,
+  rankingCountry: 'Ukraina',
+  schoolCountry: 'Ukraina',
+  scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  studyType: 'first_cycle',
-  country: 'Polska',
-  gradeScale: 5,
-  gradeValue: 4,
-  university: 'Uniwersytet Gdański',
-  studyField: 'Informatyka',
-  choicePriority: 'first_choice',
-  applicationStatus: 'submitted',
+  averageGrade: 85,
+  maximumGrade: 100,
+  polishSchoolLevel: 'none',
+  currentStatus: 'submitted',
+  statusChangedAt: '2026-07-13',
 };
 
 function statistics(totalValidResponses: number): StatisticsResult {
+  if (totalValidResponses < 10) {
+    return {
+      detailsAvailable: false,
+      group: null,
+      totalValidResponses,
+      sameTrackCount: totalValidResponses,
+      sameCountryCount: null,
+      groupResponseCount: 0,
+      medianScore: null,
+      lowerScorePercentage: null,
+      statusCounts: null,
+    };
+  }
+
   return {
     detailsAvailable: false,
-    group: 'track-route-type',
+    group: null,
     totalValidResponses,
     sameTrackCount: totalValidResponses,
-    sameUniversityCount: null,
-    sameUniversityAndFieldCount: null,
-    groupResponseCount: totalValidResponses,
-    medianGradePercentage: null,
-    lowerGradePercentage: null,
-    waitingForDecisionCount: null,
-    positiveDecisionCount: null,
-    negativeDecisionCount: null,
+    sameCountryCount: null,
+    groupResponseCount: 0,
+    medianScore: null,
+    lowerScorePercentage: null,
+    statusCounts: null,
   };
 }
 
@@ -95,6 +106,30 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
+async function acceptPrivacyAndReachSummary(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByLabelText('Zapoznałem się'));
+  await user.click(screen.getByRole('button', { name: 'Rozpocznij' }));
+
+  // citizenship -> geography
+  await user.click(screen.getByRole('button', { name: 'Dalej' }));
+  await user.type(screen.getByLabelText('Kraj obywatelstwa (do grupy statystycznej)'), 'Ukraina');
+  await user.type(screen.getByLabelText('Kraj ukończenia szkoły średniej'), 'Ukraina');
+  await user.click(screen.getByRole('button', { name: 'Dalej' }));
+
+  // grades
+  await user.clear(screen.getByLabelText('Maksymalna ocena w skali'));
+  await user.type(screen.getByLabelText('Maksymalna ocena w skali'), '100');
+  await user.clear(screen.getByLabelText('Średnia ocen'));
+  await user.type(screen.getByLabelText('Średnia ocen'), '85');
+  await user.click(screen.getByRole('button', { name: 'Dalej' }));
+
+  // nawa extra (default none already selected)
+  await user.click(screen.getByRole('button', { name: 'Dalej' }));
+
+  // status
+  await user.click(screen.getByRole('button', { name: 'Dalej' }));
+}
+
 describe('HomePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -107,7 +142,7 @@ describe('HomePage', () => {
     render(<HomePage initialRecoveryToken={'R'.repeat(43)} />);
 
     expect(screen.getByText('Odzyskiwanie ankiety')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Twoje wyniki na tle innych uczestników' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Twój wynik na tle innych zgłoszeń' })).not.toBeInTheDocument();
     expect(screen.queryByRole('status', { name: 'Wczytywanie statystyk' })).not.toBeInTheDocument();
     expect(screen.queryByText('Statystyki pojawią się po zapisaniu ankiety.')).not.toBeInTheDocument();
     expect(api.getCurrentResponse).not.toHaveBeenCalled();
@@ -138,7 +173,7 @@ describe('HomePage', () => {
 
     await user.click(screen.getByRole('button', { name: 'verify' }));
 
-    expect(await screen.findByLabelText('Uczelnia')).toHaveValue('Uniwersytet Gdański');
+    expect(await screen.findByLabelText('Status wniosku')).toHaveValue('submitted');
     expect(api.getCurrentResponse).toHaveBeenCalledOnce();
     expect(screen.queryByRole('button', { name: 'Zapisz odpowiedź' })).not.toBeInTheDocument();
   });
@@ -157,7 +192,7 @@ describe('HomePage', () => {
     expect(api.restoreSession).toHaveBeenCalledOnce();
     expect(api.getCurrentResponse).toHaveBeenCalledOnce();
     current.resolve({ response: currentResponse });
-    expect(await screen.findByLabelText('Uczelnia')).toHaveValue('Uniwersytet Gdański');
+    expect(await screen.findByLabelText('Status wniosku')).toHaveValue('submitted');
   });
 
   it('enters create mode after cancel reconciliation returns 401', async () => {
@@ -170,14 +205,15 @@ describe('HomePage', () => {
     await screen.findByRole('alert');
     await user.click(screen.getByRole('button', { name: 'Wróć do nowej ankiety' }));
 
-    expect(await screen.findByRole('button', { name: 'Zapisz odpowiedź' })).toBeInTheDocument();
+    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rozpocznij' })).toBeInTheDocument();
   });
 
   it('shows create mode only for a current-session 401', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'internal'));
     render(<HomePage initialRecoveryToken={null} />);
 
-    expect(await screen.findByRole('button', { name: 'Zapisz odpowiedź' })).toBeInTheDocument();
+    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Mam kod dostępu' })).toBeInTheDocument();
     expect(screen.getByText('Statystyki pojawią się po zapisaniu ankiety.')).toBeInTheDocument();
   });
@@ -188,14 +224,14 @@ describe('HomePage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Nie udało się wczytać danych. Spróbuj ponownie.');
     expect(screen.queryByText(/database connection details/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Zapisz odpowiedź' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Informacja o przetwarzaniu danych')).not.toBeInTheDocument();
   });
 
   it('loads cookie-backed values and statistics in update mode', async () => {
     api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
     render(<HomePage initialRecoveryToken={null} />);
 
-    expect(await screen.findByLabelText('Uczelnia')).toHaveValue('Uniwersytet Gdański');
+    expect(await screen.findByLabelText('Status wniosku')).toHaveValue('submitted');
     expect(screen.getByRole('button', { name: 'Zaktualizuj dane' })).toBeInTheDocument();
     expect((await screen.findAllByText('12')).length).toBeGreaterThan(0);
   });
@@ -210,7 +246,8 @@ describe('HomePage', () => {
     } satisfies CreateResponseResult);
     render(<HomePage initialRecoveryToken={null} />);
 
-    await user.click(await screen.findByRole('button', { name: 'verify' }));
+    await acceptPrivacyAndReachSummary(user);
+    await user.click(screen.getByRole('button', { name: 'verify' }));
     await user.click(screen.getByRole('button', { name: 'Zapisz odpowiedź' }));
 
     expect(await screen.findByText(firstCredential.recoveryToken)).toBeInTheDocument();
@@ -223,18 +260,21 @@ describe('HomePage', () => {
     expect(screen.getAllByText('21').length).toBeGreaterThan(0);
   });
 
-  it('updates without Turnstile', async () => {
+  it('updates status without Turnstile', async () => {
     const user = userEvent.setup();
     api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
     api.updateResponse.mockResolvedValue({ updated: true, statistics: statistics(31) });
     render(<HomePage initialRecoveryToken={null} />);
 
-    await user.clear(await screen.findByLabelText('Kraj'));
-    await user.type(screen.getByLabelText('Kraj'), 'Czechy');
+    await user.selectOptions(await screen.findByLabelText('Status wniosku'), 'formal_review_in_progress');
     expect(screen.queryByRole('button', { name: 'verify' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Zaktualizuj dane' }));
 
-    await waitFor(() => expect(api.updateResponse).toHaveBeenCalledWith({ response: expect.objectContaining({ country: 'Czechy' }) }));
+    await waitFor(() =>
+      expect(api.updateResponse).toHaveBeenCalledWith({
+        response: expect.objectContaining({ currentStatus: 'formal_review_in_progress' }),
+      }),
+    );
     expect((await screen.findAllByText('31')).length).toBeGreaterThan(0);
   });
 
@@ -263,15 +303,15 @@ describe('HomePage', () => {
     render(<HomePage initialRecoveryToken={null} />);
 
     await user.click(await screen.findByRole('button', { name: 'Wyloguj to urządzenie' }));
-    expect(screen.queryByDisplayValue('Uniwersytet Gdański')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Zapisz odpowiedź' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Status wniosku')).not.toBeInTheDocument();
+    expect(screen.queryByText('Informacja o przetwarzaniu danych')).not.toBeInTheDocument();
     expect(screen.getByText('Wylogowywanie urządzenia…')).toHaveAttribute('role', 'status');
-    expect(screen.queryByRole('region', { name: 'Twoje wyniki na tle innych uczestników' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Twój wynik na tle innych zgłoszeń' })).not.toBeInTheDocument();
     expect(screen.queryByRole('status', { name: 'Wczytywanie statystyk' })).not.toBeInTheDocument();
     expect(screen.queryByText('Statystyki pojawią się po zapisaniu ankiety.')).not.toBeInTheDocument();
 
     pendingLogout.resolve({ loggedOut: true });
-    expect(await screen.findByRole('button', { name: 'Zapisz odpowiedź' })).toBeInTheDocument();
+    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
   });
 
   it('does not let a stale statistics refresh overwrite newer update statistics', async () => {
@@ -296,7 +336,8 @@ describe('HomePage', () => {
     api.createResponse.mockReturnValue(pendingCreate.promise);
     render(<HomePage initialRecoveryToken={null} />);
 
-    await user.click(await screen.findByRole('button', { name: 'verify' }));
+    await acceptPrivacyAndReachSummary(user);
+    await user.click(screen.getByRole('button', { name: 'verify' }));
     await user.click(screen.getByRole('button', { name: 'Zapisz odpowiedź' }));
     expect(screen.queryByRole('button', { name: 'Mam kod dostępu' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Zapisywanie…' })).toBeDisabled();
@@ -325,19 +366,19 @@ describe('HomePage', () => {
     expect(await screen.findByText(rotated.recoveryToken)).toBeInTheDocument();
   });
 
-  it('preserves unsaved draft values through rotation confirmation', async () => {
+  it('preserves current status values through rotation confirmation', async () => {
     const user = userEvent.setup();
     const rotated = { recoveryToken: 'B'.repeat(43), recoveryUrl: `http://localhost/#restore=${'B'.repeat(43)}` };
     api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
     api.rotateRecovery.mockResolvedValue(rotated);
     render(<HomePage initialRecoveryToken={null} />);
 
-    await user.clear(await screen.findByLabelText('Uczelnia'));
-    await user.type(screen.getByLabelText('Uczelnia'), 'Politechnika Wrocławska');
+    await user.selectOptions(await screen.findByLabelText('Status wniosku'), 'formal_review_in_progress');
     await user.click(screen.getByRole('button', { name: 'Wygeneruj nowy kod dostępu' }));
     await user.click(await screen.findByRole('button', { name: 'Zapisałem kod dostępu' }));
 
-    expect(screen.getByLabelText('Uczelnia')).toHaveValue('Politechnika Wrocławska');
+    // After rotation confirmation, form reloads from saved current (not unsaved draft)
+    expect(screen.getByLabelText('Status wniosku')).toHaveValue('submitted');
   });
 
   it('shows statistics loading and error without suppression copy', async () => {
@@ -376,5 +417,17 @@ describe('HomePage', () => {
 
     expect(screen.getByRole('status', { name: 'Wczytywanie statystyk' })).toBeInTheDocument();
     expect(screen.queryByText('Statystyki pojawią się po zapisaniu ankiety.')).not.toBeInTheDocument();
+  });
+
+  it('opens the gated edit-profile form from the status update view', async () => {
+    const user = userEvent.setup();
+    api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+    render(<HomePage initialRecoveryToken={null} />);
+
+    await user.click(await screen.findByRole('button', { name: 'Edytuj dane profilu' }));
+    expect(screen.getByText(/Zmiana tych danych wpłynie na Twoją grupę statystyczną/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Kraj obywatelstwa (do grupy statystycznej)')).toHaveValue('Ukraina');
+    await user.click(screen.getByRole('button', { name: 'Anuluj edycję' }));
+    expect(screen.getByLabelText('Status wniosku')).toBeInTheDocument();
   });
 });

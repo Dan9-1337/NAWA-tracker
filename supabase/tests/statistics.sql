@@ -2,33 +2,38 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(40);
+select plan(34);
 
 do $$
 begin
   perform public.create_response_with_session(
     'stats-target-recovery', 'stats-target-session', now() + interval '1 day',
-    'stats-ip-target', null, 'nawa_mnisw', 'direct_studies', 'first_cycle',
-    'PL', 100, 50, 'Target University', 'Target Field', 'first_choice', 'submitted', null
+    'stats-ip-target', 'fingerprint-target',
+    false, 'Ukraina', 'Ukraina',
+    'nawa_director', 'direct_studies',
+    50, 100, 'none',
+    'submitted', current_date
   );
 end;
 $$;
 
 insert into public.responses (
-  recovery_token_hash, scholarship_track, study_route, study_type, country,
-  grade_scale, grade_value, grade_percentage, university, study_field,
-  choice_priority, application_status, is_suspicious
+  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 )
 select
   'stats-peer-' || value,
-  'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-  100, value, value, 'Target University', 'Target Field',
-  'first_choice',
+  false, 'Ukraina', 'Ukraina',
+  'nawa_director', 'direct_studies',
+  value, 100, value, 'none', round(value * 0.9, 2),
   case
-    when value <= 30 then 'positive_decision'
-    when value <= 60 then 'negative_decision'
-    else 'under_review'
+    when value <= 20 then 'submitted'
+    when value <= 40 then 'formal_review_in_progress'
+    when value <= 60 then 'awaiting_decision'
+    else 'merit_review_positive'
   end,
+  current_date,
   false
 from generate_series(10, 80, 10) as value;
 
@@ -38,24 +43,25 @@ select is(
   'details are suppressed when every comparison group has fewer than ten responses'
 );
 select is(public.get_current_statistics('stats-target-session')->>'group', null, 'suppressed statistics disclose no fallback group');
-select is(public.get_current_statistics('stats-target-session')->>'medianGradePercentage', null, 'suppressed statistics disclose no median');
-select is(public.get_current_statistics('stats-target-session')->>'lowerGradePercentage', null, 'suppressed statistics disclose no percentile');
-select is(public.get_current_statistics('stats-target-session')->>'sameUniversityCount', null, 'university count below ten is suppressed');
-select is(public.get_current_statistics('stats-target-session')->>'sameUniversityAndFieldCount', null, 'university and field count below ten is suppressed');
+select is(public.get_current_statistics('stats-target-session')->>'medianScore', null, 'suppressed statistics disclose no median');
+select is(public.get_current_statistics('stats-target-session')->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
+select is(public.get_current_statistics('stats-target-session')->>'sameCountryCount', null, 'country count below ten is suppressed');
+select is(public.get_current_statistics('stats-target-session')->>'statusCounts', null, 'suppressed statistics disclose no status counts');
 
 insert into public.responses (
-  recovery_token_hash, scholarship_track, study_route, study_type, country,
-  grade_scale, grade_value, grade_percentage, university, study_field,
-  choice_priority, application_status, is_suspicious
+  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  'stats-peer-90', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-  100, 90, 90, 'Target University', 'Target Field', 'first_choice', 'waiting_for_decision', false
+  'stats-peer-90', false, 'Ukraina', 'Ukraina',
+  'nawa_director', 'direct_studies',
+  90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
 );
 
 select is(
   public.get_current_statistics('stats-target-session')->>'group',
-  'track-route-type-university-field',
-  'statistics choose the most specific group with at least ten responses'
+  'track-country',
+  'statistics choose the track-country group when at least ten responses share the ranking country'
 );
 select is(
   (public.get_current_statistics('stats-target-session')->>'groupResponseCount')::integer,
@@ -63,38 +69,34 @@ select is(
   'the selected group count includes all valid matching responses'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'medianGradePercentage')::numeric,
-  50::numeric,
-  'median grade percentage uses the selected group'
+  (public.get_current_statistics('stats-target-session')->>'medianScore')::numeric,
+  45::numeric,
+  'median score uses orientation scores for nawa_director responses'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'lowerGradePercentage')::numeric,
+  (public.get_current_statistics('stats-target-session')->>'lowerScorePercentage')::numeric,
   40::numeric,
-  'percentile counts only strictly lower grades'
+  'percentile counts only strictly lower orientation scores'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'waitingForDecisionCount')::integer,
-  4,
-  'waiting count includes all non-final waiting statuses'
+  (public.get_current_statistics('stats-target-session')->'statusCounts'->>'awaiting_decision')::integer,
+  2,
+  'status counts include every application status in the selected group'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'sameUniversityCount')::integer,
+  (public.get_current_statistics('stats-target-session')->>'sameCountryCount')::integer,
   10,
-  'university count is returned at the privacy threshold'
-);
-select is(
-  (public.get_current_statistics('stats-target-session')->>'sameUniversityAndFieldCount')::integer,
-  10,
-  'university and field count is returned at the privacy threshold'
+  'country count is returned at the privacy threshold'
 );
 
 insert into public.responses (
-  recovery_token_hash, scholarship_track, study_route, study_type, country,
-  grade_scale, grade_value, grade_percentage, university, study_field,
-  choice_priority, application_status, is_suspicious
+  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  'stats-suspicious', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-  100, 0, 0, 'Target University', 'Target Field', 'first_choice', 'submitted', true
+  'stats-suspicious', false, 'Ukraina', 'Ukraina',
+  'nawa_director', 'direct_studies',
+  0, 100, 0, 'none', 0, 'submitted', current_date, true
 );
 select is(
   (public.get_current_statistics('stats-target-session')->>'totalValidResponses')::integer,
@@ -108,39 +110,26 @@ select is(
 );
 
 update public.responses
-set study_field = 'Other Field'
+set ranking_country = 'Polska'
 where recovery_token_hash in ('stats-peer-70', 'stats-peer-80', 'stats-peer-90');
 select is(
   public.get_current_statistics('stats-target-session')->>'group',
-  'track-route-type-university',
-  'statistics fall back from field to university when needed'
+  'track',
+  'statistics fall back to track when the ranking-country cohort drops below ten'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'sameUniversityCount')::integer,
-  10,
-  'university count remains available when it meets the threshold'
-);
-select is(
-  public.get_current_statistics('stats-target-session')->>'sameUniversityAndFieldCount',
+  (public.get_current_statistics('stats-target-session')->>'sameCountryCount')::integer,
   null,
-  'university and field count is suppressed independently'
+  'country count is suppressed independently after fallback'
 );
-
-update public.responses
-set university = 'Other University'
-where recovery_token_hash in ('stats-peer-50', 'stats-peer-60', 'stats-peer-70', 'stats-peer-80', 'stats-peer-90');
-select is(
-  public.get_current_statistics('stats-target-session')->>'group',
-  'track-route-type',
-  'statistics fall back from university to track, route, and type when needed'
-);
-select is(public.get_current_statistics('stats-target-session')->>'sameUniversityCount', null, 'low university count is suppressed after fallback');
-select is(public.get_current_statistics('stats-target-session')->>'sameUniversityAndFieldCount', null, 'low university and field count remains suppressed after fallback');
 
 with mutation as (
   select public.update_current_response(
-    'stats-target-session', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-    100, 50, 'Target University', 'Target Field', 'first_choice', 'positive_decision', current_date
+    'stats-target-session',
+    false, 'Ukraina', 'Ukraina',
+    'nawa_director', 'direct_studies',
+    50, 100, 'none',
+    'scholarship_awarded', current_date
   ) as result
 )
 select ok(
@@ -151,20 +140,26 @@ from mutation;
 select is(
   (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
   false,
-  'the first final decision does not mark a response suspicious'
+  'the first scholarship award does not mark a response suspicious'
 );
 select ok(
   (public.update_current_response(
-    'stats-target-session', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-    100, 50, 'Target University', 'Target Field', 'first_choice', 'negative_decision', current_date
+    'stats-target-session',
+    false, 'Ukraina', 'Ukraina',
+    'nawa_director', 'direct_studies',
+    50, 100, 'none',
+    'scholarship_not_awarded', current_date
   )->>'updated')::boolean
   and (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
-  'opposing final decisions mark a response suspicious and keep the flag sticky'
+  'opposing scholarship awards mark a response suspicious and keep the flag sticky'
 );
 select ok(
   (public.update_current_response(
-    'stats-target-session', 'nawa_mnisw', 'direct_studies', 'first_cycle', 'PL',
-    100, 50, 'Target University', 'Target Field', 'first_choice', 'submitted', null
+    'stats-target-session',
+    false, 'Ukraina', 'Ukraina',
+    'nawa_director', 'direct_studies',
+    50, 100, 'none',
+    'submitted', current_date
   )->>'updated')::boolean
   and (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
   'suspicious status remains set after a later ordinary update'
@@ -174,17 +169,25 @@ create temporary table valid_statistics(result jsonb) on commit drop;
 insert into valid_statistics values (
   '{
     "detailsAvailable": true,
-    "group": "track-route-type",
+    "group": "track",
     "totalValidResponses": 20,
     "sameTrackCount": 15,
-    "sameUniversityCount": null,
-    "sameUniversityAndFieldCount": null,
+    "sameCountryCount": null,
     "groupResponseCount": 10,
-    "medianGradePercentage": 50,
-    "lowerGradePercentage": 40,
-    "waitingForDecisionCount": 4,
-    "positiveDecisionCount": 3,
-    "negativeDecisionCount": 3
+    "medianScore": 50,
+    "lowerScorePercentage": 40,
+    "statusCounts": {
+      "submitted": 2,
+      "formal_review_in_progress": 1,
+      "correction_requested": 0,
+      "formal_review_completed": 1,
+      "merit_review_in_progress": 1,
+      "merit_review_positive": 1,
+      "merit_review_negative": 1,
+      "awaiting_decision": 1,
+      "scholarship_awarded": 1,
+      "scholarship_not_awarded": 1
+    }
   }'::jsonb
 );
 select is(
@@ -198,28 +201,22 @@ select is(
     "group": null,
     "totalValidResponses": 2,
     "sameTrackCount": 2,
-    "sameUniversityCount": null,
-    "sameUniversityAndFieldCount": null,
+    "sameCountryCount": null,
     "groupResponseCount": 0,
-    "medianGradePercentage": null,
-    "lowerGradePercentage": null,
-    "waitingForDecisionCount": null,
-    "positiveDecisionCount": null,
-    "negativeDecisionCount": null
+    "medianScore": null,
+    "lowerScorePercentage": null,
+    "statusCounts": null
   }'::jsonb),
   '{
     "detailsAvailable": false,
     "group": null,
     "totalValidResponses": 2,
     "sameTrackCount": 2,
-    "sameUniversityCount": null,
-    "sameUniversityAndFieldCount": null,
+    "sameCountryCount": null,
     "groupResponseCount": 0,
-    "medianGradePercentage": null,
-    "lowerGradePercentage": null,
-    "waitingForDecisionCount": null,
-    "positiveDecisionCount": null,
-    "negativeDecisionCount": null
+    "medianScore": null,
+    "lowerScorePercentage": null,
+    "statusCounts": null
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );
@@ -230,8 +227,8 @@ select throws_ok($$select public.assert_statistics_result((select result || '{"e
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{group}', '"invalid"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject unknown groups');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{totalValidResponses}', '1.5') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be integers');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be nonnegative');
-select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameUniversityCount}', '9') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'disclosed university counts must meet the privacy threshold');
-select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{medianGradePercentage}', '101') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics percentages must stay within bounds');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '9') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'disclosed country counts must meet the privacy threshold');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{lowerScorePercentage}', '101') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics percentages must stay within bounds');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{detailsAvailable}', 'false') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'suppressed statistics cannot retain detailed values');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{group}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'available details require a comparison group');
 
@@ -251,8 +248,11 @@ $$;
 
 select throws_ok(
   $$select public.update_current_response(
-      'stats-target-session', 'minister_culture', 'preparatory_course', 'uniform_masters', 'DE',
-      10, 9, 'Changed University', 'Changed Field', 'other', 'positive_decision', current_date
+      'stats-target-session',
+      false, 'Niemcy', 'Niemcy',
+      'culture_minister', 'preparatory_course',
+      9, 10, null,
+      'merit_review_positive', current_date
     )$$,
   'P0001',
   'statistics_invalid',

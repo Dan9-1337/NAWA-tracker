@@ -10,6 +10,12 @@
     "test": "vitest run",
     "test:db": "node supabase/tests/run-database-tests.mjs && npm run test:db:concurrency",
     "test:db:concurrency": "node supabase/tests/concurrent-rate-limits.mjs",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
+    "db:status": "npx supabase status",
+    "local:env": "node scripts/write-local-env.mjs",
+    "local:dev": "node scripts/local-dev.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "audit:prod": "npm audit --omit=dev"
   },

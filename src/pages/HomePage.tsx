@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { RecoveryCredential, ResponseFormInput } from '../../shared/contracts';
 import { useI18n } from '../i18n/context';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
-import { PrivacyNotice } from '../components/PrivacyNotice';
 import { RecoveryCard } from '../features/recovery/RecoveryCard';
 import { RestoreAccess } from '../features/recovery/RestoreAccess';
-import { ResponseForm } from '../features/response-form/ResponseForm';
+import { CreateResponseWizard } from '../features/response-wizard/CreateResponseWizard';
+import { EditProfileForm } from '../features/response-form/EditProfileForm';
+import { UpdateApplicationStatusForm } from '../features/response-form/UpdateApplicationStatusForm';
 import {
   StatisticsPanel,
   statisticsStateFromResult,
@@ -25,11 +26,11 @@ type Mutation = 'create' | 'update' | 'rotate' | 'logout' | 'reconcile';
 
 type AuthenticatedState = {
   mode: 'authenticated';
-  formSeed: ResponseFormInput;
-  draft: ResponseFormInput;
+  current: ResponseFormInput;
   statistics: StatisticsState;
   actionError: string | null;
   pending: 'update' | 'rotate' | null;
+  editingProfile: boolean;
 };
 
 type HomeState =
@@ -38,7 +39,7 @@ type HomeState =
   | { mode: 'restore'; recoveryToken: string | null }
   | {
       mode: 'recovery';
-      draft: ResponseFormInput;
+      current: ResponseFormInput;
       statistics: StatisticsState;
       credential: RecoveryCredential;
       rotated: boolean;
@@ -107,11 +108,11 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
       if (!isCurrent(id)) return;
       setState({
         mode: 'authenticated',
-        formSeed: current.response,
-        draft: current.response,
+        current: current.response,
         statistics: { status: 'loading' },
         actionError: null,
         pending: null,
+        editingProfile: false,
       });
       void loadStatistics(id);
     } catch (error) {
@@ -135,11 +136,11 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
       if (!isCurrent(id)) return;
       setState({
         mode: 'authenticated',
-        formSeed: current.response,
-        draft: current.response,
+        current: current.response,
         statistics: { status: 'loading' },
         actionError: null,
         pending: null,
+        editingProfile: false,
       });
       void loadStatistics(id);
     } catch (error) {
@@ -164,8 +165,7 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     };
   }, [initialRecoveryToken]);
 
-  async function create(input: ResponseFormInput, turnstileToken?: string) {
-    if (!turnstileToken) throw new Error('Turnstile token required');
+  async function create(input: ResponseFormInput, turnstileToken: string) {
     if (state.mode !== 'create' || !acquireMutation('create')) return;
     const id = beginEpoch();
     setState({ mode: 'create', pending: true });
@@ -175,7 +175,7 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
       releaseMutation('create');
       setState({
         mode: 'recovery',
-        draft: input,
+        current: input,
         statistics: statisticsStateFromResult(result.statistics),
         credential: {
           recoveryToken: result.recoveryToken,
@@ -195,23 +195,23 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     if (state.mode !== 'authenticated' || state.pending || !acquireMutation('update')) return;
     const snapshot = state;
     const id = beginEpoch();
-    setState({ ...snapshot, draft: input, pending: 'update', actionError: null });
+    setState({ ...snapshot, pending: 'update', actionError: null });
     try {
       const result = await updateResponse({ response: input });
       if (!isCurrent(id)) return;
       setState({
         mode: 'authenticated',
-        formSeed: input,
-        draft: input,
+        current: input,
         statistics: statisticsStateFromResult(result.statistics),
         actionError: null,
         pending: null,
+        editingProfile: false,
       });
     } catch (error) {
       if (isCurrent(id)) {
         const restartStatistics = snapshot.statistics.status === 'loading';
         const statisticsId = restartStatistics ? beginEpoch() : id;
-        setState({ ...snapshot, draft: input, pending: null });
+        setState({ ...snapshot, pending: null });
         if (restartStatistics) void loadStatistics(statisticsId);
       }
       throw error;
@@ -225,11 +225,11 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     const id = beginEpoch();
     setState({
       mode: 'authenticated',
-      formSeed: result.response,
-      draft: result.response,
+      current: result.response,
       statistics: { status: 'loading' },
       actionError: null,
       pending: null,
+      editingProfile: false,
     });
     void loadStatistics(id);
   }
@@ -245,7 +245,7 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
       releaseMutation('rotate');
       setState({
         mode: 'recovery',
-        draft: snapshot.draft,
+        current: snapshot.current,
         statistics: snapshot.statistics,
         credential,
         rotated: true,
@@ -280,28 +280,24 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     }
   }
 
-  function reportDraft(draft: ResponseFormInput) {
-    setState((active) =>
-      active.mode === 'authenticated' && active.pending === null
-        ? { ...active, draft }
-        : active,
-    );
-  }
-
   function confirmRecovery() {
     if (state.mode !== 'recovery') return;
-    const draft = state.draft;
+    const current = state.current;
     const needsStatistics = state.statistics.status === 'loading';
     const id = beginEpoch();
     setState({
       mode: 'authenticated',
-      formSeed: draft,
-      draft,
+      current,
       statistics: state.statistics,
       actionError: null,
       pending: null,
+      editingProfile: false,
     });
     if (needsStatistics) void loadStatistics(id);
+  }
+
+  function setEditingProfile(editingProfile: boolean) {
+    setState((active) => (active.mode === 'authenticated' ? { ...active, editingProfile } : active));
   }
 
   const content = (() => {
@@ -345,7 +341,12 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     if (state.mode === 'create') {
       return (
         <>
-          <ResponseForm key="create" mode="create" onSubmit={create} disabled={state.pending} />
+          <CreateResponseWizard
+            key="create"
+            onSubmit={create}
+            disabled={state.pending}
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+          />
           {state.actionError ? <p className="text-sm text-rose-900" role="alert">{state.actionError}</p> : null}
           {!state.pending ? (
             <button type="button" className="text-sm font-semibold text-sky-700" onClick={() => {
@@ -363,14 +364,23 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
     const busy = state.pending !== null;
     return (
       <>
-        <ResponseForm
-          key="authenticated"
-          mode="update"
-          initialValue={state.formSeed}
-          onDraftChange={reportDraft}
-          onSubmit={update}
-          disabled={busy}
-        />
+        {state.editingProfile ? (
+          <EditProfileForm
+            key="edit-profile"
+            initialValue={state.current}
+            onSubmit={update}
+            onCancel={() => setEditingProfile(false)}
+            disabled={busy}
+          />
+        ) : (
+          <UpdateApplicationStatusForm
+            key="update-status"
+            initialValue={state.current}
+            onSubmit={update}
+            onRequestEditProfile={() => setEditingProfile(true)}
+            disabled={busy}
+          />
+        )}
         <section className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-[0_10px_40px_rgba(15,23,42,0.06)]" aria-busy={busy}>
           <h2 className="text-lg font-semibold text-slate-900">{t.home.accessTitle}</h2>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -421,7 +431,6 @@ export function HomePage({ initialRecoveryToken }: HomePageProps) {
 
           <aside className="space-y-6">
             {statistics ? <StatisticsPanel state={statistics} /> : null}
-            <PrivacyNotice />
           </aside>
         </div>
       </div>

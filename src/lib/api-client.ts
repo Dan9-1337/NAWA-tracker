@@ -4,6 +4,8 @@ import type {
   CreateResponseResult,
   CurrentResponseResult,
   LogoutSessionResult,
+  PublicStatisticsRequest,
+  PublicStatisticsResult,
   RecoveryCredential,
   RestoreSessionRequest,
   RestoreSessionResult,
@@ -16,6 +18,7 @@ import {
   createResponseResultSchema,
   currentResponseResultSchema,
   logoutSessionResultSchema,
+  publicStatisticsResultSchema,
   restoreSessionResultSchema,
   rotateRecoveryResultSchema,
   statisticsResultSchema,
@@ -82,6 +85,10 @@ export function getCurrentResponse(): Promise<CurrentResponseResult> {
 
 export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
+}
+
+export function getPublicStatistics(input: PublicStatisticsRequest): Promise<PublicStatisticsResult> {
+  return request('/api/statistics/public', 'POST', input, publicStatisticsResultSchema);
 }
 
 export function restoreSession(input: RestoreSessionRequest): Promise<RestoreSessionResult> {
