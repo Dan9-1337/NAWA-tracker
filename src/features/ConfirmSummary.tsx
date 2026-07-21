@@ -1,36 +1,87 @@
+import type { ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { isCountryCode } from '../../shared/countries';
 import { useI18n } from '../i18n/context';
+import { formatDate, formatGrade } from '../lib/format';
+import type { WizardStep } from './ResponseWizardSteps';
 
-export function ConfirmSummary({ draft }: { draft: ResponseFormInput }) {
-  const { t } = useI18n();
+type ConfirmSummaryProps = {
+  draft: ResponseFormInput;
+  onEditSection?: (section: WizardStep) => void;
+};
+
+export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
+  const { t, locale } = useI18n();
+  const schoolCountry = isCountryCode(draft.schoolCountry)
+    ? t.countries[draft.schoolCountry]
+    : draft.schoolCountry;
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div>
         <h2 className="text-xl font-semibold">{t.wizard.summaryTitle}</h2>
         <p className="mt-2 text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.wizard.summaryDescription}</p>
       </div>
-      <dl className="space-y-3">
+
+      <SummaryBlock
+        title={t.wizard.cohortTitle}
+        onEdit={onEditSection ? () => onEditSection('application') : undefined}
+        editLabel={t.wizard.editSection}
+      >
         <Row label={t.labels.scholarshipTrack} value={t.choices.scholarshipTrack[draft.scholarshipTrack]} />
+        <Row label={t.labels.schoolCountry} value={schoolCountry} />
         <Row label={t.labels.studyRoute} value={t.choices.studyRoute[draft.studyRoute]} />
+      </SummaryBlock>
+
+      <SummaryBlock
+        title={t.wizard.dataTitle}
+        onEdit={onEditSection ? () => onEditSection('grades') : undefined}
+        editLabel={t.wizard.editSection}
+      >
         <Row
-          label={t.labels.rankingCountry}
-          value={isCountryCode(draft.rankingCountry) ? t.countries[draft.rankingCountry] : draft.rankingCountry}
+          label={t.labels.averageGrade}
+          value={`${formatGrade(draft.averageGrade, locale)} / ${formatGrade(draft.maximumGrade, locale)}`}
         />
-        <Row
-          label={t.labels.schoolCountry}
-          value={isCountryCode(draft.schoolCountry) ? t.countries[draft.schoolCountry] : draft.schoolCountry}
-        />
-        <Row label={t.labels.averageGrade} value={String(draft.averageGrade)} />
-        <Row label={t.labels.maximumGrade} value={String(draft.maximumGrade)} />
         {draft.scholarshipTrack === 'nawa_director' && draft.polishSchoolLevel ? (
           <Row label={t.labels.polishSchoolLevel} value={t.choices.polishSchoolLevel[draft.polishSchoolLevel]} />
         ) : null}
+      </SummaryBlock>
+
+      <SummaryBlock
+        title={t.labels.currentStatus}
+        onEdit={onEditSection ? () => onEditSection('status') : undefined}
+        editLabel={t.wizard.editSection}
+      >
         <Row label={t.labels.currentStatus} value={t.choices.currentStatus[draft.currentStatus]} />
-        <Row label={t.labels.statusChangedAt} value={draft.statusChangedAt} />
-      </dl>
+        <Row label={t.labels.statusChangedAt} value={formatDate(draft.statusChangedAt, locale)} />
+      </SummaryBlock>
     </section>
+  );
+}
+
+function SummaryBlock({
+  title,
+  children,
+  onEdit,
+  editLabel,
+}: {
+  title: string;
+  children: ReactNode;
+  onEdit?: () => void;
+  editLabel: string;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        {onEdit ? (
+          <button type="button" className="min-h-11 text-sm font-medium text-[var(--tg-theme-link-color)]" onClick={onEdit}>
+            {editLabel}
+          </button>
+        ) : null}
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
   );
 }
 

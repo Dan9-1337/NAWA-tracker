@@ -10,6 +10,7 @@ import {
   type CreateResponseRequest,
   type CreateResponseResult,
   type CurrentResponseResult,
+  type DeleteResponseResult,
   type PublicStatisticsRequest,
   type PublicStatisticsResult,
   type StatisticsResult,
@@ -196,6 +197,12 @@ export const currentResponseResultSchema = z
     response: responseFormInputSchema,
   })
   .strict() satisfies z.ZodType<CurrentResponseResult>;
+
+export const deleteResponseResultSchema = z
+  .object({
+    deleted: z.literal(true),
+  })
+  .strict() satisfies z.ZodType<DeleteResponseResult>;
 
 export const apiErrorSchema = z
   .object({

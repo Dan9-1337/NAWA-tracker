@@ -20,6 +20,7 @@ const API_PORT = Number(process.env.LOCAL_API_PORT ?? 3001);
 const routes: Array<{ method: string; path: string; handler: ApiHandler }> = [
   { method: 'POST', path: '/api/responses', handler: createResponsesHandler() },
   { method: 'PUT', path: '/api/responses', handler: createResponsesHandler() },
+  { method: 'DELETE', path: '/api/responses', handler: createResponsesHandler() },
   { method: 'POST', path: '/api/responses/current', handler: createCurrentResponseHandler() },
   { method: 'POST', path: '/api/statistics', handler: createStatisticsHandler() },
   { method: 'POST', path: '/api/statistics/public', handler: createPublicStatisticsHandler() },

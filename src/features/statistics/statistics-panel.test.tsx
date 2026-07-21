@@ -1,49 +1,76 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { StatisticsResult } from '../../../shared/contracts';
 import { StatisticsPanel } from './StatisticsPanel';
 
+const profile = {
+  hasPolishCitizenship: false,
+  rankingCountry: 'UA',
+  schoolCountry: 'UA',
+  scholarshipTrack: 'nawa_director' as const,
+  studyRoute: 'direct_studies' as const,
+  averageGrade: 4.5,
+  maximumGrade: 5,
+  polishSchoolLevel: 'none' as const,
+  currentStatus: 'submitted' as const,
+  statusChangedAt: '2026-07-13',
+};
+
 describe('StatisticsPanel', () => {
   it('renders unavailable, loading, and error states distinctly', () => {
-    const { rerender } = render(<StatisticsPanel state={{ status: 'unavailable' }} />);
+    const { rerender } = render(<StatisticsPanel state={{ status: 'unavailable' }} profile={profile} />);
 
     expect(screen.getByText('Statystyki pojawią się po zapisaniu ankiety.')).toBeInTheDocument();
-    expect(screen.queryByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).not.toBeInTheDocument();
 
-    rerender(<StatisticsPanel state={{ status: 'loading' }} />);
+    rerender(<StatisticsPanel state={{ status: 'loading' }} profile={profile} />);
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie statystyk…');
-    expect(screen.getByRole('region', { name: 'Twój wynik na tle innych zgłoszeń' })).toHaveAttribute('aria-busy', 'true');
 
-    rerender(<StatisticsPanel state={{ status: 'error' }} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać statystyk. Spróbuj ponownie później.');
-    expect(screen.queryByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).not.toBeInTheDocument();
+    rerender(<StatisticsPanel state={{ status: 'error' }} profile={profile} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać statystyk');
   });
 
-  it('renders a suppressed result without detailed breakdown', () => {
-    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} />);
+  it('renders suppressed state as progress toward threshold', () => {
+    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} profile={profile} />);
 
-    expect(screen.getByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).toBeInTheDocument();
-    expect(screen.queryByText('Rozkład statusów w grupie')).not.toBeInTheDocument();
+    expect(screen.getByText('Czekamy na więcej ankiet')).toBeInTheDocument();
+    expect(screen.getByText(/W Twojej grupie: 9/)).toBeInTheDocument();
+    expect(screen.getByText(/brakuje 1/)).toBeInTheDocument();
   });
 
-  it('renders the complete localized percentile sentence', () => {
+  it('uses band hero for small cohorts and keeps exact percentile in details', async () => {
+    const user = userEvent.setup();
     render(
       <StatisticsPanel
-        state={{ status: 'success', data: detailedStatistics }}
+        state={{ status: 'success', data: qualitativeStatistics }}
+        profile={profile}
         userScore={75}
-        profilePath="Stypendium Dyrektora NAWA"
       />,
     );
 
+    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'W górnej części grupy' })).toBeInTheDocument();
     expect(
-      screen.getByText('Twój wynik jest wyższy niż wynik 40.0% uczestników tej grupy.'),
+      screen.getByText('Twój wynik jest wyższy niż większość ankiet w tej grupie.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Twoja pozycja na skali wyniku')).toBeInTheDocument();
-    expect(screen.getByText('Stypendium Dyrektora NAWA')).toBeInTheDocument();
-    expect(screen.getByText('Ty')).toBeInTheDocument();
-    expect(screen.getByText('Mediana grupy')).toBeInTheDocument();
-    expect(screen.getByText('Liczba odpowiedzi w grupie')).toBeInTheDocument();
-    expect(screen.getByText('Mediana wyniku w tej grupie: 82.50')).toBeInTheDocument();
+    expect(screen.queryByText(/Wyższy niż u 95%/)).not.toBeInTheDocument();
+    expect(screen.getByText('Twoja grupa')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Wiarygodność porównania/ }));
+    expect(screen.getByText('Wyższy niż u 95% ankiet w tej grupie.')).toBeInTheDocument();
+  });
+
+  it('shows percentile support for detailed cohorts', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: detailedStatistics }}
+        profile={profile}
+        userScore={75}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Powyżej mediany' })).toBeInTheDocument();
+    expect(screen.getByText('Wyższy niż u 65% ankiet w tej grupie.')).toBeInTheDocument();
   });
 });
 
@@ -59,15 +86,27 @@ const suppressedStatistics: StatisticsResult = {
   statusCounts: null,
 };
 
-const detailedStatistics: StatisticsResult = {
+const qualitativeStatistics: StatisticsResult = {
   detailsAvailable: true,
   group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
   sameCountryCount: 12,
-  groupResponseCount: 10,
+  groupResponseCount: 19,
   medianScore: 82.5,
-  lowerScorePercentage: 40,
+  lowerScorePercentage: 95,
+  statusCounts: null,
+};
+
+const detailedStatistics: StatisticsResult = {
+  detailsAvailable: true,
+  group: 'track-country',
+  totalValidResponses: 40,
+  sameTrackCount: 36,
+  sameCountryCount: 30,
+  groupResponseCount: 30,
+  medianScore: 82.5,
+  lowerScorePercentage: 65,
   statusCounts: {
     submitted: 2,
     formal_review_in_progress: 2,

@@ -41,7 +41,7 @@ describe('bootstrapApplication', () => {
     });
 
     expect(initializeTelegramWebApp).toHaveBeenCalled();
-    expect(await screen.findByText('Twoja aplikacja NAWA')).toBeInTheDocument();
+    expect(await screen.findByText('Porównaj swoją aplikację z innymi kandydatami')).toBeInTheDocument();
     act(() => root.unmount());
   });
 });

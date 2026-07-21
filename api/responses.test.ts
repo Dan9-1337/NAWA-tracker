@@ -116,6 +116,7 @@ function responsesDependencies(
     getClient: vi.fn(() => ({
       rpc: vi.fn((name, parameters) => Promise.resolve(rpcImplementation(name, parameters))),
     })),
+    deleteProfile: vi.fn(async () => 1),
     assertSameOrigin: vi.fn(),
     requireTelegramIdentity: vi.fn(() => ({
       user: { id: USER_ID, username: 'tester' },
@@ -133,7 +134,7 @@ describe('POST /api/responses', () => {
     await handler(request('PATCH'), response);
 
     expect(state.status).toBe(405);
-    expect(state.headers.get('Allow')).toBe('POST, PUT');
+    expect(state.headers.get('Allow')).toBe('POST, PUT, DELETE');
     expect(dependencies.getClient).not.toHaveBeenCalled();
   });
 

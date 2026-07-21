@@ -9,6 +9,7 @@ import { HomePage } from './HomePage';
 const api = vi.hoisted(() => ({
   createResponse: vi.fn(),
   updateResponse: vi.fn(),
+  deleteResponse: vi.fn(),
   getCurrentResponse: vi.fn(),
   getStatistics: vi.fn(),
 }));
@@ -67,7 +68,9 @@ beforeEach(async () => {
 });
 
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {
-  const button = await screen.findByRole('button', { name: /Sprawdź moją pozycję|Dalej|Rozpocznij|Zapisz odpowiedź/ });
+  const button = await screen.findByRole('button', {
+    name: /Porównaj moją aplikację|Dalej|Zapisz odpowiedź/,
+  });
   await waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
 }
@@ -77,13 +80,13 @@ describe('HomePage', () => {
     const telegram = await import('../lib/telegram');
     vi.mocked(telegram.getTelegramWebApp).mockReturnValue(null);
     render(<HomePage />);
-    expect(screen.getByText('Otwórz przez Telegram')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Otwórz w Telegramie' })).toBeInTheDocument();
   });
 
   it('opens create mode with start screen when no profile exists', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     render(<HomePage />);
-    expect(await screen.findByText('Twoja aplikacja NAWA')).toBeInTheDocument();
+    expect(await screen.findByText('Porównaj swoją aplikację z innymi kandydatami')).toBeInTheDocument();
   });
 
   it('loads an authenticated profile and statistics', async () => {
@@ -92,7 +95,8 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Status wniosku' })).toBeInTheDocument();
+      expect(screen.getByText('Status wniosku')).toBeInTheDocument();
+      expect(screen.getByText('Wniosek złożony')).toBeInTheDocument();
     });
     expect(api.getStatistics).toHaveBeenCalled();
   });
@@ -108,19 +112,17 @@ describe('HomePage', () => {
     const user = userEvent.setup();
     render(<HomePage />);
 
-    await screen.findByText('Twoja aplikacja NAWA');
-    await clickMain(user);
-    await user.click(screen.getByLabelText('Zapoznałem się'));
+    await screen.findByText('Porównaj swoją aplikację z innymi kandydatami');
     await clickMain(user);
 
-    for (let step = 0; step < 5; step += 1) {
+    for (let step = 0; step < 4; step += 1) {
       if (screen.queryAllByRole('combobox').length >= 2) {
         const countrySelects = screen.getAllByRole('combobox');
         await user.selectOptions(countrySelects[0], 'UA');
         await user.selectOptions(countrySelects[1], 'UA');
       }
       if (screen.queryByLabelText('Średnia ocen')) {
-        const maximum = screen.getByLabelText('Maksymalna ocena w skali');
+        const maximum = screen.getByLabelText('Maksymalna ocena w Twojej skali');
         if (!(maximum as HTMLInputElement).readOnly) {
           await user.clear(maximum);
           await user.type(maximum, '5');
@@ -137,7 +139,8 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       expect(api.createResponse).toHaveBeenCalled();
-      expect(screen.getByRole('heading', { name: 'Status wniosku' })).toBeInTheDocument();
+      expect(screen.getByText('Status wniosku')).toBeInTheDocument();
+      expect(screen.getByText('Wniosek złożony')).toBeInTheDocument();
     });
   });
 });

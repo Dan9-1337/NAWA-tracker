@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState } from 'react';
 import type {
   ApplicationStatus,
   PolishSchoolLevel,
@@ -15,14 +15,17 @@ import { FormSection } from '../components/FormSection';
 import { GradeInputs } from '../components/GradeInputs';
 import { NawaScorePreview } from '../components/NawaScorePreview';
 import { RadioGroup } from '../components/RadioOption';
+import { StatusDateInput } from '../components/StatusDateInput';
 import { StatusTimeline } from '../components/StatusTimeline';
 import { WizardProgressBar } from '../components/WizardProgressBar';
 import { useI18n } from '../i18n/context';
 import { type WizardDraft } from '../lib/draft';
 import { getTelegramWebApp } from '../lib/telegram';
 
-const steps = ['citizenship', 'geography', 'grades', 'nawaExtra', 'status'] as const;
+const steps = ['application', 'education', 'grades', 'status'] as const;
 export type WizardStep = (typeof steps)[number];
+
+export const WIZARD_STEPS: readonly WizardStep[] = steps;
 
 type ResponseWizardStepsProps = {
   draft: WizardDraft;
@@ -32,24 +35,32 @@ type ResponseWizardStepsProps = {
 
 export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: ResponseWizardStepsProps) {
   const { t } = useI18n();
+  const [resetWarning, setResetWarning] = useState<string | null>(null);
+  const currentStep = steps[Math.min(stepIndex, steps.length - 1)];
 
-  const effectiveSteps = useMemo<readonly WizardStep[]>(
-    () => steps.filter((step) => step !== 'nawaExtra' || draft.scholarshipTrack === 'nawa_director'),
-    [draft.scholarshipTrack],
-  );
-  const currentStep = effectiveSteps[Math.min(stepIndex, effectiveSteps.length - 1)];
-
-  function updateDraft(patch: Partial<WizardDraft>) {
-    const next = { ...draft, ...patch };
+  function applyDraft(next: WizardDraft) {
     if (next.hasPolishCitizenship) next.scholarshipTrack = 'nawa_director';
     if (next.scholarshipTrack === 'health_minister') next.studyRoute = 'preparatory_course';
     if (next.scholarshipTrack !== 'nawa_director') next.polishSchoolLevel = 'none';
     onDraftChange(next);
   }
 
+  function updateDraft(patch: Partial<WizardDraft>) {
+    const resetsBranch =
+      ('hasPolishCitizenship' in patch && patch.hasPolishCitizenship !== draft.hasPolishCitizenship) ||
+      ('scholarshipTrack' in patch && patch.scholarshipTrack !== draft.scholarshipTrack);
+
+    if (resetsBranch && (draft.rankingCountry || draft.schoolCountry || draft.averageGrade != null)) {
+      setResetWarning(t.wizard.branchResetWarning);
+    }
+
+    applyDraft({ ...draft, ...patch });
+  }
+
   function setSchoolCountry(schoolCountry: string) {
     const suggested = defaultMaximumGradeForSchoolCountry(schoolCountry);
-    updateDraft({
+    applyDraft({
+      ...draft,
       schoolCountry,
       ...(suggested != null ? { maximumGrade: suggested } : { maximumGrade: null }),
     });
@@ -69,26 +80,20 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
     ? defaultMaximumGradeForSchoolCountry(draft.schoolCountry)
     : null;
   const maximumGradeLocked = countryDefaultScale != null;
-
   const countryScaleHint = maximumGradeLocked ? t.wizard.maximumGradeLockedHint : null;
-
-  const stepNumber = effectiveSteps.indexOf(currentStep) + 1;
-
-  const gradesNawaScore =
-    draft.scholarshipTrack === 'nawa_director' &&
-    draft.maximumGrade != null &&
-    draft.maximumGrade > 0 &&
-    draft.averageGrade != null &&
-    draft.averageGrade <= draft.maximumGrade
-      ? calculateNawaOrientationScore(draft.averageGrade, draft.maximumGrade, draft.polishSchoolLevel)
-      : null;
 
   return (
     <div className="space-y-4">
-      <WizardProgressBar current={stepNumber} total={effectiveSteps.length} />
+      <WizardProgressBar steps={steps} currentStep={currentStep} />
 
-      {currentStep === 'citizenship' ? (
-        <FormSection title={t.wizard.citizenshipTitle} description={t.wizard.citizenshipDescription}>
+      {resetWarning ? (
+        <p className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm" role="status">
+          {resetWarning}
+        </p>
+      ) : null}
+
+      {currentStep === 'application' ? (
+        <FormSection title={t.wizard.applicationTitle} description={t.wizard.applicationDescription}>
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{t.wizard.polishCitizenshipQuestion}</legend>
             <RadioGroup
@@ -137,10 +142,22 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
         </FormSection>
       ) : null}
 
-      {currentStep === 'geography' ? (
-        <FormSection title={t.wizard.geographyTitle} description={t.wizard.geographyDescription}>
-          <CountrySelect label={t.labels.rankingCountry} value={draft.rankingCountry} onChange={(v) => updateDraft({ rankingCountry: v })} allowLegacy={false} />
-          <CountrySelect label={t.labels.schoolCountry} value={draft.schoolCountry} onChange={setSchoolCountry} allowLegacy={false} />
+      {currentStep === 'education' ? (
+        <FormSection title={t.wizard.educationTitle} description={t.wizard.educationDescription}>
+          <CountrySelect
+            label={t.labels.rankingCountry}
+            hint={t.wizard.rankingCountryHint}
+            value={draft.rankingCountry}
+            onChange={(value) => updateDraft({ rankingCountry: value })}
+            allowLegacy={false}
+          />
+          <CountrySelect
+            label={t.labels.schoolCountry}
+            hint={t.wizard.schoolCountryHint}
+            value={draft.schoolCountry}
+            onChange={setSchoolCountry}
+            allowLegacy={false}
+          />
         </FormSection>
       ) : null}
 
@@ -154,25 +171,24 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
             maximumHint={countryScaleHint}
             maximumReadOnly={maximumGradeLocked}
             averageExceedsWarning={t.wizard.averageAboveMaximum}
-            onAverageChange={(v) => updateDraft({ averageGrade: v })}
-            onMaximumChange={(v) => updateDraft({ maximumGrade: v })}
+            onAverageChange={(value) => applyDraft({ ...draft, averageGrade: value })}
+            onMaximumChange={(value) => applyDraft({ ...draft, maximumGrade: value })}
           />
-          {gradesNawaScore !== null ? <NawaScorePreview score={gradesNawaScore} /> : null}
-        </FormSection>
-      ) : null}
-
-      {currentStep === 'nawaExtra' ? (
-        <FormSection title={t.wizard.nawaExtraTitle} description={t.wizard.nawaExtraDescription}>
-          <RadioGroup
-            name="polishSchoolLevel"
-            value={draft.polishSchoolLevel}
-            options={(['none', 'primary', 'secondary'] as const).map((level) => ({
-              value: level,
-              label: t.choices.polishSchoolLevel[level],
-            }))}
-            onChange={(value) => updateDraft({ polishSchoolLevel: value as PolishSchoolLevel })}
-            onSelect={hapticSelect}
-          />
+          {draft.scholarshipTrack === 'nawa_director' ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">{t.labels.polishSchoolLevel}</legend>
+              <RadioGroup
+                name="polishSchoolLevel"
+                value={draft.polishSchoolLevel}
+                options={(['none', 'primary', 'secondary'] as const).map((level) => ({
+                  value: level,
+                  label: t.choices.polishSchoolLevel[level],
+                }))}
+                onChange={(value) => updateDraft({ polishSchoolLevel: value as PolishSchoolLevel })}
+                onSelect={hapticSelect}
+              />
+            </fieldset>
+          ) : null}
           {nawaScorePreview !== null ? <NawaScorePreview score={nawaScorePreview} /> : null}
         </FormSection>
       ) : null}
@@ -184,17 +200,12 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
             selectedStatus={draft.currentStatus}
             options={getInitialStatusOptions()}
             onChange={(currentStatus: ApplicationStatus) => updateDraft({ currentStatus })}
+            showHints
           />
-          <label className="space-y-2 text-sm font-medium">
-            <span>{t.labels.statusChangedAt}</span>
-            <input
-              aria-label={t.labels.statusChangedAt}
-              type="date"
-              className="w-full rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3"
-              value={draft.statusChangedAt}
-              onChange={(event) => updateDraft({ statusChangedAt: event.target.value })}
-            />
-          </label>
+          <StatusDateInput
+            value={draft.statusChangedAt}
+            onChange={(statusChangedAt) => updateDraft({ statusChangedAt })}
+          />
         </FormSection>
       ) : null}
     </div>
@@ -218,9 +229,9 @@ export function toResponseInput(draft: WizardDraft): ResponseFormInput {
 
 export function canAdvanceWizardStep(step: WizardStep, draft: WizardDraft): boolean {
   switch (step) {
-    case 'citizenship':
+    case 'application':
       return true;
-    case 'geography':
+    case 'education':
       return draft.rankingCountry.trim().length > 0 && draft.schoolCountry.trim().length > 0;
     case 'grades':
       return (
@@ -230,7 +241,6 @@ export function canAdvanceWizardStep(step: WizardStep, draft: WizardDraft): bool
         draft.averageGrade >= 0 &&
         draft.averageGrade <= draft.maximumGrade
       );
-    case 'nawaExtra':
     case 'status':
       return draft.statusChangedAt.trim().length > 0;
     default:
@@ -238,6 +248,10 @@ export function canAdvanceWizardStep(step: WizardStep, draft: WizardDraft): bool
   }
 }
 
-export function getWizardEffectiveSteps(draft: WizardDraft): readonly WizardStep[] {
-  return steps.filter((step) => step !== 'nawaExtra' || draft.scholarshipTrack === 'nawa_director');
+export function getWizardEffectiveSteps(): readonly WizardStep[] {
+  return steps;
+}
+
+export function wizardStepIndex(step: WizardStep): number {
+  return steps.indexOf(step);
 }

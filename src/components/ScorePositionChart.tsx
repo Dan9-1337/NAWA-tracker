@@ -5,6 +5,8 @@ const CHART_ORIGIN = nawaOrientationThreshold;
 const CHART_MAX = 100;
 const CHART_SPAN = CHART_MAX - CHART_ORIGIN;
 const AXIS_INSET = 8;
+const NEUTRAL_MARKER = 'var(--tg-theme-button-color)';
+const MEDIAN_MARKER = 'var(--tg-theme-link-color)';
 
 type ScorePositionChartProps = {
   userScore: number;
@@ -84,7 +86,6 @@ function LegendItem({
 export function ScorePositionChart({ userScore, medianScore }: ScorePositionChartProps) {
   const { t } = useI18n();
   const userPercent = toAxisPercent(userScore);
-  const userAbove = userScore >= CHART_ORIGIN;
   const medianPercent = medianScore != null ? toAxisPercent(medianScore) : null;
 
   const description = [
@@ -120,29 +121,20 @@ export function ScorePositionChart({ userScore, medianScore }: ScorePositionChar
         {medianPercent != null ? (
           <Marker
             percent={medianPercent}
-            color="var(--tg-theme-link-color)"
+            color={MEDIAN_MARKER}
             value={medianScore!.toFixed(1)}
             shape="diamond"
             zIndex={1}
           />
         ) : null}
 
-        <Marker
-          percent={userPercent}
-          color={userAbove ? 'var(--tg-theme-success-text-color)' : 'var(--tg-theme-destructive-text-color)'}
-          value={userScore.toFixed(1)}
-          zIndex={2}
-        />
+        <Marker percent={userPercent} color={NEUTRAL_MARKER} value={userScore.toFixed(1)} zIndex={2} />
       </div>
 
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--tg-theme-hint-color)] pt-2">
-        <LegendItem
-          color={userAbove ? 'var(--tg-theme-success-text-color)' : 'var(--tg-theme-destructive-text-color)'}
-          label={t.stats.chartYouLabel}
-          shape="circle"
-        />
+        <LegendItem color={NEUTRAL_MARKER} label={t.stats.chartYouLabel} shape="circle" />
         {medianScore != null ? (
-          <LegendItem color="var(--tg-theme-link-color)" label={t.stats.chartMedianLabel} shape="diamond" />
+          <LegendItem color={MEDIAN_MARKER} label={t.stats.chartMedianLabel} shape="diamond" />
         ) : null}
         <LegendItem
           color="var(--tg-theme-hint-color)"

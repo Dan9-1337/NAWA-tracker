@@ -89,6 +89,10 @@ export type CurrentResponseResult = {
   response: ResponseFormInput;
 };
 
+export type DeleteResponseResult = {
+  deleted: true;
+};
+
 export type ApiError = {
   error: {
     code: string;

@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import { useI18n } from '../i18n/context';
+import { parseLocalizedNumber } from '../lib/format';
+
 type GradeInputsProps = {
   averageGrade: number | null;
   maximumGrade: number | null;
@@ -10,18 +14,17 @@ type GradeInputsProps = {
   averageExceedsWarning?: string | null;
 };
 
-function parseOptionalNumber(raw: string): number | null {
-  if (raw.trim() === '') return null;
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function clampAverage(value: number | null, maximumGrade: number | null): number | null {
   if (value == null) return null;
   let next = value;
   if (next < 0) next = 0;
   if (maximumGrade != null && maximumGrade > 0 && next > maximumGrade) next = maximumGrade;
   return next;
+}
+
+function formatInputValue(value: number | null): string {
+  if (value == null) return '';
+  return String(value);
 }
 
 export function GradeInputs({
@@ -35,6 +38,10 @@ export function GradeInputs({
   maximumReadOnly = false,
   averageExceedsWarning,
 }: GradeInputsProps) {
+  const { t } = useI18n();
+  const [averageRaw, setAverageRaw] = useState(() => formatInputValue(averageGrade));
+  const [maximumRaw, setMaximumRaw] = useState(() => formatInputValue(maximumGrade));
+
   const averageInvalid =
     averageGrade != null && maximumGrade != null && maximumGrade > 0 && averageGrade > maximumGrade;
 
@@ -44,24 +51,27 @@ export function GradeInputs({
         <span>{maximumLabel}</span>
         <input
           aria-label={maximumLabel}
-          type="number"
+          type="text"
           inputMode="decimal"
-          min={1}
-          max={1000}
-          step="any"
           readOnly={maximumReadOnly}
-          className={`w-full rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-[var(--tg-theme-text-color)] ${
+          placeholder={t.labels.maximumGradePlaceholder}
+          className={`min-h-11 w-full rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-base text-[var(--tg-theme-text-color)] ${
             maximumReadOnly
               ? 'cursor-default bg-[var(--tg-theme-secondary-bg-color)]'
               : 'bg-[var(--tg-theme-section-bg-color)]'
           }`}
-          value={maximumGrade ?? ''}
+          value={maximumReadOnly ? formatInputValue(maximumGrade) : maximumRaw}
           onChange={(event) => {
-            const nextMaximum = parseOptionalNumber(event.target.value);
+            const raw = event.target.value;
+            setMaximumRaw(raw);
+            const nextMaximum = parseLocalizedNumber(raw);
             onMaximumChange(nextMaximum);
             if (averageGrade != null && nextMaximum != null && nextMaximum > 0) {
               onAverageChange(clampAverage(averageGrade, nextMaximum));
             }
+          }}
+          onBlur={() => {
+            if (maximumGrade != null) setMaximumRaw(formatInputValue(maximumGrade));
           }}
         />
         {maximumHint ? (
@@ -72,18 +82,23 @@ export function GradeInputs({
         <span>{averageLabel}</span>
         <input
           aria-label={averageLabel}
-          type="number"
+          type="text"
           inputMode="decimal"
-          min={0}
-          max={maximumGrade ?? undefined}
-          step="0.01"
-          className={`w-full rounded-2xl border bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-[var(--tg-theme-text-color)] ${
+          placeholder={t.labels.averageGradePlaceholder}
+          className={`min-h-11 w-full rounded-2xl border bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-base text-[var(--tg-theme-text-color)] ${
             averageInvalid
               ? 'border-[var(--tg-theme-destructive-text-color)]'
               : 'border-[var(--tg-theme-hint-color)]'
           }`}
-          value={averageGrade ?? ''}
-          onChange={(event) => onAverageChange(clampAverage(parseOptionalNumber(event.target.value), maximumGrade))}
+          value={averageRaw}
+          onChange={(event) => {
+            const raw = event.target.value;
+            setAverageRaw(raw);
+            onAverageChange(clampAverage(parseLocalizedNumber(raw), maximumGrade));
+          }}
+          onBlur={() => {
+            if (averageGrade != null) setAverageRaw(formatInputValue(averageGrade));
+          }}
         />
         {averageInvalid && averageExceedsWarning ? (
           <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">

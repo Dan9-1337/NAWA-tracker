@@ -1,11 +1,12 @@
-import type { CreateResponseResult, UpdateResponseResult } from '../shared/contracts.js';
+import type { CreateResponseResult, DeleteResponseResult, UpdateResponseResult } from '../shared/contracts.js';
 import {
   createResponseRequestSchema,
   createResponseResultSchema,
+  deleteResponseResultSchema,
   updateResponseRequestSchema,
   updateResponseResultSchema,
 } from '../shared/validation.js';
-import { profileExists } from './_lib/errors.js';
+import { profileExists, profileNotFound } from './_lib/errors.js';
 import {
   assertMethod,
   parseJsonBody,
@@ -31,12 +32,21 @@ type ResponsesRequest = {
 
 export type ResponsesHandlerDependencies = {
   getClient: () => RpcClient;
+  deleteProfile: (telegramUserId: number) => Promise<number>;
   assertSameOrigin: (request: ResponsesRequest) => void;
   requireTelegramIdentity: (request: ResponsesRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: ResponsesHandlerDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
+  deleteProfile: async (telegramUserId) => {
+    const client = getSupabaseAdmin();
+    const deleteResult = await client.from('responses').delete().eq('telegram_user_id', telegramUserId).select('id');
+    if (deleteResult.error) {
+      throw deleteResult.error;
+    }
+    return deleteResult.data?.length ?? 0;
+  },
   assertSameOrigin,
   requireTelegramIdentity,
 };
@@ -100,7 +110,19 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
         return;
       }
 
-      assertMethod(request, response, ['POST', 'PUT']);
+      if (request.method === 'DELETE') {
+        dependencies.assertSameOrigin(request);
+        const identity = dependencies.requireTelegramIdentity(request);
+        const deletedCount = await dependencies.deleteProfile(identity.user.id);
+        if (deletedCount === 0) {
+          throw profileNotFound();
+        }
+        const result: DeleteResponseResult = deleteResponseResultSchema.parse({ deleted: true });
+        response.status(200).json(result);
+        return;
+      }
+
+      assertMethod(request, response, ['POST', 'PUT', 'DELETE']);
     } catch (error) {
       sendError(response, error);
     }

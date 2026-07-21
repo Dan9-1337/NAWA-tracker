@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeSwitcher } from './ThemeSwitcher';
+import { useI18n } from '../i18n/context';
 import { getDevChromeState, getTelegramWebApp } from '../lib/telegram';
 
-function DevActionBar() {
+function DevActionBar({ hidden }: { hidden: boolean }) {
   const app = getTelegramWebApp();
   const [state, setState] = useState(getDevChromeState);
 
@@ -14,7 +14,7 @@ function DevActionBar() {
     return () => window.clearInterval(id);
   }, [app?.isTelegram]);
 
-  if (!app || app.isTelegram) return null;
+  if (hidden || !app || app.isTelegram) return null;
   if (!state.mainVisible && !state.secondaryVisible && !state.backVisible) return null;
 
   return (
@@ -60,9 +60,20 @@ function DevActionBar() {
 type MiniAppShellProps = {
   title: string;
   children: ReactNode;
+  onOpenSettings?: () => void;
+  /** When true (authenticated), header shows Settings only. Otherwise Start/gate: language only. */
+  authenticatedHeader?: boolean;
+  suspendActionBar?: boolean;
 };
 
-export function MiniAppShell({ title, children }: MiniAppShellProps) {
+export function MiniAppShell({
+  title,
+  children,
+  onOpenSettings,
+  authenticatedHeader = false,
+  suspendActionBar = false,
+}: MiniAppShellProps) {
+  const { t } = useI18n();
   return (
     <div
       className="mx-auto flex min-h-[var(--tg-viewport-stable-height,100dvh)] w-full max-w-md flex-col text-[var(--tg-theme-text-color)]"
@@ -77,12 +88,21 @@ export function MiniAppShell({ title, children }: MiniAppShellProps) {
       <header className="flex items-center justify-between gap-3 px-4 pb-4 pt-3">
         <h1 className="text-lg font-semibold leading-tight">{title}</h1>
         <div className="flex items-center gap-2">
-          <ThemeSwitcher />
-          <LanguageSwitcher />
+          {authenticatedHeader && onOpenSettings ? (
+            <button
+              type="button"
+              aria-label={t.settings.open}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base active:opacity-70"
+              onClick={onOpenSettings}
+            >
+              ⚙
+            </button>
+          ) : null}
+          {!authenticatedHeader ? <LanguageSwitcher /> : null}
         </div>
       </header>
-      <main className="flex-1 space-y-4 px-4 pb-4">{children}</main>
-      <DevActionBar />
+      <main className="flex-1 px-4 pb-4">{children}</main>
+      <DevActionBar hidden={suspendActionBar} />
     </div>
   );
 }

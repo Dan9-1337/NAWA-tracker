@@ -3,6 +3,7 @@ import type {
   CreateResponseRequest,
   CreateResponseResult,
   CurrentResponseResult,
+  DeleteResponseResult,
   PublicStatisticsRequest,
   PublicStatisticsResult,
   StatisticsResult,
@@ -13,6 +14,7 @@ import {
   apiErrorSchema,
   createResponseResultSchema,
   currentResponseResultSchema,
+  deleteResponseResultSchema,
   publicStatisticsResultSchema,
   statisticsResultSchema,
   updateResponseResultSchema,
@@ -52,11 +54,11 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-async function request<T>(path: string, method: 'POST' | 'PUT', body: unknown, schema: ZodType<T>): Promise<T> {
+async function request<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', body: unknown, schema: ZodType<T>): Promise<T> {
   const response = await fetch(path, {
     method,
     headers: authHeaders(),
-    body: JSON.stringify(body),
+    body: method === 'DELETE' ? undefined : JSON.stringify(body),
   });
   const payload = await readJson(response);
 
@@ -90,6 +92,10 @@ export function getCurrentResponse(): Promise<CurrentResponseResult> {
 
 export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
+}
+
+export function deleteResponse(): Promise<DeleteResponseResult> {
+  return request('/api/responses', 'DELETE', {}, deleteResponseResultSchema);
 }
 
 export function getPublicStatistics(input: PublicStatisticsRequest): Promise<PublicStatisticsResult> {

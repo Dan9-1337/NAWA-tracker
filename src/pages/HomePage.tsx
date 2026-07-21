@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { MiniAppShell } from '../components/MiniAppShell';
+import { SettingsSheet } from '../components/SettingsSheet';
+import { TelegramGate } from '../components/TelegramGate';
 import { CreateProfileFlow } from '../features/CreateProfileFlow';
 import { ProfileDashboard } from '../features/ProfileDashboard';
 import {
@@ -11,14 +13,17 @@ import { useI18n } from '../i18n/context';
 import {
   ApiClientError,
   createResponse,
+  deleteResponse,
   getCurrentResponse,
   getStatistics,
   updateResponse,
 } from '../lib/api-client';
+import { clearStatsSnapshot } from '../lib/stats-snapshot';
+import { clearWizardDraft } from '../lib/draft';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 
-type Mutation = 'create' | 'update';
+type Mutation = 'create' | 'update' | 'delete';
 
 type AuthenticatedState = {
   mode: 'authenticated';
@@ -40,6 +45,8 @@ export function HomePage() {
     getTelegramWebApp() ? { mode: 'loading', error: null } : { mode: 'gate' },
   );
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editRequestNonce, setEditRequestNonce] = useState(0);
   const epoch = useRef(0);
   const mutation = useRef<Mutation | null>(null);
   const mounted = useRef(true);
@@ -137,7 +144,7 @@ export function HomePage() {
       });
     } catch {
       if (isCurrent(id)) {
-        setState({ mode: 'create', pending: false, actionError: t.home.actionError });
+        setState({ mode: 'create', pending: false, actionError: t.form.saveError });
       }
       throw new Error('create failed');
     } finally {
@@ -173,6 +180,23 @@ export function HomePage() {
     }
   }
 
+  async function removeProfile() {
+    if (!acquireMutation('delete')) {
+      throw new Error('delete in progress');
+    }
+    try {
+      await deleteResponse();
+      clearWizardDraft();
+      clearStatsSnapshot();
+      setSettingsOpen(false);
+      setState({ mode: 'create', pending: false });
+    } catch (error) {
+      releaseMutation('delete');
+      throw error;
+    }
+    releaseMutation('delete');
+  }
+
   useMiniAppChrome(
     state.mode === 'loading' && state.error
       ? { main: { text: t.home.retry, visible: true, onClick: () => void loadCurrentSession() } }
@@ -181,21 +205,17 @@ export function HomePage() {
 
   const content = (() => {
     if (state.mode === 'gate') {
-      return (
-        <section className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] p-5">
-          <h2 className="text-xl font-semibold">{t.telegram.gateTitle}</h2>
-          <p className="mt-3 text-sm leading-7 text-[var(--tg-theme-subtitle-text-color)]">{t.telegram.gateBody}</p>
-        </section>
-      );
+      return <TelegramGate />;
     }
 
     if (state.mode === 'loading') {
       return (
         <section aria-busy={!state.error}>
           {state.error ? (
-            <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
-              {state.error}
-            </p>
+            <div role="alert" className="space-y-2">
+              <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">{state.error}</p>
+              <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.home.loadErrorHint}</p>
+            </div>
           ) : (
             <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status" aria-live="polite">
               {t.home.loading}
@@ -216,18 +236,41 @@ export function HomePage() {
         onSubmit={update}
         disabled={state.pending !== null}
         actionError={state.actionError}
+        chromeSuspended={settingsOpen}
+        editRequestNonce={editRequestNonce}
       />
     );
   })();
 
   return (
-    <MiniAppShell title={t.app.title}>
+    <MiniAppShell
+      title={t.app.title}
+      authenticatedHeader={state.mode === 'authenticated'}
+      onOpenSettings={state.mode === 'authenticated' && !settingsOpen ? () => setSettingsOpen(true) : undefined}
+      suspendActionBar={settingsOpen}
+    >
       {offline ? (
         <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm" role="status">
           {t.home.offline}
         </p>
       ) : null}
-      {content}
+      <div
+        aria-hidden={settingsOpen}
+        className={settingsOpen ? 'pointer-events-none space-y-4' : 'space-y-4'}
+      >
+        {content}
+      </div>
+      <SettingsSheet
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        current={state.mode === 'authenticated' ? state.current : null}
+        onDelete={removeProfile}
+        onEditProfile={
+          state.mode === 'authenticated'
+            ? () => setEditRequestNonce((value) => value + 1)
+            : undefined
+        }
+      />
     </MiniAppShell>
   );
 }

@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { responseFormInputSchema } from '../../shared/validation';
-import { PrivacyNotice } from '../components/PrivacyNotice';
+import { PrivacySheet } from '../components/PrivacySheet';
+import { ResultPreviewCard } from '../components/ResultPreviewCard';
 import { useI18n } from '../i18n/context';
 import {
   clearWizardDraft,
-  loadWizardDraft,
-  saveWizardDraft,
+  loadWizardSession,
+  saveWizardSession,
   type WizardDraft,
+  type WizardScreen,
 } from '../lib/draft';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
@@ -17,6 +19,8 @@ import {
   getWizardEffectiveSteps,
   ResponseWizardSteps,
   toResponseInput,
+  wizardStepIndex,
+  type WizardStep,
 } from './ResponseWizardSteps';
 
 function todayIsoDate(): string {
@@ -36,8 +40,6 @@ const initialDraft: WizardDraft = {
   statusChangedAt: todayIsoDate(),
 };
 
-type Screen = 'start' | 'privacy' | 'wizard' | 'confirm';
-
 type CreateProfileFlowProps = {
   onSubmit: (value: ResponseFormInput) => void | Promise<void>;
   disabled?: boolean;
@@ -46,24 +48,25 @@ type CreateProfileFlowProps = {
 
 export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: CreateProfileFlowProps) {
   const { t } = useI18n();
-  const [screen, setScreen] = useState<Screen>('start');
-  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
-  const [draft, setDraft] = useState<WizardDraft>(() => loadWizardDraft() ?? initialDraft);
-  const [stepIndex, setStepIndex] = useState(0);
+  const restored = useRef(loadWizardSession());
+  const [screen, setScreen] = useState<WizardScreen>(() => restored.current?.screen ?? 'start');
+  const [draft, setDraft] = useState<WizardDraft>(() => restored.current?.draft ?? initialDraft);
+  const [stepIndex, setStepIndex] = useState(() => restored.current?.stepIndex ?? 0);
   const [pending, setPending] = useState(false);
-  const [dirty, setDirty] = useState(() => loadWizardDraft() != null);
+  const [dirty, setDirty] = useState(() => restored.current != null);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const inFlight = useRef(false);
 
-  const effectiveSteps = useMemo(() => getWizardEffectiveSteps(draft), [draft]);
+  const effectiveSteps = getWizardEffectiveSteps();
   const currentStep = effectiveSteps[Math.min(stepIndex, effectiveSteps.length - 1)];
 
   useEffect(() => {
     if (screen === 'wizard' || screen === 'confirm') {
-      saveWizardDraft(draft);
+      saveWizardSession({ version: 1, draft, screen, stepIndex });
       setDirty(true);
     }
-  }, [draft, screen]);
+  }, [draft, screen, stepIndex]);
 
   const goWizardNext = useCallback(() => {
     if (!canAdvanceWizardStep(currentStep, draft)) return;
@@ -83,6 +86,12 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
     }
     setStepIndex((index) => Math.max(index - 1, 0));
   }, [stepIndex]);
+
+  const startWizard = useCallback(() => {
+    getTelegramWebApp()?.haptic.selection();
+    setScreen('wizard');
+    setStepIndex(0);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     if (disabled || inFlight.current) return;
@@ -104,6 +113,11 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
     }
   }, [disabled, draft, onSubmit]);
 
+  const jumpToSection = useCallback((section: WizardStep) => {
+    setScreen('wizard');
+    setStepIndex(wizardStepIndex(section));
+  }, []);
+
   const backToLastWizardStep = useCallback(() => {
     setScreen('wizard');
     setStepIndex(effectiveSteps.length - 1);
@@ -111,44 +125,30 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
 
   useMiniAppChrome(
     screen === 'start'
-      ? { main: { text: t.start.cta, visible: true, enabled: !disabled, onClick: () => setScreen('privacy') } }
-      : screen === 'privacy'
+      ? { main: { text: t.start.cta, visible: true, enabled: !disabled, onClick: startWizard } }
+      : screen === 'wizard'
         ? {
             main: {
-              text: t.wizard.privacyStart,
+              text: t.wizard.next,
               visible: true,
-              enabled: privacyAcknowledged && !disabled,
-              onClick: () => {
-                getTelegramWebApp()?.haptic.selection();
-                setScreen('wizard');
-                setStepIndex(0);
-              },
+              enabled: !disabled && canAdvanceWizardStep(currentStep, draft),
+              onClick: goWizardNext,
             },
-            back: { visible: true, onClick: () => setScreen('start') },
+            back: { visible: true, onClick: goWizardBack },
+            closingConfirmation: dirty,
           }
-        : screen === 'wizard'
-          ? {
-              main: {
-                text: t.wizard.next,
-                visible: true,
-                enabled: !disabled && canAdvanceWizardStep(currentStep, draft),
-                onClick: goWizardNext,
-              },
-              back: { visible: true, onClick: goWizardBack },
-              closingConfirmation: dirty,
-            }
-          : {
-              main: {
-                text: t.form.submitCreate,
-                visible: true,
-                enabled: !disabled && !pending,
-                loading: pending,
-                onClick: handleSubmit,
-              },
-              secondary: { text: t.wizard.editStep, visible: true, enabled: !pending, onClick: backToLastWizardStep },
-              back: { visible: true, onClick: backToLastWizardStep },
-              closingConfirmation: dirty,
+        : {
+            main: {
+              text: t.form.submitCreate,
+              visible: true,
+              enabled: !disabled && !pending,
+              loading: pending,
+              onClick: handleSubmit,
             },
+            secondary: { text: t.wizard.editStep, visible: true, enabled: !pending, onClick: backToLastWizardStep },
+            back: { visible: true, onClick: backToLastWizardStep },
+            closingConfirmation: dirty,
+          },
   );
 
   if (screen === 'start') {
@@ -156,46 +156,61 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
       <>
         <section className="space-y-5">
           <div>
-            <h2 className="text-2xl font-semibold leading-tight">{t.start.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-[var(--tg-theme-subtitle-text-color)]">{t.start.subtitle}</p>
+            <h2 className="text-2xl font-semibold leading-tight text-[var(--text-primary)]">{t.start.title}</h2>
+            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{t.start.subtitle}</p>
           </div>
-          <ul className="space-y-2 text-sm leading-6">
+          <ul className="space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
             {t.start.bullets.map((bullet) => (
               <li key={bullet} className="flex gap-2">
-                <span aria-hidden="true">✓</span>
+                <span aria-hidden="true" className="text-[var(--text-primary)]">
+                  •
+                </span>
                 <span>{bullet}</span>
               </li>
             ))}
           </ul>
+          <ResultPreviewCard />
+          <div className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm leading-6">
+            <p className="font-semibold text-[var(--text-primary)]">{t.start.trustTitle}</p>
+            <p className="mt-1 text-[var(--text-helper)]">{t.start.trustBody}</p>
+            <button
+              type="button"
+              className="mt-2 min-h-11 text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
+              onClick={() => setShowPrivacy(true)}
+            >
+              {t.start.privacyLink}
+            </button>
+          </div>
+          <p className="text-xs leading-5 text-[var(--text-helper)]">{t.start.consentLine}</p>
           <button
             type="button"
             className="text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
-            onClick={() => setShowHowItWorks(true)}
+            onClick={() => setShowHowItWorks((value) => !value)}
           >
             {t.start.howItWorks}
           </button>
         </section>
         {showHowItWorks ? (
-          <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm text-[var(--tg-theme-subtitle-text-color)]">
+          <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm text-[var(--text-helper)]">
             {t.stats.disclaimer}
           </p>
         ) : null}
+        <PrivacySheet open={showPrivacy} onClose={() => setShowPrivacy(false)} />
       </>
     );
-  }
-
-  if (screen === 'privacy') {
-    return <PrivacyNotice acknowledged={privacyAcknowledged} onAcknowledgedChange={setPrivacyAcknowledged} />;
   }
 
   if (screen === 'confirm') {
     return (
       <>
-        <ConfirmSummary draft={toResponseInput(draft)} />
+        <ConfirmSummary draft={toResponseInput(draft)} onEditSection={jumpToSection} />
         {actionError ? (
-          <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
-            {actionError}
-          </p>
+          <div role="alert" className="space-y-1">
+            <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">
+              {t.form.saveError}
+            </p>
+            <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.form.saveErrorDraft}</p>
+          </div>
         ) : null}
       </>
     );
