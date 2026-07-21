@@ -54,7 +54,7 @@ describe('StatisticsPanel', () => {
       screen.getByText('Twój wynik jest wyższy niż większość ankiet w tej grupie.'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Wyższy niż u 95%/)).not.toBeInTheDocument();
-    expect(screen.getByText('Twoja grupa')).toBeInTheDocument();
+    expect(screen.getByText('Twoja grupa porównawcza')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Wiarygodność porównania/ }));
     expect(screen.getByText('Wyższy niż u 95% ankiet w tej grupie.')).toBeInTheDocument();

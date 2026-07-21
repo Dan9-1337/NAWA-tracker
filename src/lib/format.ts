@@ -27,6 +27,38 @@ export function formatDateTime(iso: string, locale: Locale): string {
   }).format(date);
 }
 
+export function formatClockTime(iso: string, locale: Locale): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(localeMap[locale], {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+export function formatShortDayTime(iso: string, locale: Locale): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(localeMap[locale], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+export function updatedStampKind(iso: string): 'today' | 'yesterday' | 'other' {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'other';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfThatDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000);
+  if (dayDiff === 0) return 'today';
+  if (dayDiff === 1) return 'yesterday';
+  return 'other';
+}
+
 export function formatGrade(value: number, locale: Locale): string {
   return new Intl.NumberFormat(localeMap[locale], {
     minimumFractionDigits: 0,

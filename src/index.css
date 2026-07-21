@@ -57,9 +57,46 @@ body {
 
 .section-divider {
   height: 1px;
-  margin: 1.5rem 0;
+  margin: 2rem 0;
   border: 0;
   background: var(--section-divider-color);
+}
+
+.section-divider-strong {
+  height: 1px;
+  margin: 2.25rem 0 1.25rem;
+  border: 0;
+  background: var(--section-divider-color);
+  opacity: 1;
+}
+
+.disclosure-row {
+  display: flex;
+  width: calc(100% + 1.5rem);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-left: -0.75rem;
+  margin-right: -0.75rem;
+  border-radius: 0.875rem;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.disclosure-row:hover {
+  background: var(--tg-theme-secondary-bg-color);
+}
+
+.disclosure-row:active {
+  background: var(--tg-theme-secondary-bg-color);
+  filter: brightness(0.96);
+}
+
+.disclosure-row:focus-visible {
+  outline: 2px solid var(--tg-theme-link-color);
+  outline-offset: 2px;
 }
 
 [data-theme='dark'] {

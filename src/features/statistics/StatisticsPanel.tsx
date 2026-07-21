@@ -5,7 +5,7 @@ import { PositionGlance } from '../../components/PositionGlance';
 import { ScorePositionChart } from '../../components/ScorePositionChart';
 import { StatCard } from '../../components/StatCard';
 import { useI18n } from '../../i18n/context';
-import { formatGrade } from '../../lib/format';
+import { formatClockTime, formatGrade, formatShortDayTime, updatedStampKind } from '../../lib/format';
 import {
   formatPercentileValue,
   getCohortProgressCount,
@@ -26,6 +26,7 @@ type StatisticsPanelProps = {
   state: StatisticsState;
   profile?: ResponseFormInput | null;
   userScore?: number | null;
+  updatedAt?: string | null;
 };
 
 export function statisticsStateFromResult(data: StatisticsResult): StatisticsState {
@@ -59,22 +60,18 @@ function supportCopy(
   t: ReturnType<typeof useI18n>['t'],
   lowerScorePercentage: number | null,
   groupSize: number,
-): { primary: string | null; note: string | null } {
-  if (lowerScorePercentage == null) return { primary: null, note: null };
+): string | null {
+  if (lowerScorePercentage == null) return null;
 
   const band = getMedianBand(lowerScorePercentage);
   if (!isDetailedCohort(groupSize)) {
-    const primary =
-      band === 'above'
-        ? t.stats.supportAboveMost
-        : band === 'below'
-          ? t.stats.supportBelowMost
-          : t.stats.supportAroundMost;
-    return { primary, note: t.stats.positionMayChange };
+    if (band === 'above') return t.stats.supportAboveMost;
+    if (band === 'below') return t.stats.supportBelowMost;
+    return t.stats.supportAroundMost;
   }
 
   const percentage = formatPercentileValue(lowerScorePercentage, groupSize);
-  return { primary: t.stats.percentileSupport(String(percentage)), note: null };
+  return t.stats.percentileSupport(String(percentage));
 }
 
 function reliabilityShort(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
@@ -91,7 +88,18 @@ function reliabilityHint(t: ReturnType<typeof useI18n>['t'], groupSize: number):
   return t.stats.reliabilityHigh;
 }
 
-export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelProps) {
+function statsUpdatedLabel(
+  t: ReturnType<typeof useI18n>['t'],
+  locale: ReturnType<typeof useI18n>['locale'],
+  iso: string,
+): string {
+  const kind = updatedStampKind(iso);
+  if (kind === 'today') return t.delta.updatedToday(formatClockTime(iso, locale));
+  if (kind === 'yesterday') return t.delta.updatedYesterday(formatClockTime(iso, locale));
+  return t.delta.updatedQuiet(formatShortDayTime(iso, locale));
+}
+
+export function StatisticsPanel({ state, profile, userScore, updatedAt }: StatisticsPanelProps) {
   const { t, locale } = useI18n();
   const [showDetails, setShowDetails] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
@@ -177,17 +185,12 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
           {heroVerdict(t, data.lowerScorePercentage, groupSize)}
         </h2>
 
-        {support.primary ? (
-          <p className="text-base leading-snug text-[var(--text-secondary)]">{support.primary}</p>
-        ) : null}
-        {support.note ? (
-          <p className="text-sm leading-snug text-[var(--tg-theme-subtitle-text-color)]">{support.note}</p>
-        ) : null}
+        {support ? <p className="text-base leading-snug text-[var(--text-secondary)]">{support}</p> : null}
         <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.unofficialNote}</p>
       </div>
 
       {band !== 'unknown' && data.lowerScorePercentage != null ? (
-        <div className="mt-3">
+        <div className="mt-4">
           {detailed ? (
             <PositionGlance mode="percentile" percentage={data.lowerScorePercentage} />
           ) : (
@@ -200,7 +203,7 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
 
       <button
         type="button"
-        className="flex w-full items-start justify-between gap-3 rounded-xl py-1 text-left active:opacity-70"
+        className="disclosure-row"
         aria-expanded={showWhy}
         aria-label={t.stats.cohortWhy}
         onClick={() => setShowWhy((value) => !value)}
@@ -209,7 +212,7 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
           <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
             {t.stats.cohortCompareLabel}
           </span>
-          <span className="block text-sm font-medium leading-snug">
+          <span className="block text-sm font-medium leading-snug text-[var(--text-primary)]">
             {[t.choices.scholarshipTrack[profile.scholarshipTrack], schoolCountry].filter(Boolean).join(' · ')}
           </span>
           <span className="block text-sm leading-snug text-[var(--tg-theme-subtitle-text-color)]">
@@ -223,31 +226,39 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 pt-5 text-[var(--tg-theme-hint-color)]" aria-hidden="true">
+        <span className="shrink-0 pt-5 text-lg leading-none text-[var(--tg-theme-hint-color)]" aria-hidden="true">
           ›
         </span>
       </button>
 
       <hr className="section-divider" />
 
-      <button
-        type="button"
-        className="flex w-full items-start justify-between gap-3 rounded-xl py-1 text-left active:opacity-70"
-        aria-expanded={showDetails}
-        onClick={() => setShowDetails((value) => !value)}
-      >
-        <span className="min-w-0 space-y-1">
-          <span className="block text-sm font-medium">
-            {t.stats.reliabilityLabel}: {reliabilityShort(t, groupSize)}
+      <div>
+        <button
+          type="button"
+          className="disclosure-row"
+          aria-expanded={showDetails}
+          onClick={() => setShowDetails((value) => !value)}
+        >
+          <span className="min-w-0 space-y-1">
+            <span className="block text-sm font-medium">
+              {t.stats.reliabilityLabel}: {reliabilityShort(t, groupSize)}
+            </span>
+            <span className="block text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">
+              {reliabilityHint(t, groupSize)}
+            </span>
           </span>
-          <span className="block text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">
-            {reliabilityHint(t, groupSize)}
+          <span className="shrink-0 pt-0.5 text-lg leading-none text-[var(--tg-theme-hint-color)]" aria-hidden="true">
+            ›
           </span>
-        </span>
-        <span className="shrink-0 pt-0.5 text-[var(--tg-theme-hint-color)]" aria-hidden="true">
-          ›
-        </span>
-      </button>
+        </button>
+
+        {updatedAt ? (
+          <p className="mt-1.5 px-0.5 text-[10px] leading-4 tracking-[0.01em] text-[var(--text-disabled)]">
+            {statsUpdatedLabel(t, locale, updatedAt)}
+          </p>
+        ) : null}
+      </div>
 
       {showDetails ? (
         <div className="mt-3 space-y-3 border-t border-[var(--section-divider-color)] pt-3">

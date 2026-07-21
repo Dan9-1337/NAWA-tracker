@@ -267,13 +267,7 @@ export function ProfileDashboard({
 
   return (
     <div className="space-y-3">
-      {statsData ? (
-        <VisitDeltaBanner
-          previous={previousSnapshot}
-          current={statsData}
-          updatedAt={statsUpdatedAt ?? undefined}
-        />
-      ) : null}
+      {statsData ? <VisitDeltaBanner previous={previousSnapshot} current={statsData} /> : null}
 
       {statusConfirmation ? (
         <p className="text-sm text-[var(--tg-theme-success-text-color)]" role="status" aria-live="polite">
@@ -281,15 +275,20 @@ export function ProfileDashboard({
         </p>
       ) : null}
 
-      <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
+      <StatisticsPanel
+        state={statistics}
+        profile={current}
+        userScore={userOrientationScore}
+        updatedAt={statsUpdatedAt}
+      />
 
-      <hr className="section-divider" />
+      <hr className="section-divider-strong" />
 
       {!statusEditorOpen ? (
         <button
           type="button"
           aria-label={t.form.changeStatusAria}
-          className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left active:opacity-70"
+          className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
           onClick={() => setStatusEditorOpen(true)}
         >
           <span className="min-w-0">
