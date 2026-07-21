@@ -6,7 +6,7 @@ import {
   parseCurrentResponse,
   type RpcClient,
 } from '../_lib/questionnaire.js';
-import { requireSession, type AuthenticatedSession } from '../_lib/session.js';
+import { requireTelegramIdentity, type VerifiedTelegramIdentity } from '../_lib/telegram-auth.js';
 import { getSupabaseAdmin } from '../_lib/supabase-admin.js';
 
 type CurrentRequest = {
@@ -17,12 +17,12 @@ type CurrentRequest = {
 
 type CurrentDependencies = {
   getClient: () => RpcClient;
-  requireSession: (request: CurrentRequest, client: RpcClient) => Promise<AuthenticatedSession>;
+  requireTelegramIdentity: (request: CurrentRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: CurrentDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
-  requireSession,
+  requireTelegramIdentity,
 };
 
 export function createCurrentResponseHandler(overrides: Partial<CurrentDependencies> = {}) {
@@ -32,10 +32,10 @@ export function createCurrentResponseHandler(overrides: Partial<CurrentDependenc
     try {
       assertMethod(request, response, 'POST');
       parseJsonBody(request, currentResponseRequestSchema);
+      const identity = dependencies.requireTelegramIdentity(request);
       const client = dependencies.getClient();
-      const session = await dependencies.requireSession(request, client);
       const currentResult = await client.rpc('get_current_response', {
-        p_session_token_hash: session.sessionTokenHash,
+        p_telegram_user_id: identity.user.id,
       });
       assertRpcSucceeded(currentResult.error);
       if (currentResult.data === null) throw unauthorized();

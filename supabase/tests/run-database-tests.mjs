@@ -10,7 +10,7 @@ if (!databaseUrl) {
 }
 
 const testFiles = [
-  'supabase/tests/recovery_sessions.sql',
+  'supabase/tests/telegram_profiles.sql',
   'supabase/tests/statistics.sql',
 ];
 const { Pool } = pg;

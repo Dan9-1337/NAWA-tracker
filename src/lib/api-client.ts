@@ -3,12 +3,8 @@ import type {
   CreateResponseRequest,
   CreateResponseResult,
   CurrentResponseResult,
-  LogoutSessionResult,
   PublicStatisticsRequest,
   PublicStatisticsResult,
-  RecoveryCredential,
-  RestoreSessionRequest,
-  RestoreSessionResult,
   StatisticsResult,
   UpdateResponseRequest,
   UpdateResponseResult,
@@ -17,15 +13,13 @@ import {
   apiErrorSchema,
   createResponseResultSchema,
   currentResponseResultSchema,
-  logoutSessionResultSchema,
   publicStatisticsResultSchema,
-  restoreSessionResultSchema,
-  rotateRecoveryResultSchema,
   statisticsResultSchema,
   updateResponseResultSchema,
 } from '../../shared/validation';
 import type { ZodType } from 'zod';
 import { getMessages } from '../i18n';
+import { getTelegramInitData } from './telegram';
 
 export class ApiClientError extends Error {
   constructor(
@@ -36,6 +30,18 @@ export class ApiClientError extends Error {
     super(message);
     this.name = 'ApiClientError';
   }
+}
+
+function authHeaders(): Record<string, string> {
+  const initData = getTelegramInitData();
+  if (!initData) {
+    throw new ApiClientError(401, 'UNAUTHORIZED', getMessages().telegram.missingInitData);
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `tma ${initData}`,
+  };
 }
 
 async function readJson(response: Response): Promise<unknown> {
@@ -49,8 +55,7 @@ async function readJson(response: Response): Promise<unknown> {
 async function request<T>(path: string, method: 'POST' | 'PUT', body: unknown, schema: ZodType<T>): Promise<T> {
   const response = await fetch(path, {
     method,
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
   const payload = await readJson(response);
@@ -89,16 +94,4 @@ export function getStatistics(): Promise<StatisticsResult> {
 
 export function getPublicStatistics(input: PublicStatisticsRequest): Promise<PublicStatisticsResult> {
   return request('/api/statistics/public', 'POST', input, publicStatisticsResultSchema);
-}
-
-export function restoreSession(input: RestoreSessionRequest): Promise<RestoreSessionResult> {
-  return request('/api/session/restore', 'POST', input, restoreSessionResultSchema);
-}
-
-export function rotateRecovery(): Promise<RecoveryCredential> {
-  return request('/api/recovery/rotate', 'POST', {}, rotateRecoveryResultSchema);
-}
-
-export function logoutSession(): Promise<LogoutSessionResult> {
-  return request('/api/session/logout', 'POST', {}, logoutSessionResultSchema);
 }

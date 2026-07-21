@@ -6,9 +6,8 @@ select plan(34);
 
 do $$
 begin
-  perform public.create_response_with_session(
-    'stats-target-recovery', 'stats-target-session', now() + interval '1 day',
-    'stats-ip-target', 'fingerprint-target',
+  perform public.create_response_for_telegram_user(
+    820000001, 'stats_target',
     false, 'Ukraina', 'Ukraina',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
@@ -18,12 +17,13 @@ end;
 $$;
 
 insert into public.responses (
-  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 )
 select
-  'stats-peer-' || value,
+  820000000 + value,
+  'stats_peer_' || value,
   false, 'Ukraina', 'Ukraina',
   'nawa_director', 'direct_studies',
   value, 100, value, 'none', round(value * 0.9, 2),
@@ -38,94 +38,94 @@ select
 from generate_series(10, 80, 10) as value;
 
 select is(
-  (public.get_current_statistics('stats-target-session')->>'detailsAvailable')::boolean,
+  (public.get_current_statistics(820000001)->>'detailsAvailable')::boolean,
   false,
   'details are suppressed when every comparison group has fewer than ten responses'
 );
-select is(public.get_current_statistics('stats-target-session')->>'group', null, 'suppressed statistics disclose no fallback group');
-select is(public.get_current_statistics('stats-target-session')->>'medianScore', null, 'suppressed statistics disclose no median');
-select is(public.get_current_statistics('stats-target-session')->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
-select is(public.get_current_statistics('stats-target-session')->>'sameCountryCount', null, 'country count below ten is suppressed');
-select is(public.get_current_statistics('stats-target-session')->>'statusCounts', null, 'suppressed statistics disclose no status counts');
+select is(public.get_current_statistics(820000001)->>'group', null, 'suppressed statistics disclose no fallback group');
+select is(public.get_current_statistics(820000001)->>'medianScore', null, 'suppressed statistics disclose no median');
+select is(public.get_current_statistics(820000001)->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
+select is(public.get_current_statistics(820000001)->>'sameCountryCount', null, 'country count below ten is suppressed');
+select is(public.get_current_statistics(820000001)->>'statusCounts', null, 'suppressed statistics disclose no status counts');
 
 insert into public.responses (
-  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  'stats-peer-90', false, 'Ukraina', 'Ukraina',
+  820000090, 'stats_peer_90', false, 'Ukraina', 'Ukraina',
   'nawa_director', 'direct_studies',
   90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
 );
 
 select is(
-  public.get_current_statistics('stats-target-session')->>'group',
+  public.get_current_statistics(820000001)->>'group',
   'track-country',
   'statistics choose the track-country group when at least ten responses share the ranking country'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'groupResponseCount')::integer,
+  (public.get_current_statistics(820000001)->>'groupResponseCount')::integer,
   10,
   'the selected group count includes all valid matching responses'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'medianScore')::numeric,
+  (public.get_current_statistics(820000001)->>'medianScore')::numeric,
   45::numeric,
   'median score uses orientation scores for nawa_director responses'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'lowerScorePercentage')::numeric,
+  (public.get_current_statistics(820000001)->>'lowerScorePercentage')::numeric,
   40::numeric,
   'percentile counts only strictly lower orientation scores'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->'statusCounts'->>'awaiting_decision')::integer,
+  (public.get_current_statistics(820000001)->'statusCounts'->>'awaiting_decision')::integer,
   2,
   'status counts include every application status in the selected group'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'sameCountryCount')::integer,
+  (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
   10,
   'country count is returned at the privacy threshold'
 );
 
 insert into public.responses (
-  recovery_token_hash, has_polish_citizenship, ranking_country, school_country,
+  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  'stats-suspicious', false, 'Ukraina', 'Ukraina',
+  820000999, 'stats_suspicious', false, 'Ukraina', 'Ukraina',
   'nawa_director', 'direct_studies',
   0, 100, 0, 'none', 0, 'submitted', current_date, true
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'totalValidResponses')::integer,
+  (public.get_current_statistics(820000001)->>'totalValidResponses')::integer,
   10,
   'suspicious responses are excluded from aggregate counts'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'groupResponseCount')::integer,
+  (public.get_current_statistics(820000001)->>'groupResponseCount')::integer,
   10,
   'suspicious responses are excluded from comparison groups'
 );
 
 update public.responses
 set ranking_country = 'Polska'
-where recovery_token_hash in ('stats-peer-70', 'stats-peer-80', 'stats-peer-90');
+where telegram_user_id in (820000070, 820000080, 820000090);
 select is(
-  public.get_current_statistics('stats-target-session')->>'group',
+  public.get_current_statistics(820000001)->>'group',
   'track',
   'statistics fall back to track when the ranking-country cohort drops below ten'
 );
 select is(
-  (public.get_current_statistics('stats-target-session')->>'sameCountryCount')::integer,
+  (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
   null,
   'country count is suppressed independently after fallback'
 );
 
 with mutation as (
   select public.update_current_response(
-    'stats-target-session',
+    820000001, 'stats_target',
     false, 'Ukraina', 'Ukraina',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
@@ -138,30 +138,30 @@ select ok(
 )
 from mutation;
 select is(
-  (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
+  (select is_suspicious from public.responses where telegram_user_id = 820000001),
   false,
   'the first scholarship award does not mark a response suspicious'
 );
 select ok(
   (public.update_current_response(
-    'stats-target-session',
+    820000001, 'stats_target',
     false, 'Ukraina', 'Ukraina',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
     'scholarship_not_awarded', current_date
   )->>'updated')::boolean
-  and (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
+  and (select is_suspicious from public.responses where telegram_user_id = 820000001),
   'opposing scholarship awards mark a response suspicious and keep the flag sticky'
 );
 select ok(
   (public.update_current_response(
-    'stats-target-session',
+    820000001, 'stats_target',
     false, 'Ukraina', 'Ukraina',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
     'submitted', current_date
   )->>'updated')::boolean
-  and (select is_suspicious from public.responses where recovery_token_hash = 'stats-target-recovery'),
+  and (select is_suspicious from public.responses where telegram_user_id = 820000001),
   'suspicious status remains set after a later ordinary update'
 );
 
@@ -234,7 +234,7 @@ select throws_ok($$select public.assert_statistics_result((select jsonb_set(resu
 
 create temporary table response_before_failed_statistics(result jsonb) on commit drop;
 insert into response_before_failed_statistics
-select to_jsonb(r) from public.responses r where recovery_token_hash = 'stats-target-recovery';
+select to_jsonb(r) from public.responses r where telegram_user_id = 820000001;
 
 create or replace function public.get_response_statistics(p_response_id uuid)
 returns jsonb
@@ -248,7 +248,7 @@ $$;
 
 select throws_ok(
   $$select public.update_current_response(
-      'stats-target-session',
+      820000001, 'stats_target',
       false, 'Niemcy', 'Niemcy',
       'culture_minister', 'preparatory_course',
       9, 10, null,
@@ -259,7 +259,7 @@ select throws_ok(
   'malformed non-null update statistics fail inside the transaction'
 );
 select is(
-  (select to_jsonb(r) from public.responses r where recovery_token_hash = 'stats-target-recovery'),
+  (select to_jsonb(r) from public.responses r where telegram_user_id = 820000001),
   (select result from response_before_failed_statistics),
   'malformed statistics roll back every update change'
 );

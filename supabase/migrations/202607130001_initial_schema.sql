@@ -2,9 +2,8 @@ create extension if not exists pgcrypto with schema extensions;
 
 create table public.responses (
   id uuid primary key default gen_random_uuid(),
-  recovery_token_hash text not null unique check (length(recovery_token_hash) > 0),
-  recovery_token_created_at timestamptz not null default now(),
-  recovery_token_rotated_at timestamptz,
+  telegram_user_id bigint not null unique check (telegram_user_id > 0),
+  telegram_username text check (telegram_username is null or length(telegram_username) between 1 and 100),
   has_polish_citizenship boolean not null,
   ranking_country text not null check (length(ranking_country) between 1 and 100),
   school_country text not null check (length(school_country) between 1 and 100),
@@ -52,20 +51,10 @@ create table public.responses (
   )
 );
 
-create table public.anonymous_sessions (
-  id uuid primary key default gen_random_uuid(),
-  response_id uuid not null references public.responses(id) on delete cascade,
-  session_token_hash text not null unique check (length(session_token_hash) > 0),
-  expires_at timestamptz not null,
-  created_at timestamptz not null default now(),
-  revoked_at timestamptz
-);
-
 create table public.submission_limits (
   id uuid primary key default gen_random_uuid(),
   ip_hash text not null check (length(ip_hash) > 0),
-  limit_type text not null check (limit_type in ('create', 'restore', 'public_stats')),
-  response_fingerprint text,
+  limit_type text not null check (limit_type in ('public_stats')),
   created_at timestamptz not null default now()
 );
 
@@ -75,8 +64,7 @@ create index responses_ranking_country_idx on public.responses (ranking_country)
 create index responses_current_status_idx on public.responses (current_status);
 create index responses_grade_percentage_idx on public.responses (grade_percentage);
 create index responses_nawa_orientation_score_idx on public.responses (nawa_orientation_score);
-create index anonymous_sessions_response_id_idx on public.anonymous_sessions (response_id);
-create index anonymous_sessions_expires_at_idx on public.anonymous_sessions (expires_at);
+create index responses_telegram_user_id_idx on public.responses (telegram_user_id);
 create index submission_limits_lookup_idx on public.submission_limits (ip_hash, limit_type, created_at);
 
 create function public.set_updated_at()
@@ -95,26 +83,6 @@ create trigger responses_set_updated_at
 before update on public.responses
 for each row execute function public.set_updated_at();
 
-create function public.resolve_anonymous_session(p_session_token_hash text)
-returns uuid
-language sql
-stable
-security definer
-set search_path = pg_catalog
-as $$
-  select response_id
-  from public.anonymous_sessions
-  where session_token_hash = p_session_token_hash
-    and revoked_at is null
-    and expires_at > now()
-  limit 1;
-$$;
-
--- Pure aggregate helper shared by the authenticated and public statistics
--- entry points. `p_metric_value` is the orientation score for nawa_director
--- or the grade percentage for the other two tracks. This never reproduces an
--- official NAWA seat-limit ranking: the comparison group is only the public,
--- user-declared passport-country cohort (see docs/superpowers/specs).
 create function public.compute_country_statistics(
   p_scholarship_track text,
   p_ranking_country text,
@@ -391,7 +359,7 @@ begin
 end;
 $$;
 
-create function public.get_current_statistics(p_session_token_hash text)
+create function public.get_current_statistics(p_telegram_user_id bigint)
 returns jsonb
 language plpgsql
 security definer
@@ -400,7 +368,10 @@ as $$
 declare
   v_response_id uuid;
 begin
-  v_response_id := public.resolve_anonymous_session(p_session_token_hash);
+  select id into v_response_id
+  from public.responses
+  where telegram_user_id = p_telegram_user_id;
+
   if v_response_id is null then
     return null;
   end if;
@@ -409,9 +380,6 @@ begin
 end;
 $$;
 
--- Public, session-free passport-country cohort comparison. Callers supply the
--- questionnaire values they intend to declare (or already declared); no raw
--- rows or identifiers are ever returned. Rate limited per IP like create/restore.
 create function public.get_public_statistics(
   p_scholarship_track text,
   p_ranking_country text,
@@ -463,12 +431,9 @@ begin
 end;
 $$;
 
-create function public.create_response_with_session(
-  p_recovery_token_hash text,
-  p_session_token_hash text,
-  p_session_expires_at timestamptz,
-  p_ip_hash text,
-  p_response_fingerprint text,
+create function public.create_response_for_telegram_user(
+  p_telegram_user_id bigint,
+  p_telegram_username text,
   p_has_polish_citizenship boolean,
   p_ranking_country text,
   p_school_country text,
@@ -494,19 +459,12 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_response';
   end if;
 
-  perform pg_advisory_xact_lock(hashtextextended(p_ip_hash, 0));
-
-  delete from public.submission_limits
-  where created_at < now() - interval '24 hours';
-
-  if (
-    select count(*)
-    from public.submission_limits
-    where ip_hash = p_ip_hash
-      and limit_type = 'create'
-      and created_at >= now() - interval '24 hours'
-  ) >= 3 then
-    raise exception using errcode = 'P0001', message = 'create_rate_limited';
+  if exists (
+    select 1
+    from public.responses
+    where telegram_user_id = p_telegram_user_id
+  ) then
+    raise exception using errcode = 'P0001', message = 'profile_exists';
   end if;
 
   v_nawa_score := case
@@ -518,42 +476,43 @@ begin
     else null
   end;
 
-  insert into public.responses (
-    recovery_token_hash,
-    has_polish_citizenship,
-    ranking_country,
-    school_country,
-    scholarship_track,
-    study_route,
-    average_grade,
-    maximum_grade,
-    grade_percentage,
-    polish_school_level,
-    nawa_orientation_score,
-    current_status,
-    status_changed_at
-  ) values (
-    p_recovery_token_hash,
-    p_has_polish_citizenship,
-    p_ranking_country,
-    p_school_country,
-    p_scholarship_track,
-    p_study_route,
-    p_average_grade,
-    p_maximum_grade,
-    p_average_grade / p_maximum_grade * 100,
-    p_polish_school_level,
-    v_nawa_score,
-    p_current_status,
-    p_status_changed_at
-  )
-  returning id into v_response_id;
-
-  insert into public.anonymous_sessions (response_id, session_token_hash, expires_at)
-  values (v_response_id, p_session_token_hash, p_session_expires_at);
-
-  insert into public.submission_limits (ip_hash, limit_type, response_fingerprint)
-  values (p_ip_hash, 'create', p_response_fingerprint);
+  begin
+    insert into public.responses (
+      telegram_user_id,
+      telegram_username,
+      has_polish_citizenship,
+      ranking_country,
+      school_country,
+      scholarship_track,
+      study_route,
+      average_grade,
+      maximum_grade,
+      grade_percentage,
+      polish_school_level,
+      nawa_orientation_score,
+      current_status,
+      status_changed_at
+    ) values (
+      p_telegram_user_id,
+      p_telegram_username,
+      p_has_polish_citizenship,
+      p_ranking_country,
+      p_school_country,
+      p_scholarship_track,
+      p_study_route,
+      p_average_grade,
+      p_maximum_grade,
+      p_average_grade / p_maximum_grade * 100,
+      p_polish_school_level,
+      v_nawa_score,
+      p_current_status,
+      p_status_changed_at
+    )
+    returning id into v_response_id;
+  exception
+    when unique_violation then
+      raise exception using errcode = 'P0001', message = 'profile_exists';
+  end;
 
   v_statistics := public.assert_statistics_result(public.get_response_statistics(v_response_id));
 
@@ -561,80 +520,7 @@ begin
 end;
 $$;
 
-create function public.restore_anonymous_session(
-  p_recovery_token_hash text,
-  p_session_token_hash text,
-  p_session_expires_at timestamptz,
-  p_ip_hash text
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = pg_catalog
-as $$
-declare
-  v_response_id uuid;
-  v_attempt_count bigint;
-begin
-  perform pg_advisory_xact_lock(hashtextextended(p_ip_hash, 0));
-
-  delete from public.submission_limits
-  where created_at < now() - interval '24 hours';
-
-  insert into public.submission_limits (ip_hash, limit_type)
-  values (p_ip_hash, 'restore');
-
-  select count(*) into v_attempt_count
-  from public.submission_limits
-  where ip_hash = p_ip_hash
-    and limit_type = 'restore'
-    and created_at >= now() - interval '15 minutes';
-
-  if v_attempt_count > 10 then
-    return jsonb_build_object('restored', false, 'rateLimited', true);
-  end if;
-
-  if p_session_expires_at is null
-    or not isfinite(p_session_expires_at)
-    or p_session_expires_at <= now() then
-    return jsonb_build_object('restored', false, 'rateLimited', false);
-  end if;
-
-  select id into v_response_id
-  from public.responses
-  where recovery_token_hash = p_recovery_token_hash;
-
-  if v_response_id is null then
-    return jsonb_build_object('restored', false, 'rateLimited', false);
-  end if;
-
-  if not pg_try_advisory_xact_lock(hashtextextended(v_response_id::text, 1)) then
-    return jsonb_build_object('restored', false, 'rateLimited', false);
-  end if;
-
-  select id into v_response_id
-  from public.responses
-  where id = v_response_id
-    and recovery_token_hash = p_recovery_token_hash
-  for update;
-
-  if v_response_id is null then
-    return jsonb_build_object('restored', false, 'rateLimited', false);
-  end if;
-
-  begin
-    insert into public.anonymous_sessions (response_id, session_token_hash, expires_at)
-    values (v_response_id, p_session_token_hash, p_session_expires_at);
-  exception
-    when unique_violation or not_null_violation or check_violation then
-      return jsonb_build_object('restored', false, 'rateLimited', false);
-  end;
-
-  return jsonb_build_object('restored', true, 'rateLimited', false);
-end;
-$$;
-
-create function public.get_current_response(p_session_token_hash text)
+create function public.get_current_response(p_telegram_user_id bigint)
 returns jsonb
 language sql
 stable
@@ -654,11 +540,12 @@ as $$
     'statusChangedAt', r.status_changed_at
   ))
   from public.responses r
-  where r.id = public.resolve_anonymous_session(p_session_token_hash);
+  where r.telegram_user_id = p_telegram_user_id;
 $$;
 
 create function public.update_current_response(
-  p_session_token_hash text,
+  p_telegram_user_id bigint,
+  p_telegram_username text,
   p_has_polish_citizenship boolean,
   p_ranking_country text,
   p_school_country text,
@@ -690,7 +577,7 @@ begin
 
   select r.* into v_response
   from public.responses r
-  where r.id = public.resolve_anonymous_session(p_session_token_hash)
+  where r.telegram_user_id = p_telegram_user_id
   for update;
 
   if not found then
@@ -715,7 +602,8 @@ begin
   end;
 
   update public.responses
-  set has_polish_citizenship = p_has_polish_citizenship,
+  set telegram_username = p_telegram_username,
+      has_polish_citizenship = p_has_polish_citizenship,
       ranking_country = p_ranking_country,
       school_country = p_school_country,
       scholarship_track = p_scholarship_track,
@@ -736,91 +624,24 @@ begin
 end;
 $$;
 
-create function public.rotate_recovery_token(
-  p_session_token_hash text,
-  p_new_recovery_token_hash text
-)
-returns boolean
-language plpgsql
-security definer
-set search_path = pg_catalog
-as $$
-declare
-  v_response_id uuid;
-begin
-  v_response_id := public.resolve_anonymous_session(p_session_token_hash);
-
-  if v_response_id is null then
-    return false;
-  end if;
-
-  if not pg_try_advisory_xact_lock(hashtextextended(v_response_id::text, 1)) then
-    return false;
-  end if;
-
-  select id into v_response_id
-  from public.responses
-  where id = v_response_id
-  for update;
-
-  if v_response_id is null then
-    return false;
-  end if;
-
-  update public.responses
-  set recovery_token_hash = p_new_recovery_token_hash,
-      recovery_token_created_at = now(),
-      recovery_token_rotated_at = now()
-  where id = v_response_id;
-
-  return true;
-end;
-$$;
-
-create function public.revoke_anonymous_session(p_session_token_hash text)
-returns boolean
-language plpgsql
-security definer
-set search_path = pg_catalog
-as $$
-begin
-  update public.anonymous_sessions
-  set revoked_at = now()
-  where session_token_hash = p_session_token_hash
-    and revoked_at is null
-    and expires_at > now();
-
-  return found;
-end;
-$$;
-
 alter table public.responses enable row level security;
-alter table public.anonymous_sessions enable row level security;
 alter table public.submission_limits enable row level security;
 
-revoke all on table public.responses, public.anonymous_sessions, public.submission_limits from public, anon, authenticated;
+revoke all on table public.responses, public.submission_limits from public, anon, authenticated;
 revoke all on all sequences in schema public from public, anon, authenticated;
 revoke all on function public.set_updated_at() from public, anon, authenticated;
-revoke all on function public.create_response_with_session(text, text, timestamptz, text, text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
-revoke all on function public.restore_anonymous_session(text, text, timestamptz, text) from public, anon, authenticated;
-revoke all on function public.resolve_anonymous_session(text) from public, anon, authenticated;
-revoke all on function public.get_current_response(text) from public, anon, authenticated;
-revoke all on function public.update_current_response(text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
-revoke all on function public.rotate_recovery_token(text, text) from public, anon, authenticated;
-revoke all on function public.revoke_anonymous_session(text) from public, anon, authenticated;
-revoke all on function public.get_current_statistics(text) from public, anon, authenticated;
+revoke all on function public.create_response_for_telegram_user(bigint, text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
+revoke all on function public.get_current_response(bigint) from public, anon, authenticated;
+revoke all on function public.update_current_response(bigint, text, boolean, text, text, text, text, numeric, numeric, text, text, date) from public, anon, authenticated;
+revoke all on function public.get_current_statistics(bigint) from public, anon, authenticated;
 revoke all on function public.get_public_statistics(text, text, numeric, numeric, text, text) from public, anon, authenticated;
 revoke all on function public.get_response_statistics(uuid) from public, anon, authenticated, service_role;
 revoke all on function public.compute_country_statistics(text, text, numeric) from public, anon, authenticated, service_role;
 revoke all on function public.assert_statistics_result(jsonb) from public, anon, authenticated, service_role;
 
-grant select, insert, update, delete on table public.responses, public.anonymous_sessions, public.submission_limits to service_role;
-grant execute on function public.create_response_with_session(text, text, timestamptz, text, text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
-grant execute on function public.restore_anonymous_session(text, text, timestamptz, text) to service_role;
-grant execute on function public.resolve_anonymous_session(text) to service_role;
-grant execute on function public.get_current_response(text) to service_role;
-grant execute on function public.update_current_response(text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
-grant execute on function public.rotate_recovery_token(text, text) to service_role;
-grant execute on function public.revoke_anonymous_session(text) to service_role;
-grant execute on function public.get_current_statistics(text) to service_role;
+grant select, insert, update, delete on table public.responses, public.submission_limits to service_role;
+grant execute on function public.create_response_for_telegram_user(bigint, text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
+grant execute on function public.get_current_response(bigint) to service_role;
+grant execute on function public.update_current_response(bigint, text, boolean, text, text, text, text, numeric, numeric, text, text, date) to service_role;
+grant execute on function public.get_current_statistics(bigint) to service_role;
 grant execute on function public.get_public_statistics(text, text, numeric, numeric, text, text) to service_role;

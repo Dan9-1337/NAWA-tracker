@@ -1,23 +1,13 @@
 -- Local development mock data for UI and statistics testing.
 -- Loaded automatically by `npx supabase db reset` (see config.toml [db.seed]).
 --
--- Demo applicant (matches the dense nawa_director / Ukraina peer group below):
---   Recovery code: AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE
---   Restore URL:   http://localhost:3000/#restore=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE
---   Session cookie value (optional manual inject):
---                  AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI
---
--- Those credentials only work when .env.local uses the fixed local HMAC secrets
--- from .env.example (RECOVERY_HMAC_SECRET / SESSION_HMAC_SECRET).
+-- Demo Telegram user id: 900000001 (matches VITE_TELEGRAM_DEV_INIT_DATA from local:env)
 
-truncate table public.submission_limits, public.anonymous_sessions, public.responses restart identity cascade;
+truncate table public.submission_limits, public.responses restart identity cascade;
 
--- ---------------------------------------------------------------------------
--- Dense peer group: unlocks detailed statistics (>= 10 matching rows)
--- track=nawa_director, ranking_country=Ukraina
--- ---------------------------------------------------------------------------
 insert into public.responses (
-  recovery_token_hash,
+  telegram_user_id,
+  telegram_username,
   has_polish_citizenship,
   ranking_country,
   school_country,
@@ -33,7 +23,8 @@ insert into public.responses (
   is_suspicious
 )
 select
-  'seed-ua-nawa-' || lpad(g::text, 2, '0'),
+  910000000 + g,
+  'seed_peer_' || lpad(g::text, 2, '0'),
   false,
   'Ukraina',
   case (g % 3)
@@ -72,12 +63,10 @@ from (
     (7, 3.8), (8, 3.45), (9, 4.2), (10, 4.5), (11, 3.7), (12, 3.35)
 ) as peers(g, grade);
 
--- ---------------------------------------------------------------------------
--- Demo response the UI can restore / edit (fixed recovery + session hashes)
--- ---------------------------------------------------------------------------
 insert into public.responses (
   id,
-  recovery_token_hash,
+  telegram_user_id,
+  telegram_username,
   has_polish_citizenship,
   ranking_country,
   school_country,
@@ -93,7 +82,8 @@ insert into public.responses (
   is_suspicious
 ) values (
   '11111111-1111-4111-8111-111111111111',
-  '728221017f4eda2e342c23afd3857c0049783761150c0a9be29a14897f2a97c9',
+  900000001,
+  'demo_applicant',
   false,
   'Ukraina',
   'Ukraina',
@@ -109,23 +99,9 @@ insert into public.responses (
   false
 );
 
-insert into public.anonymous_sessions (
-  id,
-  response_id,
-  session_token_hash,
-  expires_at
-) values (
-  '22222222-2222-4222-8222-222222222222',
-  '11111111-1111-4111-8111-111111111111',
-  '6945efd342d0656df1ffe7d4248c104f7615a1892971e2322f07807e7c480764',
-  now() + interval '180 days'
-);
-
--- ---------------------------------------------------------------------------
--- Extra variety across other tracks / countries (browse-feel data)
--- ---------------------------------------------------------------------------
 insert into public.responses (
-  recovery_token_hash,
+  telegram_user_id,
+  telegram_username,
   has_polish_citizenship,
   ranking_country,
   school_country,
@@ -141,55 +117,54 @@ insert into public.responses (
   is_suspicious
 ) values
   (
-    'seed-ua-nawa-13', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
+    900000013, 'seed_ua_nawa_13', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
     4.5, 5, 90, 'primary', 86, 'formal_review_completed', date '2026-06-02', false
   ),
   (
-    'seed-by-nawa-01', false, 'Białoruś', 'Białoruś', 'nawa_director', 'direct_studies',
+    900000101, 'seed_by_nawa_01', false, 'Białoruś', 'Białoruś', 'nawa_director', 'direct_studies',
     4.0, 5, 80, 'none', 72, 'submitted', date '2026-06-03', false
   ),
   (
-    'seed-lt-nawa-01', false, 'Litwa', 'Litwa', 'nawa_director', 'direct_studies',
+    900000102, 'seed_lt_nawa_01', false, 'Litwa', 'Litwa', 'nawa_director', 'direct_studies',
     4.2, 5, 84, 'secondary', 85.6, 'awaiting_decision', date '2026-06-04', false
   ),
   (
-    'seed-kz-nawa-01', false, 'Kazachstan', 'Kazachstan', 'nawa_director', 'preparatory_course',
+    900000103, 'seed_kz_nawa_01', false, 'Kazachstan', 'Kazachstan', 'nawa_director', 'preparatory_course',
     3.8, 5, 76, 'none', 68.4, 'formal_review_in_progress', date '2026-06-05', false
   ),
   (
-    'seed-ge-nawa-01', false, 'Gruzja', 'Gruzja', 'nawa_director', 'direct_studies',
+    900000104, 'seed_ge_nawa_01', false, 'Gruzja', 'Gruzja', 'nawa_director', 'direct_studies',
     3.55, 5, 71, 'primary', 36.95, 'correction_requested', date '2026-06-06', false
   ),
   (
-    'seed-ua-health-01', false, 'Ukraina', 'Ukraina', 'health_minister', 'preparatory_course',
+    900000201, 'seed_ua_health_01', false, 'Ukraina', 'Ukraina', 'health_minister', 'preparatory_course',
     4.55, 5, 91, null, null, 'awaiting_decision', date '2026-06-07', false
   ),
   (
-    'seed-by-health-02', false, 'Białoruś', 'Białoruś', 'health_minister', 'preparatory_course',
+    900000202, 'seed_by_health_02', false, 'Białoruś', 'Białoruś', 'health_minister', 'preparatory_course',
     4.4, 5, 88, null, null, 'scholarship_awarded', date '2026-05-28', false
   ),
   (
-    'seed-kz-health-03', false, 'Kazachstan', 'Kazachstan', 'health_minister', 'preparatory_course',
+    900000203, 'seed_kz_health_03', false, 'Kazachstan', 'Kazachstan', 'health_minister', 'preparatory_course',
     4.2, 5, 84, null, null, 'merit_review_in_progress', date '2026-06-08', false
   ),
   (
-    'seed-ge-health-04', false, 'Gruzja', 'Gruzja', 'health_minister', 'preparatory_course',
+    900000204, 'seed_ge_health_04', false, 'Gruzja', 'Gruzja', 'health_minister', 'preparatory_course',
     3.75, 5, 75, null, null, 'scholarship_not_awarded', date '2026-05-10', false
   ),
   (
-    'seed-ua-culture-01', false, 'Ukraina', 'Ukraina', 'culture_minister', 'direct_studies',
+    900000301, 'seed_ua_culture_01', false, 'Ukraina', 'Ukraina', 'culture_minister', 'direct_studies',
     4.8, 5, 96, null, null, 'submitted', date '2026-06-09', false
   ),
   (
-    'seed-by-culture-02', false, 'Białoruś', 'Białoruś', 'culture_minister', 'direct_studies',
+    900000302, 'seed_by_culture_02', false, 'Białoruś', 'Białoruś', 'culture_minister', 'direct_studies',
     4.4, 5, 88, null, null, 'awaiting_decision', date '2026-06-10', false
   ),
   (
-    'seed-lt-culture-03', false, 'Litwa', 'Litwa', 'culture_minister', 'preparatory_course',
+    900000303, 'seed_lt_culture_03', false, 'Litwa', 'Litwa', 'culture_minister', 'preparatory_course',
     4.1, 5, 82, null, null, 'correction_requested', date '2026-06-11', false
   ),
-  -- Suspicious row: present in totals exclusion checks, ignored by aggregate stats
   (
-    'seed-suspicious-01', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
+    900000999, 'seed_suspicious_01', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
     4.95, 5, 99, 'secondary', 99.1, 'scholarship_awarded', date '2026-03-01', true
   );

@@ -2,7 +2,7 @@ import { statisticsRequestSchema, statisticsResultSchema } from '../shared/valid
 import { unauthorized } from './_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
 import { assertRpcSucceeded, parseStatistics, type RpcClient } from './_lib/questionnaire.js';
-import { requireSession, type AuthenticatedSession } from './_lib/session.js';
+import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
 
 type StatisticsRequest = {
@@ -13,12 +13,12 @@ type StatisticsRequest = {
 
 type StatisticsDependencies = {
   getClient: () => RpcClient;
-  requireSession: (request: StatisticsRequest, client: RpcClient) => Promise<AuthenticatedSession>;
+  requireTelegramIdentity: (request: StatisticsRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: StatisticsDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
-  requireSession,
+  requireTelegramIdentity,
 };
 
 export function createStatisticsHandler(overrides: Partial<StatisticsDependencies> = {}) {
@@ -28,10 +28,10 @@ export function createStatisticsHandler(overrides: Partial<StatisticsDependencie
     try {
       assertMethod(request, response, 'POST');
       parseJsonBody(request, statisticsRequestSchema);
+      const identity = dependencies.requireTelegramIdentity(request);
       const client = dependencies.getClient();
-      const session = await dependencies.requireSession(request, client);
       const statisticsResult = await client.rpc('get_current_statistics', {
-        p_session_token_hash: session.sessionTokenHash,
+        p_telegram_user_id: identity.user.id,
       });
       assertRpcSucceeded(statisticsResult.error);
       if (statisticsResult.data === null) throw unauthorized();

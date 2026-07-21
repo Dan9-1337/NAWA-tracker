@@ -117,11 +117,9 @@ describe('request schemas', () => {
   it('accepts a valid create request', () => {
     expect(
       createResponseRequestSchema.parse({
-        turnstileToken: 'token',
         response: validForm,
       }),
     ).toEqual({
-      turnstileToken: 'token',
       response: validForm,
     });
   });

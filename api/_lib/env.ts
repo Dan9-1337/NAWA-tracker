@@ -4,35 +4,22 @@ import { z } from 'zod';
 
 const nonEmptySecret = z.string().min(32);
 
-const serverEnvironmentSchema = z
-  .object({
-    SUPABASE_URL: z.string().url(),
-    SUPABASE_SERVICE_ROLE_KEY: nonEmptySecret,
-    TURNSTILE_SECRET_KEY: nonEmptySecret,
-    RECOVERY_HMAC_SECRET: nonEmptySecret,
-    SESSION_HMAC_SECRET: nonEmptySecret,
-    IP_HASH_SALT: nonEmptySecret,
-    SESSION_COOKIE_NAME: z.string().regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/),
-    SESSION_MAX_AGE_DAYS: z.coerce.number().int().positive().max(3650),
-    APP_PUBLIC_URL: z.string().url(),
-    NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
-    VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
-    VERCEL: z.literal('1').optional(),
-  })
-  .refine(
-    (value) =>
-      new Set([value.RECOVERY_HMAC_SECRET, value.SESSION_HMAC_SECRET, value.IP_HASH_SALT]).size === 3,
-  );
+const serverEnvironmentSchema = z.object({
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_ROLE_KEY: nonEmptySecret,
+  TELEGRAM_BOT_TOKEN: nonEmptySecret,
+  IP_HASH_SALT: nonEmptySecret,
+  APP_PUBLIC_URL: z.string().url(),
+  NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
+  VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
+  VERCEL: z.literal('1').optional(),
+});
 
 export type ServerEnv = {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
-  turnstileSecretKey: string;
-  recoveryHmacSecret: string;
-  sessionHmacSecret: string;
+  telegramBotToken: string;
   ipHashSalt: string;
-  sessionCookieName: string;
-  sessionMaxAgeDays: number;
   appPublicUrl: string;
   appOrigin: string;
   appHostname: string;
@@ -90,12 +77,8 @@ export function loadServerEnv(
   return {
     supabaseUrl: supabaseUrl.toString().replace(/\/$/, ''),
     supabaseServiceRoleKey: result.data.SUPABASE_SERVICE_ROLE_KEY,
-    turnstileSecretKey: result.data.TURNSTILE_SECRET_KEY,
-    recoveryHmacSecret: result.data.RECOVERY_HMAC_SECRET,
-    sessionHmacSecret: result.data.SESSION_HMAC_SECRET,
+    telegramBotToken: result.data.TELEGRAM_BOT_TOKEN,
     ipHashSalt: result.data.IP_HASH_SALT,
-    sessionCookieName: result.data.SESSION_COOKIE_NAME,
-    sessionMaxAgeDays: result.data.SESSION_MAX_AGE_DAYS,
     appPublicUrl: publicUrl.toString().replace(/\/$/, ''),
     appOrigin: publicUrl.origin,
     appHostname: publicUrl.hostname,

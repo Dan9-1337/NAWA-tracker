@@ -40,8 +40,12 @@ function parseEnvFile(path) {
 }
 
 const fileEnv = parseEnvFile(envFile);
-if (!fileEnv.VITE_TURNSTILE_SITE_KEY) {
-  console.error('VITE_TURNSTILE_SITE_KEY is missing from .env.local. Run: npm run local:env\n');
+if (!fileEnv.TELEGRAM_BOT_TOKEN) {
+  console.error('TELEGRAM_BOT_TOKEN is missing from .env.local. Run: npm run local:env\n');
+  process.exit(1);
+}
+if (!fileEnv.VITE_TELEGRAM_DEV_INIT_DATA) {
+  console.error('VITE_TELEGRAM_DEV_INIT_DATA is missing from .env.local. Run: npm run local:env\n');
   process.exit(1);
 }
 
@@ -95,5 +99,4 @@ start(
 );
 
 console.log('Local app: http://localhost:3000');
-console.log('Demo restore: http://localhost:3000/#restore=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE');
-console.log(`Turnstile site key loaded (${fileEnv.VITE_TURNSTILE_SITE_KEY.length} chars)`);
+console.log('Uses signed dev initData for demo Telegram user 900000001 (see supabase/seed.sql).');

@@ -10,11 +10,8 @@ import {
   type CreateResponseRequest,
   type CreateResponseResult,
   type CurrentResponseResult,
-  type LogoutSessionResult,
   type PublicStatisticsRequest,
   type PublicStatisticsResult,
-  type RecoveryCredential,
-  type RestoreSessionRequest,
   type StatisticsResult,
   type StatusCounts,
   type UpdateResponseRequest,
@@ -75,16 +72,11 @@ const baseFormSchema = z
 
 export const responseFormInputSchema = baseFormSchema;
 
-export const canonicalOpaqueTokenPattern = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
-export const canonicalOpaqueTokenSchema = z.string().regex(canonicalOpaqueTokenPattern);
-
-const turnstileTokenSchema = z.string().min(1);
 const emptyRequestSchema = z.object({}).strict();
 
 export const createResponseRequestSchema = z
   .object({
     response: responseFormInputSchema,
-    turnstileToken: turnstileTokenSchema,
   })
   .strict() satisfies z.ZodType<CreateResponseRequest>;
 
@@ -94,17 +86,8 @@ export const updateResponseRequestSchema = z
   })
   .strict() satisfies z.ZodType<UpdateResponseRequest>;
 
-export const restoreSessionRequestSchema = z
-  .object({
-    recoveryToken: z.string().max(16 * 1024),
-    turnstileToken: turnstileTokenSchema,
-  })
-  .strict() satisfies z.ZodType<RestoreSessionRequest>;
-
 export const currentResponseRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
-export const logoutSessionRequestSchema = emptyRequestSchema;
-export const rotateRecoveryRequestSchema = emptyRequestSchema;
 
 const statusCountsShape = Object.fromEntries(
   applicationStatuses.map((status) => [status, z.number().int().nonnegative()]),
@@ -194,15 +177,8 @@ export const publicStatisticsRequestSchema = z
 
 export const publicStatisticsResultSchema = statisticsResultSchema satisfies z.ZodType<PublicStatisticsResult>;
 
-export const recoveryCredentialSchema = z
+export const createResponseResultSchema = z
   .object({
-    recoveryToken: canonicalOpaqueTokenSchema,
-    recoveryUrl: z.string().url(),
-  })
-  .strict() satisfies z.ZodType<RecoveryCredential>;
-
-export const createResponseResultSchema = recoveryCredentialSchema
-  .extend({
     created: z.literal(true),
     statistics: statisticsResultSchema,
   })
@@ -220,15 +196,6 @@ export const currentResponseResultSchema = z
     response: responseFormInputSchema,
   })
   .strict() satisfies z.ZodType<CurrentResponseResult>;
-
-export const restoreSessionResultSchema = currentResponseResultSchema;
-export const rotateRecoveryResultSchema = recoveryCredentialSchema;
-
-export const logoutSessionResultSchema = z
-  .object({
-    loggedOut: z.literal(true),
-  })
-  .strict() satisfies z.ZodType<LogoutSessionResult>;
 
 export const apiErrorSchema = z
   .object({

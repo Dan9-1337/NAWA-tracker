@@ -1,12 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import type { HttpResponse } from '../api/_lib/http.js';
-import { createRotateRecoveryHandler } from '../api/recovery/rotate.js';
 import { createResponsesHandler } from '../api/responses.js';
 import { createCurrentResponseHandler } from '../api/responses/current.js';
-import { createLogoutHandler } from '../api/session/logout.js';
-import { createRestoreHandler } from '../api/session/restore.js';
 import { createStatisticsHandler } from '../api/statistics.js';
+import { createPublicStatisticsHandler } from '../api/statistics/public.js';
 
 type ApiHandler = (request: ApiRequest, response: HttpResponse) => Promise<unknown> | unknown;
 
@@ -24,9 +22,7 @@ const routes: Array<{ method: string; path: string; handler: ApiHandler }> = [
   { method: 'PUT', path: '/api/responses', handler: createResponsesHandler() },
   { method: 'POST', path: '/api/responses/current', handler: createCurrentResponseHandler() },
   { method: 'POST', path: '/api/statistics', handler: createStatisticsHandler() },
-  { method: 'POST', path: '/api/session/restore', handler: createRestoreHandler() },
-  { method: 'POST', path: '/api/session/logout', handler: createLogoutHandler() },
-  { method: 'POST', path: '/api/recovery/rotate', handler: createRotateRecoveryHandler() },
+  { method: 'POST', path: '/api/statistics/public', handler: createPublicStatisticsHandler() },
 ];
 
 function adaptResponse(res: ServerResponse): HttpResponse {

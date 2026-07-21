@@ -19,6 +19,10 @@ export function forbiddenOrigin(): HttpError {
   return new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
 }
 
+export function profileExists(): HttpError {
+  return new HttpError(409, 'PROFILE_EXISTS', 'Ten profil Telegram ma już ankietę.');
+}
+
 export function normalizeError(error: unknown): { status: number; body: ApiError } {
   if (error instanceof HttpError) {
     return {

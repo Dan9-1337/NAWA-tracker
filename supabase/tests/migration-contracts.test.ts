@@ -18,8 +18,8 @@ function functionDefinition(name: string): string {
 }
 
 describe('mutation statistics migration contract', () => {
-  it('documents database suites without a stale hardcoded pgTAP count', () => {
-    expect(readme).toContain('transactional pgTAP suites');
+  it('documents database suites in README', () => {
+    expect(readme).toContain('npm run test:db');
     expect(readme).not.toMatch(/\d+ transactional pgTAP assertions/);
   });
 
@@ -34,17 +34,15 @@ describe('mutation statistics migration contract', () => {
     expect(migration).not.toContain("study_route in ('first_cycle', 'second_cycle', 'uniform')");
   });
 
-  it('defines session resolution and statistics before mutation functions', () => {
-    const resolve = migration.indexOf('create function public.resolve_anonymous_session(');
+  it('defines telegram identity and statistics before mutation functions', () => {
     const countryStatistics = migration.indexOf('create function public.compute_country_statistics(');
     const responseStatistics = migration.indexOf('create function public.get_response_statistics(');
     const assertion = migration.indexOf('create function public.assert_statistics_result(');
     const statistics = migration.indexOf('create function public.get_current_statistics(');
     const publicStatistics = migration.indexOf('create function public.get_public_statistics(');
-    const create = migration.indexOf('create function public.create_response_with_session(');
+    const create = migration.indexOf('create function public.create_response_for_telegram_user(');
     const update = migration.indexOf('create function public.update_current_response(');
 
-    expect(resolve).toBeLessThan(countryStatistics);
     expect(countryStatistics).toBeLessThan(responseStatistics);
     expect(responseStatistics).toBeLessThan(assertion);
     expect(assertion).toBeLessThan(statistics);
@@ -53,6 +51,8 @@ describe('mutation statistics migration contract', () => {
     expect(publicStatistics).toBeLessThan(create);
     expect(statistics).toBeLessThan(update);
     expect(publicStatistics).toBeLessThan(update);
+    expect(migration).toContain('telegram_user_id bigint not null unique');
+    expect(migration).not.toContain('anonymous_sessions');
   });
 
   it('lets in-transaction statistics observe preceding mutation writes', () => {
@@ -83,7 +83,7 @@ describe('mutation statistics migration contract', () => {
   });
 
   it.each([
-    ['create_response_with_session', 'created'],
+    ['create_response_for_telegram_user', 'created'],
     ['update_current_response', 'updated'],
   ])('%s returns in-transaction privacy-safe statistics', (name, successField) => {
     const definition = functionDefinition(name);

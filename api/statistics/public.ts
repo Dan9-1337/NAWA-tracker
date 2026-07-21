@@ -5,6 +5,7 @@ import { assertMethod, parseJsonBody, sendError, type HttpResponse } from '../_l
 import { getClientIp, hashIp } from '../_lib/ip.js';
 import { assertSameOrigin } from '../_lib/origin.js';
 import { assertRpcSucceeded, parseStatistics, type RpcClient } from '../_lib/questionnaire.js';
+import { requireTelegramIdentity, type VerifiedTelegramIdentity } from '../_lib/telegram-auth.js';
 import { getSupabaseAdmin } from '../_lib/supabase-admin.js';
 
 type PublicStatisticsRequestShape = {
@@ -17,6 +18,7 @@ type PublicStatisticsRequestShape = {
 export type PublicStatisticsDependencies = {
   getClient: () => RpcClient;
   assertSameOrigin: (request: PublicStatisticsRequestShape) => void;
+  requireTelegramIdentity: (request: PublicStatisticsRequestShape) => VerifiedTelegramIdentity;
   getClientIp: (request: PublicStatisticsRequestShape) => string;
   hashIp: (ip: string) => string;
 };
@@ -24,6 +26,7 @@ export type PublicStatisticsDependencies = {
 const defaultDependencies: PublicStatisticsDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
   assertSameOrigin,
+  requireTelegramIdentity,
   getClientIp,
   hashIp,
 };
@@ -45,6 +48,7 @@ export function createPublicStatisticsHandler(overrides: Partial<PublicStatistic
     try {
       assertMethod(request, response, 'POST');
       dependencies.assertSameOrigin(request);
+      dependencies.requireTelegramIdentity(request);
       const input = parseJsonBody(request, publicStatisticsRequestSchema);
       const clientIp = dependencies.getClientIp(request);
       const client = dependencies.getClient();

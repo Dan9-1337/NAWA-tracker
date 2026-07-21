@@ -69,24 +69,13 @@ export type PublicStatisticsResult = StatisticsResult;
 
 export type CreateResponseRequest = {
   response: ResponseFormInput;
-  turnstileToken: string;
 };
 
 export type UpdateResponseRequest = {
   response: ResponseFormInput;
 };
 
-export type RestoreSessionRequest = {
-  recoveryToken: string;
-  turnstileToken: string;
-};
-
-export type RecoveryCredential = {
-  recoveryToken: string;
-  recoveryUrl: string;
-};
-
-export type CreateResponseResult = RecoveryCredential & {
+export type CreateResponseResult = {
   created: true;
   statistics: StatisticsResult;
 };
@@ -98,12 +87,6 @@ export type UpdateResponseResult = {
 
 export type CurrentResponseResult = {
   response: ResponseFormInput;
-};
-
-export type RestoreSessionResult = CurrentResponseResult;
-
-export type LogoutSessionResult = {
-  loggedOut: true;
 };
 
 export type ApiError = {

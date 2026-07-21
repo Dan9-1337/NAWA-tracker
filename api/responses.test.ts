@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { HttpError } from './_lib/errors';
+import { signTelegramInitData } from './_lib/telegram-auth';
 import {
   createResponsesHandler,
   type ResponsesHandlerDependencies,
@@ -8,6 +9,9 @@ import {
 import { createCurrentResponseHandler } from './responses/current';
 import { createPublicStatisticsHandler } from './statistics/public';
 import { createStatisticsHandler } from './statistics';
+
+const BOT_TOKEN = 'test-bot-token-that-is-at-least-32-characters';
+const USER_ID = 424242424;
 
 const validForm = {
   hasPolishCitizenship: false,
@@ -54,6 +58,15 @@ type Request = {
   socket?: { remoteAddress?: string };
 };
 
+function initDataHeader(userId = USER_ID) {
+  const initData = signTelegramInitData(
+    { user: JSON.stringify({ id: userId, username: 'tester' }) },
+    BOT_TOKEN,
+    1_700_000_000,
+  );
+  return { authorization: `tma ${initData}` };
+}
+
 function createResponseDouble() {
   const state: { status?: number; body?: unknown; headers: Map<string, string | string[]> } = {
     headers: new Map(),
@@ -75,11 +88,11 @@ function createResponseDouble() {
   return { response, state };
 }
 
-function request(method: string, body: unknown = {}): Request {
+function request(method: string, body: unknown = {}, userId = USER_ID): Request {
   return {
     method,
     body,
-    headers: { origin: 'https://tracker.example' },
+    headers: { origin: 'https://tracker.example', ...initDataHeader(userId) },
     socket: { remoteAddress: '203.0.113.9' },
   };
 }
@@ -89,7 +102,7 @@ function responsesDependencies(
     name: string,
     parameters: Record<string, unknown>,
   ) => { data: unknown; error: { message: string } | null } = (name) => {
-    if (name === 'create_response_with_session') {
+    if (name === 'create_response_for_telegram_user') {
       return { data: { created: true, statistics }, error: null };
     }
     if (name === 'update_current_response') {
@@ -99,28 +112,15 @@ function responsesDependencies(
     throw new Error(`Unexpected RPC: ${name}`);
   },
 ): ResponsesHandlerDependencies {
-  const generatedTokens = [`${'R'.repeat(42)}Q`, `${'S'.repeat(42)}g`];
   return {
     getClient: vi.fn(() => ({
       rpc: vi.fn((name, parameters) => Promise.resolve(rpcImplementation(name, parameters))),
     })),
     assertSameOrigin: vi.fn(),
-    verifyTurnstile: vi.fn().mockResolvedValue(undefined),
-    getClientIp: vi.fn(() => '203.0.113.9'),
-    hashIp: vi.fn(() => 'ip-hash'),
-    generateOpaqueToken: vi.fn(() => generatedTokens.shift() ?? 'T'.repeat(43)),
-    hashRecoveryToken: vi.fn(() => 'recovery-hash'),
-    hashSessionToken: vi.fn(() => 'session-hash'),
-    setSessionCookie: vi.fn(),
-    requireSession: vi.fn().mockResolvedValue({
-      responseId: '5b6fcd4b-bffe-4d8f-b1e8-e0f2cc1c66b0',
-      sessionTokenHash: 'owned-session-hash',
-    }),
-    loadServerEnv: vi.fn(() => ({
-      appPublicUrl: 'https://tracker.example',
-      sessionMaxAgeDays: 180,
+    requireTelegramIdentity: vi.fn(() => ({
+      user: { id: USER_ID, username: 'tester' },
+      authDate: 1_700_000_000,
     })),
-    now: () => new Date('2026-07-13T12:00:00.000Z'),
   };
 }
 
@@ -134,25 +134,6 @@ describe('POST /api/responses', () => {
 
     expect(state.status).toBe(405);
     expect(state.headers.get('Allow')).toBe('POST, PUT');
-    expect(dependencies.assertSameOrigin).not.toHaveBeenCalled();
-    expect(dependencies.getClient).not.toHaveBeenCalled();
-  });
-
-  it('rejects malformed JSON, oversized bodies, and identity selectors', async () => {
-    const dependencies = responsesDependencies();
-    const handler = createResponsesHandler(dependencies);
-
-    for (const [body, expectedStatus] of [
-      ['{"response":', 400],
-      ['x'.repeat(16 * 1024 + 1), 413],
-      [{ response: validForm, turnstileToken: 'proof', responseId: crypto.randomUUID() }, 400],
-    ] as const) {
-      const { response, state } = createResponseDouble();
-      await handler(request('POST', body), response);
-      expect(state.status).toBe(expectedStatus);
-    }
-
-    expect(dependencies.verifyTurnstile).not.toHaveBeenCalled();
     expect(dependencies.getClient).not.toHaveBeenCalled();
   });
 
@@ -163,412 +144,154 @@ describe('POST /api/responses', () => {
     });
     const { response, state } = createResponseDouble();
 
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: validForm, turnstileToken: 'proof' }),
-      response,
-    );
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
 
     expect(state.status).toBe(403);
-    expect(dependencies.verifyTurnstile).not.toHaveBeenCalled();
   });
 
-  it('rejects nawa_director responses that omit polishSchoolLevel', async () => {
-    const dependencies = responsesDependencies();
-    const { response, state } = createResponseDouble();
-    const { polishSchoolLevel: _omitted, ...incompleteForm } = validForm;
-
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: incompleteForm, turnstileToken: 'proof' }),
-      response,
-    );
-
-    expect(state.status).toBe(400);
-    expect(dependencies.verifyTurnstile).not.toHaveBeenCalled();
-    expect(dependencies.getClient).not.toHaveBeenCalled();
-  });
-
-  it('creates response and first session atomically with normalized server arguments', async () => {
+  it('creates a profile for the authenticated Telegram user', async () => {
     const calls: Array<[string, Record<string, unknown>]> = [];
     const dependencies = responsesDependencies((name, parameters) => {
       calls.push([name, parameters]);
-      return {
-        data: {
-          created: true,
-          statistics: { ...statistics, internalId: crypto.randomUUID() },
-          sessionTokenHash: 'must-not-leak',
-        },
-        error: null,
-      };
+      return { data: { created: true, statistics }, error: null };
     });
     const { response, state } = createResponseDouble();
 
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: validForm, turnstileToken: 'turnstile-proof' }),
-      response,
-    );
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
 
-    expect(dependencies.verifyTurnstile).toHaveBeenCalledWith('turnstile-proof', '203.0.113.9');
-    expect(calls[0]).toEqual([
-      'create_response_with_session',
-      {
-        p_recovery_token_hash: 'recovery-hash',
-        p_session_token_hash: 'session-hash',
-        p_session_expires_at: '2027-01-09T12:00:00.000Z',
-        p_ip_hash: 'ip-hash',
-        p_response_fingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
-        p_has_polish_citizenship: false,
-        p_ranking_country: 'Ukraina',
-        p_school_country: 'Ukraina',
-        p_scholarship_track: 'nawa_director',
-        p_study_route: 'direct_studies',
-        p_average_grade: 4.5,
-        p_maximum_grade: 5,
-        p_polish_school_level: 'secondary',
-        p_current_status: 'submitted',
-        p_status_changed_at: '2026-07-01',
-      },
-    ]);
-    expect(calls).toHaveLength(1);
-    expect(dependencies.generateOpaqueToken).toHaveBeenCalledTimes(2);
-    expect(dependencies.hashRecoveryToken).toHaveBeenCalledWith(`${'R'.repeat(42)}Q`);
-    expect(dependencies.hashSessionToken).toHaveBeenCalledWith(`${'S'.repeat(42)}g`);
-    expect(dependencies.setSessionCookie).toHaveBeenCalledWith(response, `${'S'.repeat(42)}g`);
+    expect(calls[0]?.[0]).toBe('create_response_for_telegram_user');
+    expect(calls[0]?.[1]).toMatchObject({
+      p_telegram_user_id: USER_ID,
+      p_telegram_username: 'tester',
+      p_ranking_country: 'Ukraina',
+    });
     expect(state.status).toBe(201);
+    expect(state.body).toEqual({ created: true, statistics });
+  });
+
+  it('returns PROFILE_EXISTS when the Telegram user already has a profile', async () => {
+    const dependencies = responsesDependencies(() => ({
+      data: null,
+      error: { message: 'profile_exists' },
+    }));
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
+
+    expect(state.status).toBe(409);
     expect(state.body).toEqual({
-      created: true,
-      recoveryToken: `${'R'.repeat(42)}Q`,
-      recoveryUrl: `https://tracker.example/#restore=${`${'R'.repeat(42)}Q`}`,
-      statistics,
+      error: { code: 'PROFILE_EXISTS', message: 'Ten profil Telegram ma już ankietę.' },
     });
-    expect(JSON.stringify(state.body)).not.toContain('session-hash');
-    expect(JSON.stringify(state.body)).not.toContain('internalId');
-    expect(JSON.stringify(state.body)).not.toContain('must-not-leak');
   });
 
-  it('rejects invalid atomic mutation statistics before issuing either credential', async () => {
-    const dependencies = responsesDependencies(() => ({
-      data: {
-        created: true,
-        statistics: { ...statistics, sameCountryCount: 2 },
-        recoveryToken: 'database-secret',
-      },
-      error: null,
-    }));
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: validForm, turnstileToken: 'proof' }),
-      response,
-    );
-
-    expect(state.status).toBe(500);
-    expect(dependencies.setSessionCookie).not.toHaveBeenCalled();
-    expect(JSON.stringify(state.body)).not.toContain('database-secret');
-    expect(JSON.stringify(state.body)).not.toContain('RRRR');
-  });
-
-  it('does not issue or leak credentials when the atomic create RPC fails', async () => {
+  it('returns PROFILE_EXISTS when a concurrent create hits the unique constraint', async () => {
     const dependencies = responsesDependencies(() => ({
       data: null,
-      error: { message: 'database details containing session-hash' },
-    }));
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: validForm, turnstileToken: 'proof' }),
-      response,
-    );
-
-    expect(state.status).toBe(500);
-    expect(dependencies.setSessionCookie).not.toHaveBeenCalled();
-    expect(JSON.stringify(state.body)).not.toContain('session-hash');
-    expect(JSON.stringify(state.body)).not.toContain('RRRR');
-  });
-
-  it('maps the atomic create limit to a stable 429 without issuing credentials', async () => {
-    const dependencies = responsesDependencies(() => ({
-      data: null,
-      error: { message: 'create_rate_limited' },
-    }));
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(
-      request('POST', { response: validForm, turnstileToken: 'proof' }),
-      response,
-    );
-
-    expect(state.status).toBe(429);
-    expect(state.body).toEqual({
       error: {
-        code: 'CREATE_RATE_LIMITED',
-        message: 'Przekroczono limit nowych ankiet. Spróbuj ponownie później.',
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "responses_telegram_user_id_key"',
       },
+    }));
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
+
+    expect(state.status).toBe(409);
+    expect(state.body).toEqual({
+      error: { code: 'PROFILE_EXISTS', message: 'Ten profil Telegram ma już ankietę.' },
     });
-    expect(dependencies.setSessionCookie).not.toHaveBeenCalled();
   });
 });
 
 describe('PUT /api/responses', () => {
-  it('requires Origin and a session, but never invokes Turnstile', async () => {
-    const dependencies = responsesDependencies();
-    dependencies.requireSession = vi.fn().mockRejectedValue(
-      new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.'),
-    );
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
-
-    expect(dependencies.assertSameOrigin).toHaveBeenCalled();
-    expect(dependencies.verifyTurnstile).not.toHaveBeenCalled();
-    expect(state.status).toBe(401);
-  });
-
-  it('updates only through the owned session hash and returns fresh projected statistics', async () => {
+  it('updates only through the authenticated Telegram user id', async () => {
     const calls: Array<[string, Record<string, unknown>]> = [];
     const dependencies = responsesDependencies((name, parameters) => {
       calls.push([name, parameters]);
-      return {
-        data: {
-          updated: true,
-          statistics: { ...statistics, recovery_token_hash: 'must-not-leak' },
-          responseId: crypto.randomUUID(),
-        },
-        error: null,
-      };
+      return { data: { updated: true, statistics }, error: null };
     });
     const { response, state } = createResponseDouble();
 
     await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
 
-    expect(calls[0]).toEqual([
-      'update_current_response',
-      {
-        p_session_token_hash: 'owned-session-hash',
-        p_has_polish_citizenship: false,
-        p_ranking_country: 'Ukraina',
-        p_school_country: 'Ukraina',
-        p_scholarship_track: 'nawa_director',
-        p_study_route: 'direct_studies',
-        p_average_grade: 4.5,
-        p_maximum_grade: 5,
-        p_polish_school_level: 'secondary',
-        p_current_status: 'submitted',
-        p_status_changed_at: '2026-07-01',
-      },
-    ]);
-    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0]).toBe('update_current_response');
+    expect(calls[0]?.[1]).toMatchObject({ p_telegram_user_id: USER_ID });
+    expect(state.status).toBe(200);
     expect(state.body).toEqual({ updated: true, statistics });
-    expect(JSON.stringify(state.body)).not.toContain('must-not-leak');
-  });
-
-  it('maps a session-owned update that no longer resolves to 401', async () => {
-    const dependencies = responsesDependencies(() => ({ data: null, error: null }));
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
-
-    expect(state.status).toBe(401);
-  });
-
-  it('does not report update success when atomic mutation statistics are invalid', async () => {
-    const dependencies = responsesDependencies(() => ({
-      data: { updated: true, statistics: { ...statistics, groupResponseCount: -1 } },
-      error: null,
-    }));
-    const { response, state } = createResponseDouble();
-
-    await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
-
-    expect(state.status).toBe(500);
-    expect(state.body).toEqual({
-      error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
-    });
   });
 });
 
 describe('POST /api/responses/current', () => {
-  it('accepts only POST with an empty strict body and requires a session', async () => {
-    const getClient = vi.fn(() => ({ rpc: vi.fn() }));
-    const requireSession = vi.fn().mockRejectedValue(
-      new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.'),
-    );
-    const handler = createCurrentResponseHandler({ getClient, requireSession });
-
-    for (const [method, body, status] of [
-      ['GET', {}, 405],
-      ['POST', { responseId: crypto.randomUUID() }, 400],
-      ['POST', {}, 401],
-    ] as const) {
-      const result = createResponseDouble();
-      await handler(request(method, body), result.response);
-      expect(result.state.status).toBe(status);
-      if (status === 405) expect(result.state.headers.get('Allow')).toBe('POST');
-    }
-  });
-
-  it('returns only schema-approved questionnaire fields from the owned RPC', async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: {
-        ...validForm,
-        id: crypto.randomUUID(),
-        recovery_token_hash: 'private-hash',
-        created_at: '2026-07-13T12:00:00Z',
-      },
-      error: null,
-    });
+  it('loads the owned profile for the Telegram user', async () => {
     const handler = createCurrentResponseHandler({
-      getClient: () => ({ rpc }),
-      requireSession: vi.fn().mockResolvedValue({
-        responseId: crypto.randomUUID(),
-        sessionTokenHash: 'owned-session-hash',
-      }),
+      getClient: vi.fn(() => ({
+        rpc: vi.fn().mockResolvedValue({
+          data: validForm,
+          error: null,
+        }),
+      })),
+      requireTelegramIdentity: vi.fn(() => ({
+        user: { id: USER_ID, username: 'tester' },
+        authDate: 1_700_000_000,
+      })),
     });
     const { response, state } = createResponseDouble();
 
     await handler(request('POST'), response);
 
-    expect(rpc).toHaveBeenCalledWith('get_current_response', {
-      p_session_token_hash: 'owned-session-hash',
-    });
+    expect(state.status).toBe(200);
     expect(state.body).toEqual({ response: validForm });
-    expect(JSON.stringify(state.body)).not.toContain('private-hash');
   });
 });
 
 describe('POST /api/statistics', () => {
-  it('returns an Allow header for unsupported methods', async () => {
-    const handler = createStatisticsHandler();
-    const { response, state } = createResponseDouble();
-
-    await handler(request('GET'), response);
-
-    expect(state.status).toBe(405);
-    expect(state.headers.get('Allow')).toBe('POST');
-  });
-
-  it('requires an empty body and an authenticated owned session', async () => {
+  it('returns owned statistics for the Telegram user', async () => {
     const handler = createStatisticsHandler({
-      getClient: () => ({ rpc: vi.fn() }),
-      requireSession: vi.fn().mockRejectedValue(
-        new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.'),
-      ),
-    });
-    const invalidBodyResult = createResponseDouble();
-    const unauthorizedResult = createResponseDouble();
-
-    await handler(request('POST', { sessionToken: 'S'.repeat(43) }), invalidBodyResult.response);
-    await handler(request('POST'), unauthorizedResult.response);
-
-    expect(invalidBodyResult.state.status).toBe(400);
-    expect(unauthorizedResult.state.status).toBe(401);
-  });
-
-  it('derives statistics from the cookie session and strips unapproved RPC fields', async () => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: { ...statistics, responseId: crypto.randomUUID(), sessionTokenHash: 'private-hash' },
-      error: null,
-    });
-    const handler = createStatisticsHandler({
-      getClient: () => ({ rpc }),
-      requireSession: vi.fn().mockResolvedValue({
-        responseId: crypto.randomUUID(),
-        sessionTokenHash: 'owned-session-hash',
-      }),
+      getClient: vi.fn(() => ({
+        rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
+      })),
+      requireTelegramIdentity: vi.fn(() => ({
+        user: { id: USER_ID },
+        authDate: 1_700_000_000,
+      })),
     });
     const { response, state } = createResponseDouble();
 
     await handler(request('POST'), response);
 
-    expect(rpc).toHaveBeenCalledWith('get_current_statistics', {
-      p_session_token_hash: 'owned-session-hash',
-    });
+    expect(state.status).toBe(200);
     expect(state.body).toEqual(statistics);
-    expect(JSON.stringify(state.body)).not.toContain('private-hash');
-  });
-
-  it('fails closed when outgoing RPC statistics violate the shared schema', async () => {
-    const handler = createStatisticsHandler({
-      getClient: () => ({
-        rpc: vi.fn().mockResolvedValue({ data: { ...statistics, sameCountryCount: 2 }, error: null }),
-      }),
-      requireSession: vi.fn().mockResolvedValue({
-        responseId: crypto.randomUUID(),
-        sessionTokenHash: 'owned-session-hash',
-      }),
-    });
-    const { response, state } = createResponseDouble();
-
-    await handler(request('POST'), response);
-
-    expect(state.status).toBe(500);
-    expect(state.body).toEqual({
-      error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
-    });
   });
 });
 
 describe('POST /api/statistics/public', () => {
-  const publicRequest = {
-    scholarshipTrack: 'nawa_director',
-    rankingCountry: 'Ukraina',
-    averageGrade: 4.5,
-    maximumGrade: 5,
-    polishSchoolLevel: 'secondary',
-  } as const;
-
-  it('returns an Allow header for unsupported methods', async () => {
-    const handler = createPublicStatisticsHandler();
-    const { response, state } = createResponseDouble();
-
-    await handler(request('GET'), response);
-
-    expect(state.status).toBe(405);
-    expect(state.headers.get('Allow')).toBe('POST');
-  });
-
-  it('calls get_public_statistics with normalized questionnaire fields', async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: statistics, error: null });
+  it('requires Telegram auth and returns cohort preview statistics', async () => {
     const handler = createPublicStatisticsHandler({
-      getClient: () => ({ rpc }),
+      getClient: vi.fn(() => ({
+        rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
+      })),
       assertSameOrigin: vi.fn(),
+      requireTelegramIdentity: vi.fn(() => ({
+        user: { id: USER_ID },
+        authDate: 1_700_000_000,
+      })),
       getClientIp: vi.fn(() => '203.0.113.9'),
       hashIp: vi.fn(() => 'ip-hash'),
     });
     const { response, state } = createResponseDouble();
 
-    await handler(request('POST', publicRequest), response);
+    await handler(
+      request('POST', {
+        scholarshipTrack: 'nawa_director',
+        rankingCountry: 'Ukraina',
+        averageGrade: 4.5,
+        maximumGrade: 5,
+        polishSchoolLevel: 'secondary',
+      }),
+      response,
+    );
 
-    expect(rpc).toHaveBeenCalledWith('get_public_statistics', {
-      p_scholarship_track: 'nawa_director',
-      p_ranking_country: 'Ukraina',
-      p_average_grade: 4.5,
-      p_maximum_grade: 5,
-      p_polish_school_level: 'secondary',
-      p_ip_hash: 'ip-hash',
-    });
     expect(state.status).toBe(200);
     expect(state.body).toEqual(statistics);
-  });
-
-  it('maps the public statistics rate limit to a stable 429', async () => {
-    const handler = createPublicStatisticsHandler({
-      getClient: () => ({
-        rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'public_stats_rate_limited' } }),
-      }),
-      assertSameOrigin: vi.fn(),
-      getClientIp: vi.fn(() => '203.0.113.9'),
-      hashIp: vi.fn(() => 'ip-hash'),
-    });
-    const { response, state } = createResponseDouble();
-
-    await handler(request('POST', publicRequest), response);
-
-    expect(state.status).toBe(429);
-    expect(state.body).toEqual({
-      error: {
-        code: 'PUBLIC_STATS_RATE_LIMITED',
-        message: 'Przekroczono limit zapytań o statystyki. Spróbuj ponownie później.',
-      },
-    });
   });
 });

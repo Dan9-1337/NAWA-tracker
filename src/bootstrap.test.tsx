@@ -1,5 +1,6 @@
 import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiClientError } from './lib/api-client';
 
 const api = vi.hoisted(() => ({
   getCurrentResponse: vi.fn(),
@@ -10,29 +11,38 @@ vi.mock('./lib/api-client', async (importOriginal) => ({
   ...api,
 }));
 
+vi.mock('./lib/telegram', () => ({
+  initializeTelegramWebApp: vi.fn(),
+  getTelegramWebApp: vi.fn(() => ({
+    initData: 'signed-init-data',
+    ready: vi.fn(),
+    expand: vi.fn(),
+  })),
+  getTelegramInitData: vi.fn(() => 'signed-init-data'),
+}));
+
 describe('bootstrapApplication', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="root"></div>';
-    window.history.replaceState(null, '', `/#restore=${'A'.repeat(43)}`);
     api.getCurrentResponse.mockClear();
   });
 
   afterEach(() => {
-    window.history.replaceState(null, '', '/');
     document.body.innerHTML = '';
   });
 
-  it('scrubs and hands off a startup fragment before current-session lookup', async () => {
+  it('initializes Telegram WebApp and probes the current profile', async () => {
+    api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     const { bootstrapApplication } = await import('./bootstrap');
+    const { initializeTelegramWebApp } = await import('./lib/telegram');
     let root!: ReturnType<typeof bootstrapApplication>;
 
     act(() => {
       root = bootstrapApplication(document.getElementById('root')!);
     });
 
-    expect(window.location.hash).toBe('');
-    expect(await screen.findByText('Odzyskiwanie ankiety')).toBeInTheDocument();
-    expect(api.getCurrentResponse).not.toHaveBeenCalled();
+    expect(initializeTelegramWebApp).toHaveBeenCalled();
+    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
     act(() => root.unmount());
   });
 });

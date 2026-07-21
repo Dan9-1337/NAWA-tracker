@@ -16,15 +16,21 @@ function browserHeaders(): Map<string, string> {
 }
 
 describe('Vercel browser security headers', () => {
-  it('sets a Vite and Cloudflare Turnstile compatible CSP', () => {
+  it('sets a Vite and Telegram Mini App compatible CSP', () => {
     const csp = browserHeaders().get('content-security-policy');
 
     expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("script-src 'self' https://challenges.cloudflare.com");
-    expect(csp).toContain('frame-src https://challenges.cloudflare.com');
-    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("script-src 'self' https://telegram.org");
+    expect(csp).toContain('frame-src https://telegram.org');
+    expect(csp).toContain('https://web.telegram.org');
+    expect(csp).not.toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
+  });
+
+  it('does not block Telegram embedding with X-Frame-Options', () => {
+    const headers = browserHeaders();
+    expect(headers.has('x-frame-options')).toBe(false);
   });
 
   it('sets MIME, referrer, and restrained browser capability policies', () => {

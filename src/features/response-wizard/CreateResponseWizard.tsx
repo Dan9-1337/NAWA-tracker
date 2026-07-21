@@ -11,7 +11,6 @@ import { responseFormInputSchema } from '../../../shared/validation';
 import { calculateNawaOrientationScore, nawaOrientationThreshold } from '../../../shared/nawa-score';
 import { FormSection } from '../../components/FormSection';
 import { PrivacyNotice } from '../../components/PrivacyNotice';
-import { TurnstileWidget } from '../../components/TurnstileWidget';
 import { useI18n } from '../../i18n/context';
 
 type Draft = {
@@ -65,28 +64,19 @@ const steps = ['citizenship', 'geography', 'grades', 'nawaExtra', 'status', 'sum
 type Step = (typeof steps)[number];
 
 type CreateResponseWizardProps = {
-  onSubmit: (value: ResponseFormInput, turnstileToken: string) => void | Promise<void>;
+  onSubmit: (value: ResponseFormInput) => void | Promise<void>;
   disabled?: boolean;
-  siteKey?: string;
 };
 
-export function CreateResponseWizard({
-  onSubmit,
-  disabled = false,
-  siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY,
-}: CreateResponseWizardProps) {
+export function CreateResponseWizard({ onSubmit, disabled = false }: CreateResponseWizardProps) {
   const { t } = useI18n();
   const [privacyAcceptedAt, setPrivacyAcceptedAt] = useState<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<Draft>(initialDraft);
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const [pending, setPending] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const mounted = useRef(true);
   const inFlight = useRef(false);
-  const turnstileGeneration = useRef(0);
-  const callbackGeneration = turnstileGeneration.current;
 
   const effectiveSteps = useMemo<readonly Step[]>(
     () => steps.filter((step) => step !== 'nawaExtra' || draft.scholarshipTrack === 'nawa_director'),
@@ -102,13 +92,6 @@ export function CreateResponseWizard({
       if (next.scholarshipTrack !== 'nawa_director') next.polishSchoolLevel = 'none';
       return next;
     });
-  }
-
-  function resetTurnstile() {
-    const nextGeneration = turnstileGeneration.current + 1;
-    turnstileGeneration.current = nextGeneration;
-    setTurnstileResetKey(nextGeneration);
-    setTurnstileToken('');
   }
 
   const unsupportedCategory = draft.hasPolishCitizenship && !draft.hasSecondCitizenship;
@@ -145,7 +128,7 @@ export function CreateResponseWizard({
       : null;
 
   async function handleSubmit() {
-    if (disabled || inFlight.current || !turnstileToken) return;
+    if (disabled || inFlight.current) return;
     const result = responseFormInputSchema.safeParse(toResponseInput(draft));
     if (!result.success) {
       setServerError(t.form.submitError);
@@ -156,14 +139,11 @@ export function CreateResponseWizard({
     inFlight.current = true;
     setPending(true);
     try {
-      await onSubmit(result.data, turnstileToken);
+      await onSubmit(result.data);
     } catch {
       if (mounted.current) setServerError(t.form.submitError);
     } finally {
-      if (mounted.current) {
-        resetTurnstile();
-        setPending(false);
-      }
+      if (mounted.current) setPending(false);
       inFlight.current = false;
     }
   }
@@ -409,40 +389,6 @@ export function CreateResponseWizard({
             <SummaryRow label={t.labels.statusChangedAt} value={draft.statusChangedAt} />
           </dl>
 
-          <div className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-sm">
-            <p className="text-sm leading-6 text-slate-600">
-              {siteKey ? t.form.turnstileHint : t.form.turnstileMissingKey}
-            </p>
-            <div className="mt-4">
-              <TurnstileWidget
-                key={turnstileResetKey}
-                siteKey={siteKey}
-                onVerify={(token) => {
-                  if (callbackGeneration !== turnstileGeneration.current || inFlight.current) return;
-                  const challengeToken = token.trim();
-                  if (!challengeToken) {
-                    resetTurnstile();
-                    setServerError(t.turnstile.error);
-                    return;
-                  }
-                  setTurnstileToken(challengeToken);
-                  setServerError(null);
-                }}
-                onExpire={() => {
-                  if (callbackGeneration !== turnstileGeneration.current || inFlight.current) return;
-                  resetTurnstile();
-                  setServerError(t.turnstile.expired);
-                }}
-                onError={() => {
-                  if (callbackGeneration !== turnstileGeneration.current || inFlight.current) return;
-                  resetTurnstile();
-                  setServerError(t.turnstile.error);
-                }}
-                resetKey={turnstileResetKey}
-              />
-            </div>
-          </div>
-
           {serverError ? (
             <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900" role="alert">
               {serverError}
@@ -473,7 +419,7 @@ export function CreateResponseWizard({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={pending || disabled || !turnstileToken}
+            disabled={pending || disabled}
             className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5"
           >
             {pending ? t.form.submitting : t.form.submitCreate}

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { useI18n } from '../i18n/context';
 
-export const PRIVACY_NOTICE_VERSION = '2026-07-19';
+export const PRIVACY_NOTICE_VERSION = '2026-07-21';
 
 type PrivacyNoticeProps = {
   /** When provided, renders as a required acknowledgement gate instead of a static notice. */

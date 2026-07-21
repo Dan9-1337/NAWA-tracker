@@ -1,9 +1,5 @@
 import { HomePage } from './pages/HomePage';
 
-type AppProps = {
-  initialRecoveryToken: string | null;
-};
-
-export default function App({ initialRecoveryToken }: AppProps) {
-  return <HomePage initialRecoveryToken={initialRecoveryToken} />;
+export default function App() {
+  return <HomePage />;
 }
