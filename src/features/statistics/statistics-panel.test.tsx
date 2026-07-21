@@ -27,11 +27,21 @@ describe('StatisticsPanel', () => {
   });
 
   it('renders the complete localized percentile sentence', () => {
-    render(<StatisticsPanel state={{ status: 'success', data: detailedStatistics }} />);
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: detailedStatistics }}
+        userScore={75}
+        profilePath="Stypendium Dyrektora NAWA"
+      />,
+    );
 
     expect(
       screen.getByText('Twój wynik jest wyższy niż wynik 40.0% uczestników tej grupy.'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Twoja pozycja na skali wyniku')).toBeInTheDocument();
+    expect(screen.getByText('Stypendium Dyrektora NAWA')).toBeInTheDocument();
+    expect(screen.getByText('Ty')).toBeInTheDocument();
+    expect(screen.getByText('Mediana grupy')).toBeInTheDocument();
     expect(screen.getByText('Liczba odpowiedzi w grupie')).toBeInTheDocument();
     expect(screen.getByText('Mediana wyniku w tej grupie: 82.50')).toBeInTheDocument();
   });

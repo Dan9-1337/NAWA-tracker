@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
+import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { getSequentialStatusOptions } from '../../shared/status-options';
 import { isSuspiciousStatusTransition } from '../../shared/status-transitions';
 import { FormSection } from '../components/FormSection';
@@ -53,6 +54,20 @@ export function ProfileDashboard({
   const statusOptions = useMemo(() => getSequentialStatusOptions(current.currentStatus), [current.currentStatus]);
   const suspicious = isSuspiciousStatusTransition(current.currentStatus, currentStatus);
   const statusDirty = currentStatus !== current.currentStatus || statusChangedAt !== current.statusChangedAt;
+
+  const userOrientationScore = useMemo(() => {
+    if (current.scholarshipTrack !== 'nawa_director') return null;
+    return calculateNawaOrientationScore(
+      current.averageGrade,
+      current.maximumGrade,
+      current.polishSchoolLevel ?? 'none',
+    );
+  }, [current]);
+
+  const profilePathLabel = useMemo(
+    () => t.choices.scholarshipTrack[current.scholarshipTrack],
+    [current.scholarshipTrack, t.choices.scholarshipTrack],
+  );
 
   const editEffectiveSteps = useMemo(() => getWizardEffectiveSteps(editDraft), [editDraft]);
   const editCurrentStep = editEffectiveSteps[Math.min(editStepIndex, editEffectiveSteps.length - 1)];
@@ -205,7 +220,7 @@ export function ProfileDashboard({
         ) : null}
       </FormSection>
 
-      <StatisticsPanel state={statistics} />
+      <StatisticsPanel state={statistics} userScore={userOrientationScore} profilePath={profilePathLabel} />
 
       {actionError ? (
         <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">

@@ -1,5 +1,6 @@
 import type { StatisticsResult } from '../../../shared/contracts';
 import { useI18n } from '../../i18n/context';
+import { ScorePositionChart } from '../../components/ScorePositionChart';
 import { StatCard } from '../../components/StatCard';
 
 export type StatisticsState =
@@ -11,17 +12,15 @@ export type StatisticsState =
 
 type StatisticsPanelProps = {
   state: StatisticsState;
+  userScore?: number | null;
+  profilePath?: string | null;
 };
 
 export function statisticsStateFromResult(data: StatisticsResult): StatisticsState {
   return data.detailsAvailable ? { status: 'success', data } : { status: 'suppressed', data };
 }
 
-function formatGroup(group: StatisticsResult['group'], t: ReturnType<typeof useI18n>['t']) {
-  return group ? t.stats.groupLabels[group] : t.stats.noGroup;
-}
-
-export function StatisticsPanel({ state }: StatisticsPanelProps) {
+export function StatisticsPanel({ state, userScore, profilePath }: StatisticsPanelProps) {
   const { t } = useI18n();
   const titleId = 'statistics-title';
   const data = state.status === 'success' || state.status === 'suppressed' ? state.data : null;
@@ -66,11 +65,17 @@ export function StatisticsPanel({ state }: StatisticsPanelProps) {
       {data ? (
         <>
           <div className="mt-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
-            <p className="font-semibold">{formatGroup(data.group, t)}</p>
-            <p className="text-[var(--tg-theme-subtitle-text-color)]">
+            {profilePath ? <p className="font-semibold">{profilePath}</p> : null}
+            <p className={profilePath ? 'mt-1 text-[var(--tg-theme-subtitle-text-color)]' : ''}>
               {state.status === 'suppressed' ? t.stats.noStats : t.stats.fallbackNotice}
             </p>
           </div>
+          {userScore != null ? (
+            <ScorePositionChart
+              userScore={userScore}
+              medianScore={state.status === 'success' ? data.medianScore : null}
+            />
+          ) : null}
           <div className="mt-4 space-y-3">
             <StatCard label={t.stats.groupResponseCount} value={String(data.groupResponseCount)} />
             <StatCard
