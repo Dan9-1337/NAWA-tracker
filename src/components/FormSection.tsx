@@ -8,10 +8,10 @@ type FormSectionProps = {
 
 export function FormSection({ title, description, children }: FormSectionProps) {
   return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_10px_40px_rgba(15,23,42,0.06)] backdrop-blur">
+    <section className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] p-4">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">{description}</p>
       </div>
       <div className="space-y-4">{children}</div>
     </section>

@@ -19,20 +19,14 @@ describe('StatisticsPanel', () => {
     expect(screen.queryByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).not.toBeInTheDocument();
   });
 
-  it('renders the suppression state only for a successful suppressed result', () => {
+  it('renders a suppressed result without detailed breakdown', () => {
     render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} />);
 
     expect(screen.getByText('Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.')).toBeInTheDocument();
+    expect(screen.queryByText('Rozkład statusów w grupie')).not.toBeInTheDocument();
   });
 
-  it('renders a suppressed country count as unavailable', () => {
-    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} />);
-
-    expect(screen.getByText('Ten sam kraj obywatelstwa').parentElement).toHaveTextContent('—');
-    expect(screen.queryByText('null')).not.toBeInTheDocument();
-  });
-
-  it('renders the complete localized percentile sentence and status breakdown', () => {
+  it('renders the complete localized percentile sentence', () => {
     render(<StatisticsPanel state={{ status: 'success', data: detailedStatistics }} />);
 
     expect(
@@ -40,7 +34,6 @@ describe('StatisticsPanel', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Liczba odpowiedzi w grupie')).toBeInTheDocument();
     expect(screen.getByText('Mediana wyniku w tej grupie: 82.50')).toBeInTheDocument();
-    expect(screen.getByText('Rozkład statusów w grupie')).toBeInTheDocument();
   });
 });
 

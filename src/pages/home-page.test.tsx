@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateResponseResult, ResponseFormInput, StatisticsResult } from '../../shared/contracts';
+import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { ApiClientError } from '../lib/api-client';
 import { HomePage } from './HomePage';
 
@@ -12,29 +13,29 @@ const api = vi.hoisted(() => ({
   getStatistics: vi.fn(),
 }));
 
-const telegram = vi.hoisted(() => ({
-  getTelegramWebApp: vi.fn(),
-}));
-
 vi.mock('../lib/api-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api-client')>()),
   ...api,
 }));
 
-vi.mock('../lib/telegram', () => ({
-  getTelegramWebApp: telegram.getTelegramWebApp,
-  getTelegramInitData: vi.fn(() => 'signed-init-data'),
-  initializeTelegramWebApp: vi.fn(),
-}));
+vi.mock('../lib/telegram', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/telegram')>();
+  return {
+    ...actual,
+    initializeTelegramWebApp: vi.fn(),
+    getTelegramInitData: vi.fn(() => 'signed-init-data'),
+    getTelegramWebApp: vi.fn(() => actual.getTelegramWebApp()),
+  };
+});
 
 const currentResponse: ResponseFormInput = {
   hasPolishCitizenship: false,
-  rankingCountry: 'Ukraina',
-  schoolCountry: 'Ukraina',
+  rankingCountry: 'UA',
+  schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
-  averageGrade: 85,
-  maximumGrade: 100,
+  averageGrade: 4.5,
+  maximumGrade: 5,
   polishSchoolLevel: 'none',
   currentStatus: 'submitted',
   statusChangedAt: '2026-07-13',
@@ -54,26 +55,35 @@ function statistics(totalValidResponses: number): StatisticsResult {
   };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
-  telegram.getTelegramWebApp.mockReturnValue({
-    initData: 'signed-init-data',
-    ready: vi.fn(),
-    expand: vi.fn(),
-  });
+  localStorage.clear();
+  localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
+  setActiveLocale('pl');
+
+  const actual = await vi.importActual<typeof import('../lib/telegram')>('../lib/telegram');
+  const telegram = await import('../lib/telegram');
+  vi.mocked(telegram.getTelegramWebApp).mockImplementation(() => actual.getTelegramWebApp());
 });
 
+async function clickMain(user: ReturnType<typeof userEvent.setup>) {
+  const button = await screen.findByRole('button', { name: /Sprawdź moją pozycję|Dalej|Rozpocznij|Zapisz odpowiedź/ });
+  await waitFor(() => expect(button).toBeEnabled());
+  await user.click(button);
+}
+
 describe('HomePage', () => {
-  it('shows the Telegram gate outside WebView', () => {
-    telegram.getTelegramWebApp.mockReturnValue(null);
+  it('shows the Telegram gate outside WebView', async () => {
+    const telegram = await import('../lib/telegram');
+    vi.mocked(telegram.getTelegramWebApp).mockReturnValue(null);
     render(<HomePage />);
     expect(screen.getByText('Otwórz przez Telegram')).toBeInTheDocument();
   });
 
-  it('opens create mode when no profile exists', async () => {
+  it('opens create mode with start screen when no profile exists', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     render(<HomePage />);
-    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
+    expect(await screen.findByText('Twoja aplikacja NAWA')).toBeInTheDocument();
   });
 
   it('loads an authenticated profile and statistics', async () => {
@@ -82,12 +92,12 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Tryb aktualizacji')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Status wniosku' })).toBeInTheDocument();
     });
     expect(api.getStatistics).toHaveBeenCalled();
   });
 
-  it('creates a profile and lands in authenticated mode', async () => {
+  it('creates a profile through the wizard flow', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     const createResult: CreateResponseResult = {
       created: true,
@@ -98,24 +108,36 @@ describe('HomePage', () => {
     const user = userEvent.setup();
     render(<HomePage />);
 
-    await user.click(await screen.findByLabelText('Zapoznałem się'));
-    await user.click(screen.getByRole('button', { name: 'Rozpocznij' }));
-    await user.click(screen.getByRole('button', { name: 'Dalej' }));
-    await user.type(screen.getByLabelText('Kraj obywatelstwa (do grupy statystycznej)'), 'Ukraina');
-    await user.type(screen.getByLabelText('Kraj ukończenia szkoły średniej'), 'Ukraina');
-    await user.click(screen.getByRole('button', { name: 'Dalej' }));
-    await user.clear(screen.getByLabelText('Maksymalna ocena w skali'));
-    await user.type(screen.getByLabelText('Maksymalna ocena w skali'), '5');
-    await user.clear(screen.getByLabelText('Średnia ocen'));
-    await user.type(screen.getByLabelText('Średnia ocen'), '4.5');
-    await user.click(screen.getByRole('button', { name: 'Dalej' }));
-    await user.click(screen.getByRole('button', { name: 'Dalej' }));
-    await user.click(screen.getByRole('button', { name: 'Dalej' }));
-    await user.click(screen.getByRole('button', { name: 'Zapisz odpowiedź' }));
+    await screen.findByText('Twoja aplikacja NAWA');
+    await clickMain(user);
+    await user.click(screen.getByLabelText('Zapoznałem się'));
+    await clickMain(user);
+
+    for (let step = 0; step < 5; step += 1) {
+      if (screen.queryAllByRole('combobox').length >= 2) {
+        const countrySelects = screen.getAllByRole('combobox');
+        await user.selectOptions(countrySelects[0], 'UA');
+        await user.selectOptions(countrySelects[1], 'UA');
+      }
+      if (screen.queryByLabelText('Średnia ocen')) {
+        const maximum = screen.getByLabelText('Maksymalna ocena w skali');
+        if (!(maximum as HTMLInputElement).readOnly) {
+          await user.clear(maximum);
+          await user.type(maximum, '5');
+        }
+        await user.type(screen.getByLabelText('Średnia ocen'), '4.5');
+      }
+      await clickMain(user);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText('Podsumowanie')).toBeInTheDocument();
+    });
+    await clickMain(user);
 
     await waitFor(() => {
       expect(api.createResponse).toHaveBeenCalled();
-      expect(screen.getByText('Tryb aktualizacji')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Status wniosku' })).toBeInTheDocument();
     });
   });
 });

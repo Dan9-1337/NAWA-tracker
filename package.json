@@ -15,6 +15,8 @@
     "db:reset": "npx supabase db reset",
     "db:status": "npx supabase status",
     "local:env": "node scripts/write-local-env.mjs",
+    "local:env:new": "node scripts/write-local-env.mjs --persona=new",
+    "local:env:returning": "node scripts/write-local-env.mjs --persona=returning",
     "local:dev": "node scripts/local-dev.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "audit:prod": "npm audit --omit=dev"

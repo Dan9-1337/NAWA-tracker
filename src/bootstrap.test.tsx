@@ -11,15 +11,14 @@ vi.mock('./lib/api-client', async (importOriginal) => ({
   ...api,
 }));
 
-vi.mock('./lib/telegram', () => ({
-  initializeTelegramWebApp: vi.fn(),
-  getTelegramWebApp: vi.fn(() => ({
-    initData: 'signed-init-data',
-    ready: vi.fn(),
-    expand: vi.fn(),
-  })),
-  getTelegramInitData: vi.fn(() => 'signed-init-data'),
-}));
+vi.mock('./lib/telegram', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./lib/telegram')>();
+  return {
+    ...actual,
+    initializeTelegramWebApp: vi.fn(),
+    getTelegramInitData: vi.fn(() => 'signed-init-data'),
+  };
+});
 
 describe('bootstrapApplication', () => {
   beforeEach(() => {
@@ -42,7 +41,7 @@ describe('bootstrapApplication', () => {
     });
 
     expect(initializeTelegramWebApp).toHaveBeenCalled();
-    expect(await screen.findByText('Informacja o przetwarzaniu danych')).toBeInTheDocument();
+    expect(await screen.findByText('Twoja aplikacja NAWA')).toBeInTheDocument();
     act(() => root.unmount());
   });
 });

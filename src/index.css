@@ -2,26 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #000000;
+  --tg-theme-hint-color: #999999;
+  --tg-theme-link-color: #2481cc;
+  --tg-theme-button-color: #2481cc;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #f4f4f5;
+  --tg-theme-section-bg-color: #ffffff;
+  --tg-theme-subtitle-text-color: #707579;
+  --tg-theme-header-bg-color: #ffffff;
+  --tg-theme-accent-text-color: #2481cc;
+  --tg-theme-destructive-text-color: #e53935;
+  --tg-theme-success-text-color: #2e7d32;
+  --tg-viewport-stable-height: 100dvh;
+  --tg-content-safe-area-inset-top: 0px;
+  --tg-content-safe-area-inset-right: 0px;
+  --tg-content-safe-area-inset-bottom: 0px;
+  --tg-content-safe-area-inset-left: 0px;
+}
+
 html {
-  color-scheme: light;
+  color-scheme: light dark;
   scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 35%),
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.15), transparent 32%),
-    linear-gradient(180deg, #fffdf7 0%, #f4f8fb 55%, #eef3f7 100%);
-  color: #102033;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
 }
 
 #root {
-  min-height: 100vh;
+  min-height: var(--tg-viewport-stable-height, 100dvh);
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.2);
-  color: #0f172a;
+  background: color-mix(in srgb, var(--tg-theme-link-color) 25%, transparent);
 }

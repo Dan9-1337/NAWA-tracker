@@ -1,10 +1,11 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install setup up dev down wait-db db-start db-stop db-reset db-status local-env local-dev test typecheck build check
+.PHONY: help install setup up dev dev-new dev-returning stop-dev down wait-db db-start db-stop db-reset db-status local-env local-env-new local-env-returning local-dev test typecheck build check
 
 help: ## Show available targets
 	@echo "Quick start:"
-	@echo "  make up          one command: install + DB + env + app"
+	@echo "  make dev-new     first-time user flow (no saved profile)"
+	@echo "  make dev         returning user with seeded profile"
 	@echo "  make setup dev   two commands: prepare, then run app"
 	@echo "  make install db-start dev   three commands"
 	@echo ""
@@ -21,7 +22,20 @@ setup: install db-start ## First-time setup: deps + Supabase Docker
 up: setup wait-db local-env ## Full local stack at http://localhost:3000
 	npm run local:dev
 
-dev: wait-db local-env local-dev ## Run app (Supabase must be running)
+dev: wait-db local-env stop-dev local-dev ## Run app as returning user (seeded profile)
+
+dev-new: wait-db local-env-new stop-dev local-dev ## Run app as first-time user (create wizard)
+
+dev-returning: wait-db local-env-returning stop-dev local-dev ## Run app as returning demo user
+
+stop-dev: ## Stop Vite + local API on ports 3000/3001
+	@for port in 3000 3001; do \
+	  pids=$$(lsof -ti :$$port 2>/dev/null); \
+	  if [ -n "$$pids" ]; then \
+	    echo "Stopping process on port $$port..."; \
+	    kill $$pids 2>/dev/null || true; \
+	  fi; \
+	done
 
 down: db-stop ## Stop local Supabase
 
@@ -51,8 +65,14 @@ db-reset: ## Reset DB schema + seed data
 db-status: ## Show Supabase status
 	npm run db:status
 
-local-env: ## Write .env.local from local Supabase
+local-env: ## Write .env.local for returning demo user
 	npm run local:env
+
+local-env-new: ## Write .env.local for first-time user (id 900000002)
+	npm run local:env:new
+
+local-env-returning: ## Write .env.local for returning demo user (id 900000001)
+	npm run local:env:returning
 
 local-dev: ## Run Vite + local API (needs .env.local)
 	npm run local:dev

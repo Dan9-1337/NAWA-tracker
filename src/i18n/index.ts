@@ -5,8 +5,6 @@ import type { Locale, Messages } from './types';
 
 export type { Locale, Messages } from './types';
 
-export const LOCALES: Locale[] = ['pl', 'en', 'ru'];
-
 export const LOCALE_STORAGE_KEY = 'nawa-locale';
 
 export const messages: Record<Locale, Messages> = { pl, en, ru };
@@ -30,10 +28,6 @@ export function resolveInitialLocale(): Locale {
 }
 
 let activeLocale: Locale = resolveInitialLocale();
-
-export function getLocale(): Locale {
-  return activeLocale;
-}
 
 export function setActiveLocale(locale: Locale): void {
   activeLocale = locale;

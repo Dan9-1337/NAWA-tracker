@@ -30,64 +30,65 @@ export function StatisticsPanel({ state }: StatisticsPanelProps) {
     <section
       aria-busy={state.status === 'loading'}
       aria-labelledby={titleId}
-      className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-[0_10px_40px_rgba(15,23,42,0.06)]"
+      className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] p-4"
       role="region"
     >
-      <h2 id={titleId} className="text-xl font-semibold text-slate-900">{t.stats.title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">{t.stats.subtitle}</p>
+      <h2 id={titleId} className="text-xl font-semibold">
+        {t.stats.title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.subtitle}</p>
 
       {state.status === 'unavailable' ? (
-        <p className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <p className="mt-4 rounded-2xl border border-dashed border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
           {t.stats.unavailable}
         </p>
       ) : null}
       {state.status === 'loading' ? (
-        <p className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900" role="status" aria-label={t.stats.loadingAriaLabel} aria-live="polite">
+        <p
+          className="mt-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm"
+          role="status"
+          aria-label={t.stats.loadingAriaLabel}
+          aria-live="polite"
+        >
           {t.stats.loading}
         </p>
       ) : null}
       {state.status === 'error' ? (
-        <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert" aria-label={t.stats.errorAriaLabel}>
+        <p
+          className="mt-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm text-[var(--tg-theme-destructive-text-color)]"
+          role="alert"
+          aria-label={t.stats.errorAriaLabel}
+        >
           {t.stats.error}
         </p>
       ) : null}
 
       {data ? (
         <>
-          <div className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <div className="mt-5 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
             <p className="font-semibold">{formatGroup(data.group, t)}</p>
-            <p>{state.status === 'suppressed' ? t.stats.noStats : t.stats.fallbackNotice}</p>
+            <p className="text-[var(--tg-theme-subtitle-text-color)]">
+              {state.status === 'suppressed' ? t.stats.noStats : t.stats.fallbackNotice}
+            </p>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <StatCard label={t.stats.totalResponses} value={String(data.totalValidResponses)} />
-            <StatCard label={t.stats.sameTrack} value={String(data.sameTrackCount)} />
-            <StatCard label={t.stats.sameCountry} value={data.sameCountryCount == null ? t.stats.noValue : String(data.sameCountryCount)} />
+          <div className="mt-4 space-y-3">
             <StatCard label={t.stats.groupResponseCount} value={String(data.groupResponseCount)} />
             <StatCard
               label={t.stats.percentileLabel}
-              value={data.lowerScorePercentage == null
-                ? t.stats.noValue
-                : t.stats.percentileSentence(data.lowerScorePercentage.toFixed(1))}
-              hint={data.medianScore == null
-                ? t.stats.medianUnavailable
-                : t.stats.medianSentence(data.medianScore.toFixed(2))}
+              value={
+                data.lowerScorePercentage == null
+                  ? t.stats.noValue
+                  : t.stats.percentileSentence(data.lowerScorePercentage.toFixed(1))
+              }
+              hint={
+                data.medianScore == null
+                  ? t.stats.medianUnavailable
+                  : t.stats.medianSentence(data.medianScore.toFixed(2))
+              }
             />
+            <StatCard label={t.stats.totalResponses} value={String(data.totalValidResponses)} />
           </div>
-          {data.statusCounts ? (
-            <div className="mt-6">
-              <p className="text-sm font-semibold text-slate-700">{t.stats.statusBreakdown}</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {Object.entries(data.statusCounts).map(([status, count]) => (
-                  <StatCard
-                    key={status}
-                    label={t.choices.currentStatus[status as keyof typeof t.choices.currentStatus]}
-                    value={String(count)}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-          <p className="mt-6 text-xs leading-5 text-slate-500">{t.stats.disclaimer}</p>
+          <p className="mt-4 text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.disclaimer}</p>
         </>
       ) : null}
     </section>

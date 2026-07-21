@@ -49,6 +49,18 @@ if (!fileEnv.VITE_TELEGRAM_DEV_INIT_DATA) {
   process.exit(1);
 }
 
+function readDevUserId(initData) {
+  try {
+    const userRaw = new URLSearchParams(initData).get('user');
+    if (!userRaw) return null;
+    const user = JSON.parse(userRaw);
+    return typeof user.id === 'number' ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
+const devUserId = readDevUserId(fileEnv.VITE_TELEGRAM_DEV_INIT_DATA);
 const children = [];
 const childEnv = {
   ...process.env,
@@ -99,4 +111,6 @@ start(
 );
 
 console.log('Local app: http://localhost:3000');
-console.log('Uses signed dev initData for demo Telegram user 900000001 (see supabase/seed.sql).');
+if (devUserId) {
+  console.log(`Dev Telegram user id: ${devUserId}`);
+}
