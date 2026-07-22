@@ -237,7 +237,7 @@ export const en = {
     percentileSentence: (percentage: string) =>
       `Your result is higher than ${percentage}% of valid responses in this group.`,
     percentileSupport: (percentage: string) =>
-      `Higher than ${percentage}% of responses in this group.`,
+      `Your result is higher than ${percentage}% of responses in this group.`,
     percentileSecondary: (percentage: string) => `${percentage}th percentile`,
     medianUnavailable: 'We do not show the median for groups that are too small.',
     medianSentence: (score: string) => `Median score in this group: ${score}`,
@@ -245,10 +245,13 @@ export const en = {
     noStats: 'Not enough data to show a detailed comparison for this group.',
     fallbackNotice: 'Showing the nearest group with enough responses.',
     totalResponses: 'Valid responses',
+    densityTitle: 'Score distribution',
+    scoresTitle: 'Calculated scores',
     chartTitle: 'Your position on the score scale',
     chartYouLabel: 'You',
     chartMedianLabel: 'Group median',
     chartThresholdLegend: 'Axis origin: 60-pt merit-review threshold',
+    chartThresholdNote: 'The axis starts at the minimum qualifying score of 60.',
     chartYou: (score: string) => `Your score: ${score} pts`,
     chartMedian: (score: string) => `Group median: ${score} pts`,
     scaleBelow: 'Below',

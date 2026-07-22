@@ -31,6 +31,7 @@
 html {
   color-scheme: light dark;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -82,6 +83,7 @@ body {
   padding: 0.625rem 0.75rem;
   text-align: left;
   cursor: pointer;
+  outline: none;
   transition: background-color 120ms ease;
 }
 
@@ -92,6 +94,10 @@ body {
 .disclosure-row:active {
   background: var(--tg-theme-secondary-bg-color);
   filter: brightness(0.96);
+}
+
+.disclosure-row:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .disclosure-row:focus-visible {

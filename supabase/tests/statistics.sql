@@ -176,6 +176,7 @@ insert into valid_statistics values (
     "groupResponseCount": 10,
     "medianScore": 50,
     "lowerScorePercentage": 40,
+    "scoreBuckets": [1, 2, 3, 2, 2],
     "statusCounts": {
       "submitted": 2,
       "formal_review_in_progress": 1,
@@ -205,6 +206,7 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
+    "scoreBuckets": null,
     "statusCounts": null
   }'::jsonb),
   '{
@@ -216,6 +218,7 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
+    "scoreBuckets": null,
     "statusCounts": null
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'

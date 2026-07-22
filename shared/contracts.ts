@@ -54,6 +54,8 @@ export type StatisticsResult = {
   groupResponseCount: number;
   medianScore: number | null;
   lowerScorePercentage: number | null;
+  /** Five bucket counts for the cohort score distribution (low → high). */
+  scoreBuckets: number[] | null;
   statusCounts: StatusCounts | null;
 };
 

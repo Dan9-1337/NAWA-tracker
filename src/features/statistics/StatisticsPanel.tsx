@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
 import { isCountryCode } from '../../../shared/countries';
-import { PositionGlance } from '../../components/PositionGlance';
+import { ScoreDensityStrip } from '../../components/ScoreDensityStrip';
 import { ScorePositionChart } from '../../components/ScorePositionChart';
 import { StatCard } from '../../components/StatCard';
 import { useI18n } from '../../i18n/context';
 import { formatClockTime, formatGrade, formatShortDayTime, updatedStampKind } from '../../lib/format';
+import { canShowScoreDistribution } from '../../lib/score-buckets';
 import {
   formatPercentileValue,
   getCohortProgressCount,
@@ -61,14 +62,7 @@ function supportCopy(
   lowerScorePercentage: number | null,
   groupSize: number,
 ): string | null {
-  if (lowerScorePercentage == null) return null;
-
-  const band = getMedianBand(lowerScorePercentage);
-  if (!isDetailedCohort(groupSize)) {
-    if (band === 'above') return t.stats.supportAboveMost;
-    if (band === 'below') return t.stats.supportBelowMost;
-    return t.stats.supportAroundMost;
-  }
+  if (lowerScorePercentage == null || groupSize < MIN_DETAILED_COHORT) return null;
 
   const percentage = formatPercentileValue(lowerScorePercentage, groupSize);
   return t.stats.percentileSupport(String(percentage));
@@ -107,11 +101,7 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
   const data = state.status === 'success' || state.status === 'suppressed' ? state.data : null;
   const groupSize = data?.groupResponseCount ?? 0;
   const progressCount = data ? getCohortProgressCount(data) : 0;
-  const detailed = isDetailedCohort(groupSize);
-  const percentage =
-    data?.lowerScorePercentage != null
-      ? formatPercentileValue(data.lowerScorePercentage, groupSize)
-      : null;
+  const showDistribution = data ? canShowScoreDistribution(groupSize, data.scoreBuckets) : false;
 
   const schoolCountry =
     profile && isCountryCode(profile.schoolCountry) ? t.countries[profile.schoolCountry] : profile?.schoolCountry;
@@ -169,7 +159,6 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
     );
   }
 
-  const band = getMedianBand(data.lowerScorePercentage);
   const support = supportCopy(t, data.lowerScorePercentage, groupSize);
 
   return (
@@ -189,14 +178,13 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
         <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.unofficialNote}</p>
       </div>
 
-      {band !== 'unknown' && data.lowerScorePercentage != null ? (
-        <div className="mt-4">
-          {detailed ? (
-            <PositionGlance mode="percentile" percentage={data.lowerScorePercentage} />
-          ) : (
-            <PositionGlance mode="band" band={band} />
-          )}
-        </div>
+      {showDistribution && userScore != null ? (
+        <ScoreDensityStrip
+          buckets={data.scoreBuckets!}
+          track={profile.scholarshipTrack}
+          userScore={userScore}
+          medianScore={data.medianScore}
+        />
       ) : null}
 
       <hr className="section-divider" />
@@ -205,7 +193,6 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
         type="button"
         className="disclosure-row"
         aria-expanded={showWhy}
-        aria-label={t.stats.cohortWhy}
         onClick={() => setShowWhy((value) => !value)}
       >
         <span className="min-w-0 space-y-1">
@@ -254,7 +241,7 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
         </button>
 
         {updatedAt ? (
-          <p className="mt-1.5 px-0.5 text-[10px] leading-4 tracking-[0.01em] text-[var(--text-disabled)]">
+          <p className="mt-1.5 px-0.5 text-xs leading-4 tracking-[0.01em] text-[var(--text-disabled)]">
             {statsUpdatedLabel(t, locale, updatedAt)}
           </p>
         ) : null}
@@ -262,14 +249,8 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
 
       {showDetails ? (
         <div className="mt-3 space-y-3 border-t border-[var(--section-divider-color)] pt-3">
-          {percentage != null ? (
-            <p className="text-sm text-[var(--text-secondary)]">
-              {t.stats.percentileSupport(String(percentage))}
-            </p>
-          ) : null}
-
           {userScore != null ? (
-            <ScorePositionChart userScore={userScore} medianScore={data.medianScore} />
+            <ScorePositionChart userScore={userScore} medianScore={data.medianScore} variant="compact" />
           ) : null}
 
           <div className="space-y-2">
@@ -283,7 +264,6 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
             <StatCard label={t.stats.totalResponses} value={String(data.totalValidResponses)} />
           </div>
 
-          <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.cohortWhyBody}</p>
           <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.disclaimer}</p>
         </div>
       ) : null}

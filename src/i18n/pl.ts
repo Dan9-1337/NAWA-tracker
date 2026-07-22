@@ -236,7 +236,7 @@ export const pl = {
     percentileSentence: (percentage: string) =>
       `Twój wynik jest wyższy niż u ${percentage}% ważnych ankiet w tej grupie.`,
     percentileSupport: (percentage: string) =>
-      `Wyższy niż u ${percentage}% ankiet w tej grupie.`,
+      `Twój wynik jest wyższy niż u ${percentage}% ankiet w tej grupie.`,
     percentileSecondary: (percentage: string) => `${percentage}. percentyl`,
     medianUnavailable: 'Nie pokazujemy mediany dla zbyt małych grup.',
     medianSentence: (score: string) => `Mediana wyniku w tej grupie: ${score}`,
@@ -244,10 +244,13 @@ export const pl = {
     noStats: 'Za mało danych, aby pokazać szczegółowe porównanie dla tej grupy.',
     fallbackNotice: 'Pokazujemy najbliższą grupę z wystarczającą liczbą odpowiedzi.',
     totalResponses: 'Ważne odpowiedzi',
+    densityTitle: 'Rozkład wyników',
+    scoresTitle: 'Wyniki punktowe',
     chartTitle: 'Twoja pozycja na skali wyniku',
     chartYouLabel: 'Ty',
     chartMedianLabel: 'Mediana grupy',
     chartThresholdLegend: 'Początek osi: próg 60 pkt. (ocena merytoryczna)',
+    chartThresholdNote: 'Oś zaczyna się od minimalnego wyniku kwalifikacyjnego — 60 pkt.',
     chartYou: (score: string) => `Twój wynik: ${score} pkt.`,
     chartMedian: (score: string) => `Mediana grupy: ${score} pkt.`,
     scaleBelow: 'Poniżej',

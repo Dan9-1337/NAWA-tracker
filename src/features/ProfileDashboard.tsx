@@ -287,7 +287,6 @@ export function ProfileDashboard({
       {!statusEditorOpen ? (
         <button
           type="button"
-          aria-label={t.form.changeStatusAria}
           className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
           onClick={() => setStatusEditorOpen(true)}
         >

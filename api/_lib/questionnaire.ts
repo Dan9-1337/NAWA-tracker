@@ -47,6 +47,7 @@ const statisticsFields = [
   'groupResponseCount',
   'medianScore',
   'lowerScorePercentage',
+  'scoreBuckets',
   'statusCounts',
 ] as const;
 

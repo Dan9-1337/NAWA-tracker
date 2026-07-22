@@ -52,6 +52,7 @@ function statistics(totalValidResponses: number): StatisticsResult {
     groupResponseCount: 0,
     medianScore: null,
     lowerScorePercentage: null,
+    scoreBuckets: null,
     statusCounts: null,
   };
 }

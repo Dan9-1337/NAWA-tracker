@@ -48,6 +48,7 @@ const statistics = {
   groupResponseCount: 10,
   medianScore: 82.5,
   lowerScorePercentage: 40,
+  scoreBuckets: [1, 2, 3, 2, 2],
   statusCounts,
 } as const;
 

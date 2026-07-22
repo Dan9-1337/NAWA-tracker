@@ -51,13 +51,15 @@ describe('StatisticsPanel', () => {
     expect(screen.getByText('Twój wynik')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'W górnej części grupy' })).toBeInTheDocument();
     expect(
-      screen.getByText('Twój wynik jest wyższy niż większość ankiet w tej grupie.'),
+      screen.getByText('Twój wynik jest wyższy niż u 95% ankiet w tej grupie.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Wyższy niż u 95%/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/większość ankiet/)).not.toBeInTheDocument();
+    expect(screen.getByText('Rozkład wyników')).toBeInTheDocument();
     expect(screen.getByText('Twoja grupa porównawcza')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Wiarygodność porównania/ }));
-    expect(screen.getByText('Wyższy niż u 95% ankiet w tej grupie.')).toBeInTheDocument();
+    expect(screen.getByText('Wyniki punktowe')).toBeInTheDocument();
+    expect(screen.queryByText(/Wyższy niż u 95%/)).not.toBeInTheDocument();
   });
 
   it('shows percentile support for detailed cohorts', () => {
@@ -70,7 +72,7 @@ describe('StatisticsPanel', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Powyżej mediany' })).toBeInTheDocument();
-    expect(screen.getByText('Wyższy niż u 65% ankiet w tej grupie.')).toBeInTheDocument();
+    expect(screen.getByText('Twój wynik jest wyższy niż u 65% ankiet w tej grupie.')).toBeInTheDocument();
   });
 });
 
@@ -83,6 +85,7 @@ const suppressedStatistics: StatisticsResult = {
   groupResponseCount: 0,
   medianScore: null,
   lowerScorePercentage: null,
+  scoreBuckets: null,
   statusCounts: null,
 };
 
@@ -95,7 +98,19 @@ const qualitativeStatistics: StatisticsResult = {
   groupResponseCount: 19,
   medianScore: 82.5,
   lowerScorePercentage: 95,
-  statusCounts: null,
+  scoreBuckets: [1, 2, 4, 7, 5],
+  statusCounts: {
+    submitted: 4,
+    formal_review_in_progress: 3,
+    correction_requested: 1,
+    formal_review_completed: 2,
+    merit_review_in_progress: 2,
+    merit_review_positive: 2,
+    merit_review_negative: 1,
+    awaiting_decision: 2,
+    scholarship_awarded: 1,
+    scholarship_not_awarded: 1,
+  },
 };
 
 const detailedStatistics: StatisticsResult = {
@@ -107,6 +122,7 @@ const detailedStatistics: StatisticsResult = {
   groupResponseCount: 30,
   medianScore: 82.5,
   lowerScorePercentage: 65,
+  scoreBuckets: [2, 4, 8, 10, 6],
   statusCounts: {
     submitted: 2,
     formal_review_in_progress: 2,

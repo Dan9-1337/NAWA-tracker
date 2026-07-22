@@ -106,6 +106,7 @@ export const statisticsResultSchema = z
     groupResponseCount: z.number().int().nonnegative(),
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
+    scoreBuckets: z.array(z.number().int().nonnegative()).length(5).nullable(),
     statusCounts: statusCountsSchema.nullable(),
   })
   .strict()
@@ -126,6 +127,7 @@ export const statisticsResultSchema = z
         value.groupResponseCount < 10 ||
         value.medianScore === null ||
         value.lowerScorePercentage === null ||
+        value.scoreBuckets === null ||
         value.statusCounts === null
       ) {
         ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require every detailed field' });
@@ -135,11 +137,16 @@ export const statisticsResultSchema = z
       if (total !== value.groupResponseCount) {
         ctx.addIssue({ code: 'custom', path: ['statusCounts'], message: 'statusCounts must sum to groupResponseCount' });
       }
+      const bucketTotal = value.scoreBuckets.reduce((sum, count) => sum + count, 0);
+      if (bucketTotal !== value.groupResponseCount) {
+        ctx.addIssue({ code: 'custom', path: ['scoreBuckets'], message: 'scoreBuckets must sum to groupResponseCount' });
+      }
     } else if (
       value.group !== null ||
       value.groupResponseCount !== 0 ||
       value.medianScore !== null ||
       value.lowerScorePercentage !== null ||
+      value.scoreBuckets !== null ||
       value.statusCounts !== null
     ) {
       ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'suppressed statistics cannot retain detailed fields' });
