@@ -27,6 +27,11 @@ export function getInitialStatusOptions(): readonly ApplicationStatus[] {
   return applicationStatuses;
 }
 
+/** Early pipeline statuses for the create wizard — avoids overwhelming new users. */
+export function getCreateWizardStatusOptions(): readonly ApplicationStatus[] {
+  return getSequentialStatusOptions('submitted');
+}
+
 /**
  * Statuses selectable when updating from `current`:
  * always includes `current`, plus the next sequential / side-branch steps.

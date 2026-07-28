@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { ResponseFormInput } from '../../shared/contracts.js';
 import {
   responseFormInputSchema,
+  responseFormStoredSchema,
   statisticsResultSchema,
 } from '../../shared/validation.js';
 import { HttpError, unauthorized } from './errors.js';
@@ -31,6 +32,7 @@ const responseFields = [
   'schoolCountry',
   'scholarshipTrack',
   'studyRoute',
+  'targetUniversity',
   'averageGrade',
   'maximumGrade',
   'polishSchoolLevel',
@@ -71,6 +73,7 @@ export function normalizeQuestionnaire(response: ResponseFormInput) {
     p_school_country: response.schoolCountry,
     p_scholarship_track: response.scholarshipTrack,
     p_study_route: response.studyRoute,
+    p_target_university: response.targetUniversity ?? null,
     p_average_grade: response.averageGrade,
     p_maximum_grade: response.maximumGrade,
     p_polish_school_level: response.polishSchoolLevel ?? null,
@@ -84,7 +87,7 @@ export function fingerprintQuestionnaire(response: ResponseFormInput): string {
 }
 
 export function parseCurrentResponse(value: unknown): ResponseFormInput {
-  return responseFormInputSchema.parse(projectFields(value, responseFields));
+  return responseFormStoredSchema.parse(projectFields(value, responseFields));
 }
 
 export function parseStatistics(value: unknown) {

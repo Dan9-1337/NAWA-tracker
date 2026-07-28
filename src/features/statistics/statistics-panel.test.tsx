@@ -11,6 +11,7 @@ const profile = {
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director' as const,
   studyRoute: 'direct_studies' as const,
+  targetUniversity: 'science-096',
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'none' as const,

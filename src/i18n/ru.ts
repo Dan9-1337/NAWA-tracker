@@ -22,6 +22,10 @@ export const ru = {
       'Мы не просим ФИО, номер заявки или email. Telegram-аккаунт используется только для ограничения: одна анкета на пользователя.',
     privacyLink: 'Какие данные сохраняются?',
     consentLine: 'Продолжая, вы принимаете правила обработки данных.',
+    resumeTitle: 'Есть сохранённый прогресс',
+    resumeBody: 'Продолжите с того места, где остановились, или начните анкету заново.',
+    resumeContinue: 'Продолжить',
+    resumeStartOver: 'Начать заново',
   },
   wizard: {
     stepLabel: (current: string, total: string) => `Шаг ${current} из ${total}`,
@@ -55,6 +59,8 @@ export const ru = {
     geographyDescription: 'Эти данные определяют вашу группу сравнения в статистике.',
     rankingCountryHint: 'Определяет вашу группу сравнения: вас будут ранжировать вместе с кандидатами из этой же страны.',
     schoolCountryHint: 'Определяет шкалу оценок в калькуляторе (например, 12-балльная в Украине или 5-балльная в Казахстане).',
+    targetUniversityHint:
+      'Список вузов, заключивших договор с NAWA — выберите вуз, в который подаёте документы.',
     branchResetWarning:
       'При изменении этого ответа выбранная программа и часть данных будут сброшены.',
     maximumGradeLockedHint: 'Шкала задана по стране окончания средней школы.',
@@ -72,6 +78,14 @@ export const ru = {
     dataTitle: 'Ваши данные',
     editSection: 'Изменить',
     editStep: 'Изменить',
+    validation: {
+      universityRequired: 'Выберите целевой вуз, чтобы продолжить.',
+      rankingCountryRequired: 'Выберите страну гражданства.',
+      schoolCountryRequired: 'Выберите страну окончания средней школы.',
+      educationRequired: 'Заполните данные об образовании, чтобы продолжить.',
+      gradesRequired: 'Укажите средний балл и убедитесь, что он в пределах шкалы.',
+      statusDateRequired: 'Выберите дату изменения статуса.',
+    },
   },
   form: {
     submitCreate: 'Сохранить ответ',
@@ -106,10 +120,11 @@ export const ru = {
     outcome: 'Решение',
   },
   labels: {
-    rankingCountry: 'Страна гражданства (для статистической группы)',
+    rankingCountry: 'Страна гражданства',
     schoolCountry: 'В какой стране вы окончили школу?',
     scholarshipTrack: 'Вид стипендии',
     studyRoute: 'Маршрут поступления',
+    targetUniversity: 'Целевой вуз',
     averageGrade: 'Средний балл',
     maximumGrade: 'Максимальный балл по вашей шкале',
     polishSchoolLevel: 'Польская, диаспорная или польскоязычная школа',
@@ -157,6 +172,10 @@ export const ru = {
       scholarship_awarded: 'Поздравляем — вам присуждена стипендия.',
       scholarship_not_awarded: 'В этом наборе вам не присудили стипендию.',
     },
+  },
+  universities: {
+    placeholder: 'Выберите вуз',
+    searchPlaceholder: 'Поиск вуза…',
   },
   countries: {
     placeholder: 'Выберите страну',

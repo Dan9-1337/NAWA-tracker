@@ -13,6 +13,7 @@ insert into public.responses (
   school_country,
   scholarship_track,
   study_route,
+  target_university,
   average_grade,
   maximum_grade,
   grade_percentage,
@@ -34,6 +35,7 @@ select
   end,
   'nawa_director',
   'direct_studies',
+  'science-096',
   grade,
   5,
   grade / 5 * 100,
@@ -72,6 +74,7 @@ insert into public.responses (
   school_country,
   scholarship_track,
   study_route,
+  target_university,
   average_grade,
   maximum_grade,
   grade_percentage,
@@ -89,6 +92,7 @@ insert into public.responses (
   'UA',
   'nawa_director',
   'direct_studies',
+  'science-096',
   4.1,
   5,
   82,
@@ -107,6 +111,7 @@ insert into public.responses (
   school_country,
   scholarship_track,
   study_route,
+  target_university,
   average_grade,
   maximum_grade,
   grade_percentage,
@@ -117,54 +122,54 @@ insert into public.responses (
   is_suspicious
 ) values
   (
-    900000013, 'seed_ua_nawa_13', false, 'UA', 'UA', 'nawa_director', 'direct_studies',
+    900000013, 'seed_ua_nawa_13', false, 'UA', 'UA', 'nawa_director', 'direct_studies', 'science-071',
     4.5, 5, 90, 'primary', 86, 'formal_review_completed', date '2026-06-02', false
   ),
   (
-    900000101, 'seed_by_nawa_01', false, 'BY', 'BY', 'nawa_director', 'direct_studies',
+    900000101, 'seed_by_nawa_01', false, 'BY', 'BY', 'nawa_director', 'direct_studies', 'science-048',
     4.0, 5, 80, 'none', 72, 'submitted', date '2026-06-03', false
   ),
   (
-    900000102, 'seed_lt_nawa_01', false, 'Litwa', 'Litwa', 'nawa_director', 'direct_studies',
+    900000102, 'seed_lt_nawa_01', false, 'Litwa', 'Litwa', 'nawa_director', 'direct_studies', 'science-097',
     4.2, 5, 84, 'secondary', 85.6, 'awaiting_decision', date '2026-06-04', false
   ),
   (
-    900000103, 'seed_kz_nawa_01', false, 'KZ', 'KZ', 'nawa_director', 'preparatory_course',
+    900000103, 'seed_kz_nawa_01', false, 'KZ', 'KZ', 'nawa_director', 'preparatory_course', null,
     3.8, 5, 76, 'none', 68.4, 'formal_review_in_progress', date '2026-06-05', false
   ),
   (
-    900000104, 'seed_ge_nawa_01', false, 'Gruzja', 'Gruzja', 'nawa_director', 'direct_studies',
+    900000104, 'seed_ge_nawa_01', false, 'Gruzja', 'Gruzja', 'nawa_director', 'direct_studies', 'science-049',
     3.55, 5, 71, 'primary', 36.95, 'correction_requested', date '2026-06-06', false
   ),
   (
-    900000201, 'seed_ua_health_01', false, 'UA', 'UA', 'health_minister', 'preparatory_course',
+    900000201, 'seed_ua_health_01', false, 'UA', 'UA', 'health_minister', 'preparatory_course', null,
     4.55, 5, 91, null, null, 'awaiting_decision', date '2026-06-07', false
   ),
   (
-    900000202, 'seed_by_health_02', false, 'BY', 'BY', 'health_minister', 'preparatory_course',
+    900000202, 'seed_by_health_02', false, 'BY', 'BY', 'health_minister', 'preparatory_course', null,
     4.4, 5, 88, null, null, 'scholarship_awarded', date '2026-05-28', false
   ),
   (
-    900000203, 'seed_kz_health_03', false, 'KZ', 'KZ', 'health_minister', 'preparatory_course',
+    900000203, 'seed_kz_health_03', false, 'KZ', 'KZ', 'health_minister', 'preparatory_course', null,
     4.2, 5, 84, null, null, 'merit_review_in_progress', date '2026-06-08', false
   ),
   (
-    900000204, 'seed_ge_health_04', false, 'Gruzja', 'Gruzja', 'health_minister', 'preparatory_course',
+    900000204, 'seed_ge_health_04', false, 'Gruzja', 'Gruzja', 'health_minister', 'preparatory_course', null,
     3.75, 5, 75, null, null, 'scholarship_not_awarded', date '2026-05-10', false
   ),
   (
-    900000301, 'seed_ua_culture_01', false, 'UA', 'UA', 'culture_minister', 'direct_studies',
+    900000301, 'seed_ua_culture_01', false, 'UA', 'UA', 'culture_minister', 'direct_studies', 'culture-013',
     4.8, 5, 96, null, null, 'submitted', date '2026-06-09', false
   ),
   (
-    900000302, 'seed_by_culture_02', false, 'BY', 'BY', 'culture_minister', 'direct_studies',
+    900000302, 'seed_by_culture_02', false, 'BY', 'BY', 'culture_minister', 'direct_studies', 'culture-009',
     4.4, 5, 88, null, null, 'awaiting_decision', date '2026-06-10', false
   ),
   (
-    900000303, 'seed_lt_culture_03', false, 'Litwa', 'Litwa', 'culture_minister', 'preparatory_course',
+    900000303, 'seed_lt_culture_03', false, 'Litwa', 'Litwa', 'culture_minister', 'preparatory_course', null,
     4.1, 5, 82, null, null, 'correction_requested', date '2026-06-11', false
   ),
   (
-    900000999, 'seed_suspicious_01', false, 'UA', 'UA', 'nawa_director', 'direct_studies',
+    900000999, 'seed_suspicious_01', false, 'UA', 'UA', 'nawa_director', 'direct_studies', 'science-096',
     4.95, 5, 99, 'secondary', 99.1, 'scholarship_awarded', date '2026-03-01', true
   );

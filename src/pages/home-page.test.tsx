@@ -35,6 +35,7 @@ const currentResponse: ResponseFormInput = {
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
+  targetUniversity: 'science-096',
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'none',
@@ -69,11 +70,21 @@ beforeEach(async () => {
 });
 
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {
-  const button = await screen.findByRole('button', {
+  const buttons = await screen.findAllByRole('button', {
     name: /Porównaj moją aplikację|Dalej|Zapisz odpowiedź/,
   });
+  const button = buttons.find((candidate) => !candidate.disabled) ?? buttons[buttons.length - 1];
   await waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
+}
+
+async function pickSearchableOption(
+  user: ReturnType<typeof userEvent.setup>,
+  fieldLabel: string,
+  optionName: string | RegExp,
+) {
+  await user.click(screen.getByLabelText(fieldLabel));
+  await user.click(screen.getByRole('option', { name: optionName }));
 }
 
 describe('HomePage', () => {
@@ -117,10 +128,12 @@ describe('HomePage', () => {
     await clickMain(user);
 
     for (let step = 0; step < 4; step += 1) {
-      if (screen.queryAllByRole('combobox').length >= 2) {
-        const countrySelects = screen.getAllByRole('combobox');
-        await user.selectOptions(countrySelects[0], 'UA');
-        await user.selectOptions(countrySelects[1], 'UA');
+      if (screen.queryByLabelText('Uczelnia docelowa')) {
+        await pickSearchableOption(user, 'Uczelnia docelowa', /Uniwersytet Warszawski/i);
+      }
+      if (screen.queryByLabelText('Kraj obywatelstwa')) {
+        await pickSearchableOption(user, 'Kraj obywatelstwa', 'Ukraina');
+        await pickSearchableOption(user, 'W jakim kraju ukończyłeś/aś szkołę średnią?', 'Ukraina');
       }
       if (screen.queryByLabelText('Średnia ocen')) {
         const maximum = screen.getByLabelText('Maksymalna ocena w Twojej skali');

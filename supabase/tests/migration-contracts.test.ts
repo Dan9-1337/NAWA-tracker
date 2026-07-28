@@ -15,6 +15,10 @@ const snapshotsMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202607290001_statistics_snapshots.sql'),
   'utf8',
 );
+const universityMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202607300001_target_university.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
 function functionDefinition(name: string, source = migration): string {
@@ -97,23 +101,30 @@ describe('mutation statistics migration contract', () => {
     ['create_response_for_telegram_user', 'created'],
     ['update_current_response', 'updated'],
   ])('%s returns in-transaction privacy-safe statistics', (name, successField) => {
-    const definition = functionDefinition(name);
+    const definition = functionDefinition(name, universityMigration);
 
     expect(definition).toContain(`'${successField}', true`);
     expect(definition).toContain("'statistics', v_statistics");
     expect(definition).toContain(
       'v_statistics := public.assert_statistics_result(public.get_response_statistics(v_response_id));',
     );
+    expect(definition).toContain('p_target_university');
   });
 
   it('flags transition-based suspicious updates', () => {
-    const definition = functionDefinition('update_current_response');
+    const definition = functionDefinition('update_current_response', universityMigration);
 
     expect(definition).toContain('v_terminal_statuses');
     expect(definition).toContain('v_opposing_award_statuses');
     expect(definition).toContain('p_status_changed_at < v_response.status_changed_at');
     expect(definition).not.toContain('positive_decision');
     expect(definition).not.toContain('negative_decision');
+  });
+
+  it('stores partner university for direct studies', () => {
+    expect(universityMigration).toContain('target_university');
+    expect(universityMigration).toContain("'targetUniversity', r.target_university");
+    expect(universityMigration).toContain('responses_target_university_route_check');
   });
 
   it('keeps raw aggregation and validation helpers inaccessible to API roles', () => {

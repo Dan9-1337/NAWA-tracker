@@ -15,6 +15,7 @@ export type WizardDraft = {
   schoolCountry: string;
   scholarshipTrack: ScholarshipTrack;
   studyRoute: StudyRoute;
+  targetUniversity: string;
   averageGrade: number | null;
   maximumGrade: number | null;
   polishSchoolLevel: PolishSchoolLevel;
@@ -38,11 +39,19 @@ export function responseToDraft(value: ResponseFormInput): WizardDraft {
     schoolCountry: value.schoolCountry,
     scholarshipTrack: value.scholarshipTrack,
     studyRoute: value.studyRoute,
+    targetUniversity: value.targetUniversity ?? '',
     averageGrade: value.averageGrade,
     maximumGrade: value.maximumGrade,
     polishSchoolLevel: value.polishSchoolLevel ?? 'none',
     currentStatus: value.currentStatus,
     statusChangedAt: value.statusChangedAt,
+  };
+}
+
+function normalizeWizardDraft(draft: WizardDraft): WizardDraft {
+  return {
+    ...draft,
+    targetUniversity: draft.targetUniversity ?? '',
   };
 }
 
@@ -67,9 +76,16 @@ export function loadWizardSession(): WizardSession | null {
     const raw = localStorage.getItem(draftStorageKey());
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (isWizardSession(parsed)) return parsed;
+    if (isWizardSession(parsed)) {
+      return { ...parsed, draft: normalizeWizardDraft(parsed.draft) };
+    }
     if (isWizardDraft(parsed)) {
-      return { version: SESSION_VERSION, draft: parsed, screen: 'wizard', stepIndex: 0 };
+      return {
+        version: SESSION_VERSION,
+        draft: normalizeWizardDraft(parsed),
+        screen: 'wizard',
+        stepIndex: 0,
+      };
     }
     return null;
   } catch {
@@ -102,4 +118,9 @@ export function saveWizardDraft(draft: WizardDraft): void {
 export function clearWizardDraft(): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(draftStorageKey());
+}
+
+/** True when a saved session should prompt resume instead of jumping into the wizard. */
+export function hasRestoredWizardSession(session: WizardSession | null): boolean {
+  return session != null && (session.screen === 'wizard' || session.screen === 'confirm');
 }

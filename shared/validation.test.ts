@@ -3,6 +3,7 @@ import { applicationStatuses, polishSchoolLevels, scholarshipTracks, studyRoutes
 import {
   createResponseRequestSchema,
   responseFormInputSchema,
+  responseFormStoredSchema,
   statisticsRequestSchema,
 } from './validation';
 
@@ -12,6 +13,7 @@ const validForm = {
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
+  targetUniversity: 'science-096',
   averageGrade: 85,
   maximumGrade: 100,
   polishSchoolLevel: 'none',
@@ -74,11 +76,51 @@ describe('responseFormInputSchema', () => {
       responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'nawa_director', polishSchoolLevel: undefined }),
     ).toThrow();
     expect(() =>
-      responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'health_minister', polishSchoolLevel: undefined, studyRoute: 'preparatory_course' }),
+      responseFormInputSchema.parse({
+        ...validForm,
+        scholarshipTrack: 'health_minister',
+        polishSchoolLevel: undefined,
+        studyRoute: 'preparatory_course',
+        targetUniversity: undefined,
+      }),
     ).not.toThrow();
     expect(() =>
-      responseFormInputSchema.parse({ ...validForm, scholarshipTrack: 'health_minister', polishSchoolLevel: 'none', studyRoute: 'preparatory_course' }),
+      responseFormInputSchema.parse({
+        ...validForm,
+        scholarshipTrack: 'health_minister',
+        polishSchoolLevel: 'none',
+        studyRoute: 'preparatory_course',
+        targetUniversity: undefined,
+      }),
     ).toThrow();
+  });
+
+  it('requires targetUniversity for direct_studies and rejects mismatched track universities', () => {
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, targetUniversity: undefined }),
+    ).toThrow();
+    expect(() =>
+      responseFormInputSchema.parse({ ...validForm, targetUniversity: 'culture-013' }),
+    ).toThrow();
+    expect(() =>
+      responseFormInputSchema.parse({
+        ...validForm,
+        studyRoute: 'preparatory_course',
+        targetUniversity: 'science-096',
+      }),
+    ).toThrow();
+    expect(() =>
+      responseFormInputSchema.parse({
+        ...validForm,
+        studyRoute: 'preparatory_course',
+        targetUniversity: undefined,
+      }),
+    ).not.toThrow();
+  });
+
+  it('allows stored direct_studies profiles without targetUniversity until the user saves again', () => {
+    const { targetUniversity: _ignored, ...legacyProfile } = validForm;
+    expect(responseFormStoredSchema.parse(legacyProfile)).toEqual(legacyProfile);
   });
 
   it('forces the preparatory course route for health_minister', () => {
@@ -100,6 +142,7 @@ describe('responseFormInputSchema', () => {
         scholarshipTrack: 'health_minister',
         studyRoute: 'preparatory_course',
         polishSchoolLevel: undefined,
+        targetUniversity: undefined,
       }),
     ).toThrow();
     expect(

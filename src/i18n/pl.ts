@@ -20,6 +20,10 @@ export const pl = {
       'Nie prosimy o imię, numer wniosku ani e-mail. Konto Telegram służy tylko do ograniczenia: jedna ankieta na użytkownika.',
     privacyLink: 'Jakie dane są zapisywane?',
     consentLine: 'Kontynuując, akceptujesz zasady przetwarzania danych.',
+    resumeTitle: 'Masz zapisany postęp',
+    resumeBody: 'Możesz wrócić do miejsca, w którym skończyłeś/aś, albo zacząć od nowa.',
+    resumeContinue: 'Kontynuuj',
+    resumeStartOver: 'Zacznij od nowa',
   },
   wizard: {
     stepLabel: (current: string, total: string) => `Krok ${current} z ${total}`,
@@ -53,6 +57,8 @@ export const pl = {
     geographyDescription: 'Te dane definiują Twoją grupę porównawczą w statystykach.',
     rankingCountryHint: 'Określa Twoją grupę porównawczą — będziesz zestawiany/a z kandydatami z tego samego kraju.',
     schoolCountryHint: 'Ustala skalę ocen w kalkulatorze (np. 12-punktową na Ukrainie lub 5-punktową w Kazachstanie).',
+    targetUniversityHint:
+      'Lista uczelni, które zawarły z NAWA umowę ramową — wybierz uczelnię, na którą składasz dokumenty.',
     branchResetWarning:
       'Po zmianie tej odpowiedzi wybrany program i część danych zostaną zresetowane.',
     maximumGradeLockedHint: 'Skala ustawiona według kraju ukończenia szkoły.',
@@ -70,6 +76,14 @@ export const pl = {
     dataTitle: 'Twoje dane',
     editSection: 'Zmień',
     editStep: 'Edytuj',
+    validation: {
+      universityRequired: 'Wybierz uczelnię docelową, aby przejść dalej.',
+      rankingCountryRequired: 'Wybierz kraj obywatelstwa.',
+      schoolCountryRequired: 'Wybierz kraj ukończenia szkoły średniej.',
+      educationRequired: 'Uzupełnij dane edukacyjne, aby przejść dalej.',
+      gradesRequired: 'Podaj średnią ocen i upewnij się, że mieści się w skali.',
+      statusDateRequired: 'Wybierz datę zmiany statusu.',
+    },
   },
   form: {
     submitCreate: 'Zapisz odpowiedź',
@@ -104,10 +118,11 @@ export const pl = {
     outcome: 'Decyzja',
   },
   labels: {
-    rankingCountry: 'Kraj obywatelstwa (do grupy statystycznej)',
+    rankingCountry: 'Kraj obywatelstwa',
     schoolCountry: 'W jakim kraju ukończyłeś/aś szkołę średnią?',
     scholarshipTrack: 'Rodzaj stypendium',
     studyRoute: 'Ścieżka stypendialna',
+    targetUniversity: 'Uczelnia docelowa',
     averageGrade: 'Średnia ocen',
     maximumGrade: 'Maksymalna ocena w Twojej skali',
     polishSchoolLevel: 'Szkoła polska, polonijna lub z polskim językiem nauczania',
@@ -155,6 +170,10 @@ export const pl = {
       scholarship_awarded: 'Gratulacje — otrzymałeś/aś stypendium.',
       scholarship_not_awarded: 'W tej edycji nie przyznano Ci stypendium.',
     },
+  },
+  universities: {
+    placeholder: 'Wybierz uczelnię',
+    searchPlaceholder: 'Szukaj uczelni…',
   },
   countries: {
     placeholder: 'Wybierz kraj',

@@ -33,6 +33,10 @@
   --text-helper: #6c6f85;
   --text-disabled: #8c8fa1;
   --section-divider-color: rgba(76, 79, 105, 0.14);
+  --app-aurora-top: color-mix(in srgb, #ffffff 55%, transparent);
+  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --app-aurora-depth: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 70%, transparent);
+  --app-grain-opacity: 0.045;
   --tg-viewport-stable-height: 100dvh;
   --tg-content-safe-area-inset-top: 0px;
   --tg-content-safe-area-inset-right: 0px;
@@ -81,6 +85,50 @@ body {
     --text-helper: #a6adc8;
     --text-disabled: #7f849c;
     --section-divider-color: rgba(205, 214, 244, 0.12);
+    --app-aurora-top: color-mix(in srgb, var(--color-median) 16%, transparent);
+    --app-aurora-accent: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    --app-aurora-depth: color-mix(in srgb, #45475a 40%, transparent);
+    --app-grain-opacity: 0.07;
+  }
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--tg-theme-bg-color);
+}
+
+.app-shell::before,
+.app-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.app-shell::before {
+  background:
+    radial-gradient(ellipse 130% 70% at 50% -25%, var(--app-aurora-top), transparent 58%),
+    radial-gradient(ellipse 90% 55% at 115% 8%, var(--app-aurora-accent), transparent 52%),
+    radial-gradient(ellipse 80% 50% at -20% 95%, var(--app-aurora-depth), transparent 55%);
+  animation: app-aurora-drift 18s ease-in-out infinite alternate;
+}
+
+.app-shell::after {
+  opacity: var(--app-grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+}
+
+@keyframes app-aurora-drift {
+  from {
+    opacity: 0.78;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -628,10 +676,18 @@ body {
 
 [data-theme='dark'] {
   --section-divider-color: rgba(205, 214, 244, 0.12);
+  --app-aurora-top: color-mix(in srgb, var(--color-median) 16%, transparent);
+  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  --app-aurora-depth: color-mix(in srgb, #45475a 40%, transparent);
+  --app-grain-opacity: 0.07;
 }
 
 [data-theme='light'] {
   --section-divider-color: rgba(76, 79, 105, 0.14);
+  --app-aurora-top: color-mix(in srgb, #ffffff 55%, transparent);
+  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  --app-aurora-depth: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 70%, transparent);
+  --app-grain-opacity: 0.045;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -11,7 +11,7 @@ begin
   perform public.create_response_for_telegram_user(
     820000001, 'stats_target',
     false, 'UA', 'UA',
-    'nawa_director', 'direct_studies',
+    'nawa_director', 'direct_studies', 'science-096',
     50, 100, 'none',
     'submitted', current_date
   );
@@ -112,7 +112,7 @@ with mutation as (
   select public.update_current_response(
     820000001, 'stats_target',
     false, 'UA', 'UA',
-    'nawa_director', 'direct_studies',
+    'nawa_director', 'direct_studies', 'science-096',
     50, 100, 'none',
     'scholarship_awarded', current_date
   ) as result
@@ -131,7 +131,7 @@ select lives_ok(
   $$select public.update_current_response(
       820000001, 'stats_target',
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       50, 100, 'none',
       'scholarship_not_awarded', current_date
     )$$,
@@ -146,7 +146,7 @@ select lives_ok(
   $$select public.update_current_response(
       820000001, 'stats_target',
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       50, 100, 'none',
       'submitted', current_date
     )$$,
@@ -243,7 +243,7 @@ select throws_ok(
   $$select public.update_current_response(
       820000001, 'stats_target',
       false, 'Niemcy', 'Niemcy',
-      'culture_minister', 'preparatory_course',
+      'culture_minister', 'preparatory_course', null,
       9, 10, null,
       'merit_review_positive', current_date
     )$$,

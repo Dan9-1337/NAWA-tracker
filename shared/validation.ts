@@ -16,62 +16,101 @@ import {
   type UpdateResponseRequest,
   type UpdateResponseResult,
 } from './contracts';
+import { isUniversityAllowedForTrack } from './universities';
 
 const countryCodeSchema = z.string().trim().refine(isCountryCode, { message: 'invalid country code' });
 
-const baseFormSchema = z
+const responseFormObjectSchema = z
   .object({
     hasPolishCitizenship: z.boolean(),
     rankingCountry: countryCodeSchema,
     schoolCountry: countryCodeSchema,
     scholarshipTrack: z.enum(scholarshipTracks),
     studyRoute: z.enum(studyRoutes),
+    targetUniversity: z.string().trim().min(1).max(64).optional(),
     averageGrade: z.number().min(0).max(1000),
     maximumGrade: z.number().positive().max(1000),
     polishSchoolLevel: z.enum(polishSchoolLevels).optional(),
     currentStatus: z.enum(applicationStatuses),
     statusChangedAt: z.string().date(),
   })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.averageGrade > value.maximumGrade) {
-      ctx.addIssue({ code: 'custom', path: ['averageGrade'], message: 'averageGrade must not exceed maximumGrade' });
-    }
+  .strict();
 
-    if (value.hasPolishCitizenship && value.scholarshipTrack !== 'nawa_director') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['scholarshipTrack'],
-        message: 'dual Polish citizenship is limited to the nawa_director track',
-      });
-    }
+function refineSharedQuestionnaireRules(
+  value: z.infer<typeof responseFormObjectSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  if (value.averageGrade > value.maximumGrade) {
+    ctx.addIssue({ code: 'custom', path: ['averageGrade'], message: 'averageGrade must not exceed maximumGrade' });
+  }
 
-    if (value.scholarshipTrack === 'nawa_director') {
-      if (value.polishSchoolLevel === undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['polishSchoolLevel'],
-          message: 'polishSchoolLevel is required for nawa_director',
-        });
-      }
-    } else if (value.polishSchoolLevel !== undefined) {
+  if (value.hasPolishCitizenship && value.scholarshipTrack !== 'nawa_director') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scholarshipTrack'],
+      message: 'dual Polish citizenship is limited to the nawa_director track',
+    });
+  }
+
+  if (value.scholarshipTrack === 'nawa_director') {
+    if (value.polishSchoolLevel === undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['polishSchoolLevel'],
-        message: 'polishSchoolLevel is only allowed for nawa_director',
+        message: 'polishSchoolLevel is required for nawa_director',
       });
     }
+  } else if (value.polishSchoolLevel !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['polishSchoolLevel'],
+      message: 'polishSchoolLevel is only allowed for nawa_director',
+    });
+  }
 
-    if (value.scholarshipTrack === 'health_minister' && value.studyRoute !== 'preparatory_course') {
+  if (value.scholarshipTrack === 'health_minister' && value.studyRoute !== 'preparatory_course') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['studyRoute'],
+      message: 'health_minister currently supports only the preparatory course route',
+    });
+  }
+
+  if (value.targetUniversity !== undefined) {
+    if (value.studyRoute !== 'direct_studies') {
       ctx.addIssue({
         code: 'custom',
-        path: ['studyRoute'],
-        message: 'health_minister currently supports only the preparatory course route',
+        path: ['targetUniversity'],
+        message: 'targetUniversity is only allowed for direct_studies',
+      });
+    } else if (!isUniversityAllowedForTrack(value.targetUniversity, value.scholarshipTrack)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['targetUniversity'],
+        message: 'targetUniversity must be a partner university for the selected scholarship track',
       });
     }
-  });
+  }
+}
 
-export const responseFormInputSchema = baseFormSchema;
+/** Profiles loaded from storage may predate targetUniversity; writes still require it. */
+export const responseFormStoredSchema = responseFormObjectSchema.superRefine((value, ctx) => {
+  refineSharedQuestionnaireRules(value, ctx);
+});
+
+export const responseFormInputSchema = responseFormObjectSchema.superRefine((value, ctx) => {
+  refineSharedQuestionnaireRules(value, ctx);
+
+  if (value.studyRoute === 'direct_studies') {
+    if (value.targetUniversity === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['targetUniversity'],
+        message: 'targetUniversity is required for direct_studies',
+      });
+    }
+  }
+});
 
 const emptyRequestSchema = z.object({}).strict();
 
@@ -206,7 +245,7 @@ export const updateResponseResultSchema = z
 
 export const currentResponseResultSchema = z
   .object({
-    response: responseFormInputSchema,
+    response: responseFormStoredSchema,
   })
   .strict() satisfies z.ZodType<CurrentResponseResult>;
 

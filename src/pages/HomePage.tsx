@@ -258,7 +258,7 @@ export function HomePage() {
     <MiniAppShell
       title={t.app.title}
       subtitle={statsSubtitle}
-      authenticatedHeader={state.mode === 'authenticated'}
+      showLanguageSwitcher={state.mode === 'create' || state.mode === 'gate'}
       onOpenSettings={state.mode === 'authenticated' && !settingsOpen ? () => setSettingsOpen(true) : undefined}
       suspendActionBar={settingsOpen}
     >

@@ -22,6 +22,10 @@ export const en = {
       'We do not ask for your name, application number, or email. Your Telegram account is used only to limit one survey per user.',
     privacyLink: 'What data is stored?',
     consentLine: 'By continuing, you accept the data processing rules.',
+    resumeTitle: 'You have saved progress',
+    resumeBody: 'Continue where you left off or start the survey again from scratch.',
+    resumeContinue: 'Continue',
+    resumeStartOver: 'Start over',
   },
   wizard: {
     stepLabel: (current: string, total: string) => `Step ${current} of ${total}`,
@@ -55,6 +59,8 @@ export const en = {
     geographyDescription: 'These values define your comparison group in the statistics.',
     rankingCountryHint: 'Determines your comparison group — you will be ranked together with candidates from this country.',
     schoolCountryHint: 'Sets the grading scale used in the calculator (e.g. a 12-point scale in Ukraine or a 5-point scale in Kazakhstan).',
+    targetUniversityHint:
+      'List of universities that have an agreement with NAWA — choose the one you are applying to.',
     branchResetWarning: 'Changing this answer will reset your selected program and some entered data.',
     maximumGradeLockedHint: 'Scale set from your secondary school country.',
     averageAboveMaximum: 'The average grade cannot be higher than the maximum grade on the scale.',
@@ -71,6 +77,14 @@ export const en = {
     dataTitle: 'Your data',
     editSection: 'Edit',
     editStep: 'Edit',
+    validation: {
+      universityRequired: 'Select a target university to continue.',
+      rankingCountryRequired: 'Select your country of citizenship.',
+      schoolCountryRequired: 'Select the country where you completed secondary school.',
+      educationRequired: 'Complete the education fields to continue.',
+      gradesRequired: 'Enter your average grade and make sure it fits the scale.',
+      statusDateRequired: 'Select when this status appeared.',
+    },
   },
   form: {
     submitCreate: 'Save response',
@@ -105,10 +119,11 @@ export const en = {
     outcome: 'Decision',
   },
   labels: {
-    rankingCountry: 'Citizenship country (used for the statistics group)',
+    rankingCountry: 'Country of citizenship',
     schoolCountry: 'In which country did you complete secondary school?',
     scholarshipTrack: 'Scholarship track',
     studyRoute: 'Scholarship path',
+    targetUniversity: 'Target university',
     averageGrade: 'Average grade',
     maximumGrade: 'Maximum grade on your scale',
     polishSchoolLevel: 'Polish, Polish-diaspora, or Polish-language school',
@@ -156,6 +171,10 @@ export const en = {
       scholarship_awarded: "Congratulations — you've been awarded the scholarship.",
       scholarship_not_awarded: 'Your application was not awarded a scholarship this round.',
     },
+  },
+  universities: {
+    placeholder: 'Select a university',
+    searchPlaceholder: 'Search university…',
   },
   countries: {
     placeholder: 'Select a country',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getInitialStatusOptions, getSequentialStatusOptions } from './status-options';
+import { getCreateWizardStatusOptions, getInitialStatusOptions, getSequentialStatusOptions } from './status-options';
 
 describe('getSequentialStatusOptions', () => {
   it('from submitted only offers nearby formal-review steps', () => {
@@ -24,6 +24,12 @@ describe('getSequentialStatusOptions', () => {
   it('keeps terminal statuses as current-only', () => {
     expect(getSequentialStatusOptions('scholarship_awarded')).toEqual(['scholarship_awarded']);
     expect(getSequentialStatusOptions('merit_review_negative')).toEqual(['merit_review_negative']);
+  });
+});
+
+describe('getCreateWizardStatusOptions', () => {
+  it('matches early pipeline options from submitted', () => {
+    expect(getCreateWizardStatusOptions()).toEqual(getSequentialStatusOptions('submitted'));
   });
 });
 

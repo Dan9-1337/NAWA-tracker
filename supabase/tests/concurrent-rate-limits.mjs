@@ -21,7 +21,7 @@ try {
     `select public.create_response_for_telegram_user(
       $1, $2,
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       4.5, 5, 'secondary',
       'submitted', current_date
     )`,
@@ -32,7 +32,7 @@ try {
     `select public.create_response_for_telegram_user(
       $1, $2,
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       4.5, 5, 'secondary',
       'submitted', current_date
     )`,

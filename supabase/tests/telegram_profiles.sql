@@ -8,7 +8,7 @@ select lives_ok(
   $$select public.create_response_for_telegram_user(
       810001, 'first_user',
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       4.5, 5, 'secondary',
       'submitted', current_date
     )$$,
@@ -19,7 +19,7 @@ select throws_ok(
   $$select public.create_response_for_telegram_user(
       810001, 'first_user',
       false, 'UA', 'UA',
-      'nawa_director', 'direct_studies',
+      'nawa_director', 'direct_studies', 'science-096',
       4.5, 5, 'secondary',
       'submitted', current_date
     )$$,
@@ -38,7 +38,7 @@ with mutation as (
   select public.update_current_response(
     810001, 'first_user',
     false, 'PL', 'PL',
-    'culture_minister', 'preparatory_course',
+    'culture_minister', 'preparatory_course', null,
     4.0, 5, null,
     'awaiting_decision', current_date
   ) as result

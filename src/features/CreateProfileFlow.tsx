@@ -6,6 +6,7 @@ import { ResultPreviewCard } from '../components/ResultPreviewCard';
 import { useI18n } from '../i18n/context';
 import {
   clearWizardDraft,
+  hasRestoredWizardSession,
   loadWizardSession,
   saveWizardSession,
   type WizardDraft,
@@ -33,6 +34,7 @@ const initialDraft: WizardDraft = {
   schoolCountry: '',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
+  targetUniversity: '',
   averageGrade: null,
   maximumGrade: null,
   polishSchoolLevel: 'none',
@@ -48,14 +50,16 @@ type CreateProfileFlowProps = {
 
 export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: CreateProfileFlowProps) {
   const { t } = useI18n();
-  const restored = useRef(loadWizardSession());
-  const [screen, setScreen] = useState<WizardScreen>(() => restored.current?.screen ?? 'start');
-  const [draft, setDraft] = useState<WizardDraft>(() => restored.current?.draft ?? initialDraft);
-  const [stepIndex, setStepIndex] = useState(() => restored.current?.stepIndex ?? 0);
+  const restoredSession = useRef(loadWizardSession());
+  const pendingResume = hasRestoredWizardSession(restoredSession.current);
+  const [screen, setScreen] = useState<WizardScreen>('start');
+  const [draft, setDraft] = useState<WizardDraft>(() => restoredSession.current?.draft ?? initialDraft);
+  const [stepIndex, setStepIndex] = useState(() => restoredSession.current?.stepIndex ?? 0);
   const [pending, setPending] = useState(false);
-  const [dirty, setDirty] = useState(() => restored.current != null);
+  const [dirty, setDirty] = useState(() => restoredSession.current != null);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showResumePrompt, setShowResumePrompt] = useState(pendingResume);
   const inFlight = useRef(false);
 
   const effectiveSteps = getWizardEffectiveSteps();
@@ -89,8 +93,28 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
 
   const startWizard = useCallback(() => {
     getTelegramWebApp()?.haptic.selection();
+    setShowResumePrompt(false);
     setScreen('wizard');
     setStepIndex(0);
+  }, []);
+
+  const continueResume = useCallback(() => {
+    const session = restoredSession.current;
+    if (!session) return;
+    setDraft(session.draft);
+    setStepIndex(session.stepIndex);
+    setScreen(session.screen === 'start' ? 'wizard' : session.screen);
+    setShowResumePrompt(false);
+    getTelegramWebApp()?.haptic.selection();
+  }, []);
+
+  const startOver = useCallback(() => {
+    clearWizardDraft();
+    setDraft(initialDraft);
+    setStepIndex(0);
+    setShowResumePrompt(false);
+    setDirty(false);
+    getTelegramWebApp()?.haptic.selection();
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -145,7 +169,6 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
               loading: pending,
               onClick: handleSubmit,
             },
-            secondary: { text: t.wizard.editStep, visible: true, enabled: !pending, onClick: backToLastWizardStep },
             back: { visible: true, onClick: backToLastWizardStep },
             closingConfirmation: dirty,
           },
@@ -155,6 +178,28 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
     return (
       <>
         <section className="space-y-5">
+          {showResumePrompt ? (
+            <div className="rounded-2xl border border-[var(--tg-theme-button-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-4">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">{t.start.resumeTitle}</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">{t.start.resumeBody}</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  className="min-h-11 rounded-2xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)]"
+                  onClick={continueResume}
+                >
+                  {t.start.resumeContinue}
+                </button>
+                <button
+                  type="button"
+                  className="min-h-11 rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold"
+                  onClick={startOver}
+                >
+                  {t.start.resumeStartOver}
+                </button>
+              </div>
+            </div>
+          ) : null}
           <div>
             <h2 className="text-2xl font-semibold leading-tight text-[var(--text-primary)]">{t.start.title}</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{t.start.subtitle}</p>
@@ -170,6 +215,14 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
             ))}
           </ul>
           <ResultPreviewCard />
+          <button
+            type="button"
+            disabled={disabled}
+            className="min-h-12 w-full rounded-2xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)] disabled:opacity-50"
+            onClick={startWizard}
+          >
+            {t.start.cta}
+          </button>
           <div className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm leading-6">
             <p className="font-semibold text-[var(--text-primary)]">{t.start.trustTitle}</p>
             <p className="mt-1 text-[var(--text-helper)]">{t.start.trustBody}</p>
@@ -186,14 +239,18 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
             type="button"
             className="text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
             onClick={() => setShowHowItWorks((value) => !value)}
+            aria-expanded={showHowItWorks}
           >
             {t.start.howItWorks}
           </button>
         </section>
         {showHowItWorks ? (
-          <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm text-[var(--text-helper)]">
-            {t.stats.disclaimer}
-          </p>
+          <div className="mt-4 rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-helper)]">
+              {t.start.howItWorks}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{t.stats.disclaimer}</p>
+          </div>
         ) : null}
         <PrivacySheet open={showPrivacy} onClose={() => setShowPrivacy(false)} />
       </>
@@ -216,5 +273,5 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
     );
   }
 
-  return <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />;
+  return <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} createFlow />;
 }

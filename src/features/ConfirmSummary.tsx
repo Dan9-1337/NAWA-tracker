@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
+import { getUniversityById } from '../../shared/universities';
 import { useI18n } from '../i18n/context';
 import { formatCountryLabel } from '../lib/country-label';
 import { formatDate, formatGrade } from '../lib/format';
@@ -14,6 +15,8 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
   const { t, locale } = useI18n();
   const rankingCountry = formatCountryLabel(draft.rankingCountry, t.countries);
   const schoolCountry = formatCountryLabel(draft.schoolCountry, t.countries);
+  const universityName =
+    draft.targetUniversity != null ? (getUniversityById(draft.targetUniversity)?.name ?? draft.targetUniversity) : null;
 
   return (
     <section className="space-y-5">
@@ -31,6 +34,7 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         <Row label={t.labels.rankingCountry} value={rankingCountry} />
         <Row label={t.labels.schoolCountry} value={schoolCountry} />
         <Row label={t.labels.studyRoute} value={t.choices.studyRoute[draft.studyRoute]} />
+        {universityName ? <Row label={t.labels.targetUniversity} value={universityName} /> : null}
       </SummaryBlock>
 
       <SummaryBlock
@@ -88,7 +92,7 @@ function SummaryBlock({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3">
-      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--tg-theme-subtitle-text-color)]">
+      <dt className="text-xs font-medium text-[var(--tg-theme-subtitle-text-color)]">
         {label}
       </dt>
       <dd className="mt-1 text-sm font-medium">{value}</dd>

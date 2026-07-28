@@ -20,6 +20,7 @@ const validForm = {
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
+  targetUniversity: 'science-096',
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'secondary',

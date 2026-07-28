@@ -261,12 +261,7 @@ export function ProfileDashboard({
   }, [editDraft, view]);
 
   if (view === 'edit-wizard') {
-    return (
-      <>
-        <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />
-        <DeleteProfileZone onDelete={onDelete} disabled={disabled || pending} />
-      </>
-    );
+    return <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />;
   }
 
   if (view === 'edit-confirm') {

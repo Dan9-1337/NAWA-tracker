@@ -33,6 +33,8 @@ export type ResponseFormInput = {
   schoolCountry: string;
   scholarshipTrack: ScholarshipTrack;
   studyRoute: StudyRoute;
+  /** Required for direct_studies; partner university with a NAWA framework agreement. */
+  targetUniversity?: string;
   averageGrade: number;
   maximumGrade: number;
   polishSchoolLevel?: PolishSchoolLevel;

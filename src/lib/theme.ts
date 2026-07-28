@@ -44,7 +44,7 @@ export const LIGHT_SEMANTIC: SemanticColors = {
   reliability: '#df8e1d',
 };
 
-/** Catppuccin Mocha — dark purple base with graphite cards. */
+/** Catppuccin Mocha — dark purple base with atmospheric washes. */
 export const DARK_THEME: TelegramThemeParams = {
   bg_color: '#1e1e2e',
   text_color: '#cdd6f4',

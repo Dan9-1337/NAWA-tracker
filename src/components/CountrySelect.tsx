@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { countryCodes, type CountryCode } from '../../shared/countries';
 import { useI18n } from '../i18n/context';
+import { SearchableSelect } from './SearchableSelect';
 
 const popularCountryCodes: CountryCode[] = ['UA', 'BY', 'KZ', 'PL', 'RU'];
 
@@ -10,65 +11,39 @@ type CountrySelectProps = {
   hint?: string;
   value: string;
   onChange: (value: string) => void;
+  error?: string | null;
 };
 
-export function CountrySelect({ id, label, hint, value, onChange }: CountrySelectProps) {
+export function CountrySelect({ id, label, hint, value, onChange, error }: CountrySelectProps) {
   const { t } = useI18n();
-  const [query, setQuery] = useState('');
-  const known = (countryCodes as readonly string[]).includes(value);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) return countryCodes;
-    return countryCodes.filter((code) => {
-      const name = t.countries[code as CountryCode].toLowerCase();
-      return code.toLowerCase().includes(normalized) || name.includes(normalized);
-    });
-  }, [query, t.countries]);
-
-  const popular = popularCountryCodes.filter((code) => filtered.includes(code));
-  const rest = filtered.filter((code) => !popularCountryCodes.includes(code));
+  const options = useMemo(() => {
+    const popular = popularCountryCodes.filter((code) => (countryCodes as readonly string[]).includes(code));
+    const rest = countryCodes.filter((code) => !popularCountryCodes.includes(code));
+    return [
+      ...popular.map((code) => ({
+        value: code,
+        label: t.countries[code],
+        group: t.countries.popular,
+      })),
+      ...rest.map((code) => ({
+        value: code,
+        label: t.countries[code as CountryCode],
+      })),
+    ];
+  }, [t.countries]);
 
   return (
-    <div className="space-y-2 text-sm font-medium">
-      <label htmlFor={id}>{label}</label>
-      {hint ? <p className="text-xs font-normal text-[var(--tg-theme-subtitle-text-color)]">{hint}</p> : null}
-      <input
-        type="search"
-        aria-label={t.countries.searchPlaceholder}
-        placeholder={t.countries.searchPlaceholder}
-        className="min-h-11 w-full rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-base"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      <select
-        id={id}
-        aria-label={label}
-        className="min-h-11 w-full rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-base text-[var(--tg-theme-text-color)]"
-        value={known ? value : ''}
-        onChange={(event) => {
-          onChange(event.target.value);
-          setQuery('');
-        }}
-      >
-        <option value="" disabled>
-          {t.countries.placeholder}
-        </option>
-        {popular.length > 0 ? (
-          <optgroup label={t.countries.popular}>
-            {popular.map((code) => (
-              <option key={code} value={code}>
-                {t.countries[code]}
-              </option>
-            ))}
-          </optgroup>
-        ) : null}
-        {rest.map((code) => (
-          <option key={code} value={code}>
-            {t.countries[code as CountryCode]}
-          </option>
-        ))}
-      </select>
-    </div>
+    <SearchableSelect
+      id={id}
+      label={label}
+      hint={hint}
+      value={value}
+      placeholder={t.countries.placeholder}
+      searchPlaceholder={t.countries.searchPlaceholder}
+      options={options}
+      onChange={onChange}
+      error={error}
+    />
   );
 }
