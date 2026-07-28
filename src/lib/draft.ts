@@ -1,7 +1,13 @@
 import type { ApplicationStatus, PolishSchoolLevel, ResponseFormInput, ScholarshipTrack, StudyRoute } from '../../shared/contracts';
+import { getTelegramUserId } from './telegram';
 
-export const DRAFT_STORAGE_KEY = 'nawa-wizard-draft';
+export const DRAFT_STORAGE_KEY_PREFIX = 'nawa-wizard-draft';
 const SESSION_VERSION = 1 as const;
+
+// Scoped by Telegram user id so drafts never leak between accounts sharing a device/browser.
+function draftStorageKey(): string {
+  return `${DRAFT_STORAGE_KEY_PREFIX}:${getTelegramUserId() ?? 'anon'}`;
+}
 
 export type WizardDraft = {
   hasPolishCitizenship: boolean;
@@ -58,7 +64,7 @@ function isWizardSession(value: unknown): value is WizardSession {
 export function loadWizardSession(): WizardSession | null {
   if (typeof localStorage === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    const raw = localStorage.getItem(draftStorageKey());
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (isWizardSession(parsed)) return parsed;
@@ -78,7 +84,7 @@ export function loadWizardDraft(): WizardDraft | null {
 export function saveWizardSession(session: WizardSession): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.setItem(
-    DRAFT_STORAGE_KEY,
+    draftStorageKey(),
     JSON.stringify({ ...session, version: SESSION_VERSION }),
   );
 }
@@ -95,5 +101,5 @@ export function saveWizardDraft(draft: WizardDraft): void {
 
 export function clearWizardDraft(): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(DRAFT_STORAGE_KEY);
+  localStorage.removeItem(draftStorageKey());
 }

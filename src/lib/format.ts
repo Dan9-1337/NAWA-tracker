@@ -66,6 +66,13 @@ export function formatGrade(value: number, locale: Locale): string {
   }).format(value);
 }
 
+export function formatScore(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(localeMap[locale], {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 export function parseLocalizedNumber(raw: string): number | null {
   const normalized = raw.trim().replace(/\s/g, '').replace(',', '.');
   if (normalized === '') return null;

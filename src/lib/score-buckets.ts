@@ -1,7 +1,9 @@
 import { nawaOrientationThreshold } from '../../shared/nawa-score';
 import type { ScholarshipTrack } from '../../shared/contracts';
 
-export const SCORE_BUCKET_COUNT = 5;
+export const FINE_BUCKET_COUNT = 16;
+/** @deprecated Use FINE_BUCKET_COUNT — storage always uses sixteen fine buckets. */
+export const SCORE_BUCKET_COUNT = FINE_BUCKET_COUNT;
 
 export type ScoreBucketRange = {
   from: number;
@@ -11,9 +13,32 @@ export type ScoreBucketRange = {
 
 export function scoreAxisForTrack(track: ScholarshipTrack): { origin: number; max: number; step: number } {
   if (track === 'nawa_director') {
-    return { origin: nawaOrientationThreshold, max: 100, step: 8 };
+    return { origin: nawaOrientationThreshold, max: 100, step: 2.5 };
   }
-  return { origin: 0, max: 100, step: 20 };
+  return { origin: 0, max: 100, step: 6.25 };
+}
+
+export function displayBinCount(groupSize: number): 4 | 8 | 16 {
+  if (groupSize >= 200) return 16;
+  if (groupSize >= 40) return 8;
+  return 4;
+}
+
+export function aggregateBuckets(buckets: number[], targetCount: 4 | 8 | 16): number[] {
+  if (buckets.length === targetCount) return [...buckets];
+  if (buckets.length % targetCount !== 0) {
+    throw new Error(`Cannot aggregate ${buckets.length} buckets into ${targetCount}`);
+  }
+
+  const groupSize = buckets.length / targetCount;
+  const aggregated: number[] = [];
+
+  for (let group = 0; group < targetCount; group += 1) {
+    const start = group * groupSize;
+    aggregated.push(buckets.slice(start, start + groupSize).reduce((sum, count) => sum + count, 0));
+  }
+
+  return aggregated;
 }
 
 export function scoreToAxisPercent(score: number, origin: number, max: number): number {
@@ -59,5 +84,10 @@ export function bucketFillOpacity(count: number, maxCount: number): number {
 }
 
 export function canShowScoreDistribution(groupSize: number, buckets: number[] | null | undefined): buckets is number[] {
-  return groupSize >= 10 && Array.isArray(buckets) && buckets.length === SCORE_BUCKET_COUNT;
+  return groupSize >= 10 && Array.isArray(buckets) && buckets.length === FINE_BUCKET_COUNT;
+}
+
+export function displayBuckets(buckets: number[], groupSize: number): number[] {
+  const targetCount = displayBinCount(groupSize);
+  return aggregateBuckets(buckets, targetCount);
 }

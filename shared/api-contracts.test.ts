@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { fineBuckets } from './test-statistics';
 import {
   apiErrorSchema,
   createResponseRequestSchema,
@@ -15,8 +16,8 @@ import {
 
 const validForm = {
   hasPolishCitizenship: false,
-  rankingCountry: 'Ukraina',
-  schoolCountry: 'Ukraina',
+  rankingCountry: 'UA',
+  schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   averageGrade: 85,
@@ -34,7 +35,9 @@ const validStatistics = {
   groupResponseCount: 10,
   medianScore: 82.5,
   lowerScorePercentage: 40,
-  scoreBuckets: [1, 2, 3, 2, 2],
+  scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
+  growth7d: null,
+  history: [],
 } as const;
 
 describe('API request contracts', () => {
@@ -59,7 +62,7 @@ describe('API request contracts', () => {
   it('accepts public statistics preview payloads', () => {
     const request = {
       scholarshipTrack: 'nawa_director',
-      rankingCountry: 'Ukraina',
+      rankingCountry: 'UA',
       averageGrade: 4.5,
       maximumGrade: 5,
       polishSchoolLevel: 'secondary',

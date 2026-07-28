@@ -10,47 +10,72 @@ type TypographyTokens = {
   disabled: string;
 };
 
-const LIGHT_THEME: TelegramThemeParams = {
-  bg_color: '#ffffff',
-  text_color: '#000000',
-  hint_color: '#6b7280',
-  link_color: '#2481cc',
-  button_color: '#2481cc',
+export type SemanticColors = {
+  accent: string;
+  median: string;
+  positive: string;
+  reliability: string;
+};
+
+/** Catppuccin Latte — light surfaces with calm graphite cards. */
+export const LIGHT_THEME: TelegramThemeParams = {
+  bg_color: '#eff1f5',
+  text_color: '#4c4f69',
+  hint_color: '#8c8fa1',
+  link_color: '#04a5e5',
+  button_color: '#04a5e5',
   button_text_color: '#ffffff',
-  secondary_bg_color: '#f4f4f5',
-  section_bg_color: '#ffffff',
-  subtitle_text_color: '#2d3236',
-  destructive_text_color: '#e53935',
+  secondary_bg_color: '#e6e9ef',
+  section_bg_color: '#dce0e8',
+  subtitle_text_color: '#5c5f77',
+  destructive_text_color: '#d20f39',
 };
 
-const LIGHT_TYPOGRAPHY: TypographyTokens = {
-  secondary: '#2d3236',
-  helper: '#4a5158',
-  disabled: '#6b7280',
+export const LIGHT_TYPOGRAPHY: TypographyTokens = {
+  secondary: '#5c5f77',
+  helper: '#6c6f85',
+  disabled: '#8c8fa1',
 };
 
-const LIGHT_SUCCESS_COLOR = '#2e7d32';
-const DARK_SUCCESS_COLOR = '#4caf50';
-
-const DARK_THEME: TelegramThemeParams = {
-  bg_color: '#18222d',
-  text_color: '#ffffff',
-  hint_color: '#7d91a8',
-  link_color: '#6ab2f2',
-  button_color: '#5288c1',
-  button_text_color: '#ffffff',
-  secondary_bg_color: '#232e3c',
-  section_bg_color: '#232e3c',
-  subtitle_text_color: '#e8eef4',
-  header_bg_color: '#18222d',
-  destructive_text_color: '#ff6b6b',
+export const LIGHT_SEMANTIC: SemanticColors = {
+  accent: '#04a5e5',
+  median: '#8839ef',
+  positive: '#5a8f5c',
+  reliability: '#df8e1d',
 };
 
-const DARK_TYPOGRAPHY: TypographyTokens = {
-  secondary: '#e8eef4',
-  helper: '#b8c9d9',
-  disabled: '#7d91a8',
+/** Catppuccin Mocha — dark purple base with graphite cards. */
+export const DARK_THEME: TelegramThemeParams = {
+  bg_color: '#1e1e2e',
+  text_color: '#cdd6f4',
+  hint_color: '#7f849c',
+  link_color: '#89dceb',
+  button_color: '#89dceb',
+  button_text_color: '#11111b',
+  secondary_bg_color: '#313244',
+  section_bg_color: '#313244',
+  subtitle_text_color: '#bac2de',
+  header_bg_color: '#181825',
+  destructive_text_color: '#f38ba8',
 };
+
+export const DARK_TYPOGRAPHY: TypographyTokens = {
+  secondary: '#bac2de',
+  helper: '#a6adc8',
+  disabled: '#7f849c',
+};
+
+export const DARK_SEMANTIC: SemanticColors = {
+  accent: '#89dceb',
+  median: '#cba6f7',
+  positive: '#94b894',
+  reliability: '#f9e2af',
+};
+
+export const THEME_PALETTES = {
+  light: { theme: LIGHT_THEME, typography: LIGHT_TYPOGRAPHY, semantic: LIGHT_SEMANTIC },
+  dark: { theme: DARK_THEME, typography: DARK_TYPOGRAPHY, semantic: DARK_SEMANTIC },
+} as const;
 
 function setCssVar(name: string, value: string | undefined) {
   if (!value) return;
@@ -88,6 +113,10 @@ function typographyForTheme(theme: TelegramThemeParams): TypographyTokens {
   return isDarkBackground(theme.bg_color) ? DARK_TYPOGRAPHY : LIGHT_TYPOGRAPHY;
 }
 
+function semanticForTheme(theme: TelegramThemeParams): SemanticColors {
+  return isDarkBackground(theme.bg_color) ? DARK_SEMANTIC : LIGHT_SEMANTIC;
+}
+
 function resolveBaseTheme(preference: ThemePreference | null, params: TelegramThemeParams): TelegramThemeParams {
   if (preference === 'dark') return DARK_THEME;
   if (preference === 'light') return LIGHT_THEME;
@@ -102,12 +131,22 @@ function withReadableTextColors(theme: TelegramThemeParams, typography: Typograp
   };
 }
 
+function applySemanticColors(semantic: SemanticColors): void {
+  setCssVar('--color-accent', semantic.accent);
+  setCssVar('--color-median', semantic.median);
+  setCssVar('--color-positive', semantic.positive);
+  setCssVar('--color-reliability', semantic.reliability);
+  setCssVar('--tg-theme-success-text-color', semantic.positive);
+}
+
 export function applyTelegramTheme(params: TelegramThemeParams = {}): void {
   const preference = getStoredThemePreference();
   const base = resolveBaseTheme(preference, params);
   const merged = preference ? { ...base } : { ...base, ...params };
   const typography = typographyForTheme(merged);
+  const semantic = semanticForTheme(merged);
   const theme = withReadableTextColors(merged, typography);
+  const dark = isDarkBackground(theme.bg_color);
 
   setCssVar('--tg-theme-bg-color', theme.bg_color);
   setCssVar('--tg-theme-text-color', theme.text_color);
@@ -119,21 +158,16 @@ export function applyTelegramTheme(params: TelegramThemeParams = {}): void {
   setCssVar('--tg-theme-section-bg-color', theme.section_bg_color);
   setCssVar('--tg-theme-subtitle-text-color', theme.subtitle_text_color);
   setCssVar('--tg-theme-header-bg-color', theme.header_bg_color ?? theme.bg_color);
-  setCssVar('--tg-theme-accent-text-color', theme.accent_text_color ?? theme.link_color);
+  setCssVar('--tg-theme-accent-text-color', theme.accent_text_color ?? semantic.accent);
   setCssVar('--tg-theme-destructive-text-color', theme.destructive_text_color ?? '#e53935');
   setCssVar('--text-primary', theme.text_color);
   setCssVar('--text-secondary', typography.secondary);
   setCssVar('--text-helper', typography.helper);
   setCssVar('--text-disabled', typography.disabled);
-  setCssVar(
-    '--tg-theme-success-text-color',
-    isDarkBackground(theme.bg_color) ? DARK_SUCCESS_COLOR : LIGHT_SUCCESS_COLOR,
-  );
-  setCssVar(
-    '--section-divider-color',
-    isDarkBackground(theme.bg_color) ? 'rgba(255, 255, 255, 0.12)' : 'rgba(15, 23, 42, 0.12)',
-  );
-  document.documentElement.style.colorScheme = isDarkBackground(theme.bg_color) ? 'dark' : 'light';
+  setCssVar('--section-divider-color', dark ? 'rgba(205, 214, 244, 0.12)' : 'rgba(76, 79, 105, 0.14)');
+  applySemanticColors(semantic);
+  document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 }
 
 export function getStoredThemePreference(): ThemePreference | null {

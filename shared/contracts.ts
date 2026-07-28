@@ -40,6 +40,21 @@ export type ResponseFormInput = {
   statusChangedAt: string;
 };
 
+export type StatisticsGrowth7d = {
+  newResponsesTotal: number;
+  newResponsesInGroup: number;
+  medianThen: number | null;
+  medianNow: number | null;
+  percentileThen: number | null;
+  percentileNow: number | null;
+};
+
+export type StatisticsHistoryPoint = {
+  recordedAt: string;
+  lowerScorePercentage: number | null;
+  groupResponseCount: number;
+};
+
 export type StatisticsResult = {
   detailsAvailable: boolean;
   totalValidResponses: number;
@@ -48,8 +63,10 @@ export type StatisticsResult = {
   groupResponseCount: number;
   medianScore: number | null;
   lowerScorePercentage: number | null;
-  /** Five bucket counts for the cohort score distribution (low → high). */
+  /** Sixteen fine bucket counts for the cohort score distribution (low → high). */
   scoreBuckets: number[] | null;
+  growth7d: StatisticsGrowth7d | null;
+  history: StatisticsHistoryPoint[];
 };
 
 export type PublicStatisticsRequest = {

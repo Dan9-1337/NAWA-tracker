@@ -20,7 +20,7 @@ try {
   await pool.query(
     `select public.create_response_for_telegram_user(
       $1, $2,
-      false, 'Ukraina', 'Ukraina',
+      false, 'UA', 'UA',
       'nawa_director', 'direct_studies',
       4.5, 5, 'secondary',
       'submitted', current_date
@@ -31,7 +31,7 @@ try {
   const duplicate = await pool.query(
     `select public.create_response_for_telegram_user(
       $1, $2,
-      false, 'Ukraina', 'Ukraina',
+      false, 'UA', 'UA',
       'nawa_director', 'direct_studies',
       4.5, 5, 'secondary',
       'submitted', current_date
@@ -43,7 +43,7 @@ try {
 
   const publicStats = await pool.query(
     `select public.get_public_statistics(
-      'nawa_director', 'Ukraina', 4.5, 5, 'secondary', $1
+      'nawa_director', 'UA', 4.5, 5, 'secondary', $1
     ) as result`,
     [publicStatsIpHash],
   );

@@ -2,12 +2,12 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(8);
 
 select lives_ok(
   $$select public.create_response_for_telegram_user(
       810001, 'first_user',
-      false, 'Ukraina', 'Ukraina',
+      false, 'UA', 'UA',
       'nawa_director', 'direct_studies',
       4.5, 5, 'secondary',
       'submitted', current_date
@@ -18,7 +18,7 @@ select lives_ok(
 select throws_ok(
   $$select public.create_response_for_telegram_user(
       810001, 'first_user',
-      false, 'Ukraina', 'Ukraina',
+      false, 'UA', 'UA',
       'nawa_director', 'direct_studies',
       4.5, 5, 'secondary',
       'submitted', current_date
@@ -30,14 +30,14 @@ select throws_ok(
 
 select is(
   public.get_current_response(810001)->>'rankingCountry',
-  'Ukraina',
+  'UA',
   'get_current_response returns the owned profile'
 );
 
 with mutation as (
   select public.update_current_response(
     810001, 'first_user',
-    false, 'Polska', 'Polska',
+    false, 'PL', 'PL',
     'culture_minister', 'preparatory_course',
     4.0, 5, null,
     'awaiting_decision', current_date

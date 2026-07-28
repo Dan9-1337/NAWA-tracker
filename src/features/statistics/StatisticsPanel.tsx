@@ -1,19 +1,22 @@
 import { useState } from 'react';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
-import { isCountryCode } from '../../../shared/countries';
+import { PositionHistoryList } from '../../components/PositionHistoryList';
+import { ChevronIcon } from '../../components/icons';
 import { ScoreDensityStrip } from '../../components/ScoreDensityStrip';
 import { ScorePositionChart } from '../../components/ScorePositionChart';
-import { StatCard } from '../../components/StatCard';
+import { WeeklyActivityBlock } from '../../components/SinceLastVisitCard';
 import { useI18n } from '../../i18n/context';
-import { formatClockTime, formatGrade, formatShortDayTime, updatedStampKind } from '../../lib/format';
+import { formatCountryLabel } from '../../lib/country-label';
+import type { StatsSnapshot } from '../../lib/stats-snapshot';
 import { canShowScoreDistribution } from '../../lib/score-buckets';
+import { getTelegramWebApp } from '../../lib/telegram';
 import {
   formatPercentileValue,
   getCohortProgressCount,
   getMedianBand,
   getReliabilityLevel,
-  isDetailedCohort,
   MIN_DETAILED_COHORT,
+  QUALITATIVE_COHORT_MAX,
 } from '../../lib/stats-verdict';
 
 export type StatisticsState =
@@ -27,11 +30,33 @@ type StatisticsPanelProps = {
   state: StatisticsState;
   profile?: ResponseFormInput | null;
   userScore?: number | null;
-  updatedAt?: string | null;
+  previousSnapshot?: StatsSnapshot | null;
 };
 
 export function statisticsStateFromResult(data: StatisticsResult): StatisticsState {
   return data.detailsAvailable ? { status: 'success', data } : { status: 'suppressed', data };
+}
+
+function medianBandLabel(t: ReturnType<typeof useI18n>['t'], lowerScorePercentage: number | null): string | null {
+  const band = getMedianBand(lowerScorePercentage);
+  if (band === 'above') return t.stats.heroAbove;
+  if (band === 'below') return t.stats.heroBelow;
+  if (band === 'around') return t.stats.heroAround;
+  return null;
+}
+
+function reliabilityShortLabel(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
+  const level = getReliabilityLevel(groupSize);
+  if (level === 'low') return t.stats.reliabilityShortLow;
+  if (level === 'medium') return t.stats.reliabilityShortMedium;
+  return t.stats.reliabilityShortHigh;
+}
+
+function reliabilityHint(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
+  const level = getReliabilityLevel(groupSize);
+  if (level === 'low') return t.stats.reliabilityLow(String(groupSize));
+  if (level === 'medium') return t.stats.reliabilityMedium(String(groupSize));
+  return t.stats.reliabilityHigh(String(groupSize));
 }
 
 function heroVerdict(
@@ -42,7 +67,7 @@ function heroVerdict(
   if (lowerScorePercentage == null) return t.stats.unavailable;
 
   const band = getMedianBand(lowerScorePercentage);
-  if (!isDetailedCohort(groupSize)) {
+  if (groupSize < MIN_DETAILED_COHORT) {
     if (band === 'above') return t.stats.heroUpperPart;
     if (band === 'below') return t.stats.heroLowerPart;
     return t.stats.heroAround;
@@ -57,44 +82,23 @@ function heroVerdict(
   return t.stats.heroAround;
 }
 
-function supportCopy(
+function heroMedianContext(
   t: ReturnType<typeof useI18n>['t'],
   lowerScorePercentage: number | null,
   groupSize: number,
 ): string | null {
   if (lowerScorePercentage == null || groupSize < MIN_DETAILED_COHORT) return null;
 
-  const percentage = formatPercentileValue(lowerScorePercentage, groupSize);
-  return t.stats.percentileSupport(String(percentage));
+  const band = getMedianBand(lowerScorePercentage);
+  const count = String(groupSize);
+  if (band === 'above') return t.stats.heroMedianAbove(count);
+  if (band === 'below') return t.stats.heroMedianBelow(count);
+  if (band === 'around') return t.stats.heroMedianAround(count);
+  return null;
 }
 
-function reliabilityShort(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
-  const level = getReliabilityLevel(groupSize);
-  if (level === 'low') return t.stats.reliabilityShortLow;
-  if (level === 'medium') return t.stats.reliabilityShortMedium;
-  return t.stats.reliabilityShortHigh;
-}
-
-function reliabilityHint(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
-  const level = getReliabilityLevel(groupSize);
-  if (level === 'low') return t.stats.reliabilityLow;
-  if (level === 'medium') return t.stats.reliabilityMedium;
-  return t.stats.reliabilityHigh;
-}
-
-function statsUpdatedLabel(
-  t: ReturnType<typeof useI18n>['t'],
-  locale: ReturnType<typeof useI18n>['locale'],
-  iso: string,
-): string {
-  const kind = updatedStampKind(iso);
-  if (kind === 'today') return t.delta.updatedToday(formatClockTime(iso, locale));
-  if (kind === 'yesterday') return t.delta.updatedYesterday(formatClockTime(iso, locale));
-  return t.delta.updatedQuiet(formatShortDayTime(iso, locale));
-}
-
-export function StatisticsPanel({ state, profile, userScore, updatedAt }: StatisticsPanelProps) {
-  const { t, locale } = useI18n();
+export function StatisticsPanel({ state, profile, userScore, previousSnapshot }: StatisticsPanelProps) {
+  const { t } = useI18n();
   const [showDetails, setShowDetails] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
   const titleId = 'statistics-hero';
@@ -103,8 +107,7 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
   const progressCount = data ? getCohortProgressCount(data) : 0;
   const showDistribution = data ? canShowScoreDistribution(groupSize, data.scoreBuckets) : false;
 
-  const schoolCountry =
-    profile && isCountryCode(profile.schoolCountry) ? t.countries[profile.schoolCountry] : profile?.schoolCountry;
+  const schoolCountry = formatCountryLabel(profile?.schoolCountry, t.countries);
 
   if (state.status === 'unavailable') {
     return (
@@ -159,23 +162,38 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
     );
   }
 
-  const support = supportCopy(t, data.lowerScorePercentage, groupSize);
+  const percentileValue =
+    data.lowerScorePercentage != null && groupSize >= MIN_DETAILED_COHORT
+      ? formatPercentileValue(data.lowerScorePercentage, groupSize)
+      : null;
+  const medianBadge = medianBandLabel(t, data.lowerScorePercentage);
+  const medianContext = heroMedianContext(t, data.lowerScorePercentage, groupSize);
+  const reliabilityShort = reliabilityShortLabel(t, groupSize);
+  const reliabilityLevel = getReliabilityLevel(groupSize);
+  const trackLabel = t.choices.scholarshipTrack[profile.scholarshipTrack];
+  const heroTitle =
+    percentileValue != null
+      ? t.stats.heroHeadline(String(percentileValue))
+      : heroVerdict(t, data.lowerScorePercentage, groupSize);
 
   return (
     <section aria-labelledby={titleId} className="space-y-0" role="region">
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-          {t.stats.heroLabel}
-        </p>
-        <h2
-          id={titleId}
-          className="text-[1.75rem] font-semibold leading-[1.15] tracking-tight text-[var(--text-primary)]"
-        >
-          {heroVerdict(t, data.lowerScorePercentage, groupSize)}
-        </h2>
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <h2 id={titleId} className="text-2xl font-bold leading-tight tracking-tight text-[var(--text-primary)]">
+            {heroTitle}
+          </h2>
+          {medianContext ? (
+            <p className="text-sm leading-snug text-[var(--text-secondary)]">{medianContext}</p>
+          ) : null}
+        </div>
 
-        {support ? <p className="text-base leading-snug text-[var(--text-secondary)]">{support}</p> : null}
-        <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.unofficialNote}</p>
+        <div className="flex flex-wrap gap-2">
+          {medianBadge ? <span className="stat-badge stat-badge--accent">{medianBadge}</span> : null}
+          <span className="stat-badge stat-badge--reliability">{t.stats.reliabilityBadgeWithLevel(reliabilityShort)}</span>
+        </div>
+
+        <WeeklyActivityBlock previous={previousSnapshot ?? null} current={data} />
       </div>
 
       {showDistribution && userScore != null ? (
@@ -184,8 +202,11 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
           track={profile.scholarshipTrack}
           userScore={userScore}
           medianScore={data.medianScore}
+          groupSize={groupSize}
         />
       ) : null}
+
+      <PositionHistoryList history={data.history} />
 
       <hr className="section-divider" />
 
@@ -195,76 +216,95 @@ export function StatisticsPanel({ state, profile, userScore, updatedAt }: Statis
         aria-expanded={showWhy}
         onClick={() => setShowWhy((value) => !value)}
       >
-        <span className="min-w-0 space-y-1">
+        <span className="min-w-0">
           <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
             {t.stats.cohortCompareLabel}
           </span>
-          <span className="block text-sm font-medium leading-snug text-[var(--text-primary)]">
-            {[t.choices.scholarshipTrack[profile.scholarshipTrack], schoolCountry].filter(Boolean).join(' · ')}
-          </span>
-          <span className="block text-sm leading-snug text-[var(--tg-theme-subtitle-text-color)]">
-            {[t.choices.studyRoute[profile.studyRoute], t.stats.cohortResponses(String(groupSize))]
-              .filter(Boolean)
-              .join(' · ')}
-          </span>
-          {showWhy ? (
+          {!showWhy ? (
+            <dl className="cohort-grid cohort-grid--stacked">
+              <div className="cohort-grid__full">
+                <dt>{t.stats.cohortFieldTrack}</dt>
+                <dd>{trackLabel}</dd>
+              </div>
+              <div>
+                <dt>{t.stats.cohortFieldCountry}</dt>
+                <dd>{schoolCountry ?? t.stats.noValue}</dd>
+              </div>
+              <div>
+                <dt>{t.stats.cohortFieldSize}</dt>
+                <dd>{t.stats.cohortResponses(String(groupSize))}</dd>
+              </div>
+              <div className="cohort-grid__full">
+                <dt>{t.stats.cohortFieldRoute}</dt>
+                <dd>{t.choices.studyRoute[profile.studyRoute]}</dd>
+              </div>
+            </dl>
+          ) : (
             <span className="mt-2 block text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">
               {t.stats.cohortWhyBody}
             </span>
-          ) : null}
+          )}
         </span>
-        <span className="shrink-0 pt-5 text-lg leading-none text-[var(--tg-theme-hint-color)]" aria-hidden="true">
-          ›
+        <span className="disclosure-row__chevron">
+          <ChevronIcon />
         </span>
       </button>
 
-      <hr className="section-divider" />
-
-      <div>
+      <div className="disclosure-slot">
         <button
           type="button"
-          className="disclosure-row"
+          className="disclosure-row disclosure-row--slot"
           aria-expanded={showDetails}
           onClick={() => setShowDetails((value) => !value)}
         >
-          <span className="min-w-0 space-y-1">
-            <span className="block text-sm font-medium">
-              {t.stats.reliabilityLabel}: {reliabilityShort(t, groupSize)}
-            </span>
-            <span className="block text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">
-              {reliabilityHint(t, groupSize)}
-            </span>
-          </span>
-          <span className="shrink-0 pt-0.5 text-lg leading-none text-[var(--tg-theme-hint-color)]" aria-hidden="true">
-            ›
+          <span className="disclosure-row__label">{t.stats.reliabilityWhyLabel(reliabilityShort)}</span>
+          <span className="disclosure-row__chevron">
+            <ChevronIcon />
           </span>
         </button>
-
-        {updatedAt ? (
-          <p className="mt-1.5 px-0.5 text-xs leading-4 tracking-[0.01em] text-[var(--text-disabled)]">
-            {statsUpdatedLabel(t, locale, updatedAt)}
-          </p>
-        ) : null}
       </div>
 
+      {getTelegramWebApp()?.isTelegram && data.lowerScorePercentage != null ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            className="w-full rounded-2xl border border-[var(--section-divider-color)] px-4 py-2.5 text-sm font-medium text-[var(--tg-theme-button-color)]"
+            onClick={() => {
+              const initData = getTelegramWebApp()?.initData;
+              if (!initData) return;
+              const url = `${window.location.origin}/api/share-card?initData=${encodeURIComponent(initData)}`;
+              getTelegramWebApp()?.shareToStory(url, {
+                text: heroTitle,
+              });
+            }}
+          >
+            {t.stats.shareToStory}
+          </button>
+          <p className="mt-1 text-xs text-[var(--tg-theme-subtitle-text-color)]">{t.stats.shareToStoryPremiumNote}</p>
+        </div>
+      ) : null}
+
       {showDetails ? (
-        <div className="mt-3 space-y-3 border-t border-[var(--section-divider-color)] pt-3">
+        <div className="reliability-details">
+          <p className="reliability-details__summary">{reliabilityHint(t, groupSize)}</p>
+
           {userScore != null ? (
             <ScorePositionChart userScore={userScore} medianScore={data.medianScore} variant="compact" />
           ) : null}
 
-          <div className="space-y-2">
-            <StatCard label={t.stats.groupResponseCount} value={String(data.groupResponseCount)} />
-            {data.medianScore != null ? (
-              <StatCard
-                label={t.stats.percentileLabel}
-                value={t.stats.medianSentence(formatGrade(data.medianScore, locale))}
-              />
-            ) : null}
-            <StatCard label={t.stats.totalResponses} value={String(data.totalValidResponses)} />
-          </div>
+          <ul className="reliability-details__factors">
+            <li>{t.stats.reliabilityFactorSize(String(groupSize))}</li>
+            <li>{t.stats.reliabilityFactorQuality(String(groupSize))}</li>
+            <li>{t.stats.reliabilityFactorStability}</li>
+          </ul>
 
-          <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.disclaimer}</p>
+          {reliabilityLevel !== 'high' ? (
+            <p className="reliability-details__threshold">
+              {t.stats.reliabilityThreshold(String(QUALITATIVE_COHORT_MAX + 1))}
+            </p>
+          ) : null}
+
+          <p className="reliability-details__disclaimer">{t.stats.disclaimerShort}</p>
         </div>
       ) : null}
     </section>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { fineBuckets } from '../shared/test-statistics';
 import { HttpError } from './_lib/errors';
 import { signTelegramInitData } from './_lib/telegram-auth';
 import {
@@ -15,8 +16,8 @@ const USER_ID = 424242424;
 
 const validForm = {
   hasPolishCitizenship: false,
-  rankingCountry: 'Ukraina',
-  schoolCountry: 'Ukraina',
+  rankingCountry: 'UA',
+  schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   averageGrade: 4.5,
@@ -34,7 +35,9 @@ const statistics = {
   groupResponseCount: 10,
   medianScore: 82.5,
   lowerScorePercentage: 40,
-  scoreBuckets: [1, 2, 3, 2, 2],
+  scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
+  growth7d: null,
+  history: [],
 } as const;
 
 type Request = {
@@ -150,7 +153,7 @@ describe('POST /api/responses', () => {
     expect(calls[0]?.[1]).toMatchObject({
       p_telegram_user_id: USER_ID,
       p_telegram_username: 'tester',
-      p_ranking_country: 'Ukraina',
+      p_ranking_country: 'UA',
     });
     expect(state.status).toBe(201);
     expect(state.body).toEqual({ created: true, statistics });
@@ -302,7 +305,7 @@ describe('POST /api/statistics/public', () => {
     await handler(
       request('POST', {
         scholarshipTrack: 'nawa_director',
-        rankingCountry: 'Ukraina',
+        rankingCountry: 'UA',
         averageGrade: 4.5,
         maximumGrade: 5,
         polishSchoolLevel: 'secondary',

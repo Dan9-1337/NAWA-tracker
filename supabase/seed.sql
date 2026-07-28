@@ -26,11 +26,11 @@ select
   910000000 + g,
   'seed_peer_' || lpad(g::text, 2, '0'),
   false,
-  'Ukraina',
+  'UA',
   case (g % 3)
-    when 0 then 'Ukraina'
-    when 1 then 'Białoruś'
-    else 'Kazachstan'
+    when 0 then 'UA'
+    when 1 then 'BY'
+    else 'KZ'
   end,
   'nawa_director',
   'direct_studies',
@@ -85,8 +85,8 @@ insert into public.responses (
   900000001,
   'demo_applicant',
   false,
-  'Ukraina',
-  'Ukraina',
+  'UA',
+  'UA',
   'nawa_director',
   'direct_studies',
   4.1,
@@ -117,11 +117,11 @@ insert into public.responses (
   is_suspicious
 ) values
   (
-    900000013, 'seed_ua_nawa_13', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
+    900000013, 'seed_ua_nawa_13', false, 'UA', 'UA', 'nawa_director', 'direct_studies',
     4.5, 5, 90, 'primary', 86, 'formal_review_completed', date '2026-06-02', false
   ),
   (
-    900000101, 'seed_by_nawa_01', false, 'Białoruś', 'Białoruś', 'nawa_director', 'direct_studies',
+    900000101, 'seed_by_nawa_01', false, 'BY', 'BY', 'nawa_director', 'direct_studies',
     4.0, 5, 80, 'none', 72, 'submitted', date '2026-06-03', false
   ),
   (
@@ -129,7 +129,7 @@ insert into public.responses (
     4.2, 5, 84, 'secondary', 85.6, 'awaiting_decision', date '2026-06-04', false
   ),
   (
-    900000103, 'seed_kz_nawa_01', false, 'Kazachstan', 'Kazachstan', 'nawa_director', 'preparatory_course',
+    900000103, 'seed_kz_nawa_01', false, 'KZ', 'KZ', 'nawa_director', 'preparatory_course',
     3.8, 5, 76, 'none', 68.4, 'formal_review_in_progress', date '2026-06-05', false
   ),
   (
@@ -137,15 +137,15 @@ insert into public.responses (
     3.55, 5, 71, 'primary', 36.95, 'correction_requested', date '2026-06-06', false
   ),
   (
-    900000201, 'seed_ua_health_01', false, 'Ukraina', 'Ukraina', 'health_minister', 'preparatory_course',
+    900000201, 'seed_ua_health_01', false, 'UA', 'UA', 'health_minister', 'preparatory_course',
     4.55, 5, 91, null, null, 'awaiting_decision', date '2026-06-07', false
   ),
   (
-    900000202, 'seed_by_health_02', false, 'Białoruś', 'Białoruś', 'health_minister', 'preparatory_course',
+    900000202, 'seed_by_health_02', false, 'BY', 'BY', 'health_minister', 'preparatory_course',
     4.4, 5, 88, null, null, 'scholarship_awarded', date '2026-05-28', false
   ),
   (
-    900000203, 'seed_kz_health_03', false, 'Kazachstan', 'Kazachstan', 'health_minister', 'preparatory_course',
+    900000203, 'seed_kz_health_03', false, 'KZ', 'KZ', 'health_minister', 'preparatory_course',
     4.2, 5, 84, null, null, 'merit_review_in_progress', date '2026-06-08', false
   ),
   (
@@ -153,11 +153,11 @@ insert into public.responses (
     3.75, 5, 75, null, null, 'scholarship_not_awarded', date '2026-05-10', false
   ),
   (
-    900000301, 'seed_ua_culture_01', false, 'Ukraina', 'Ukraina', 'culture_minister', 'direct_studies',
+    900000301, 'seed_ua_culture_01', false, 'UA', 'UA', 'culture_minister', 'direct_studies',
     4.8, 5, 96, null, null, 'submitted', date '2026-06-09', false
   ),
   (
-    900000302, 'seed_by_culture_02', false, 'Białoruś', 'Białoruś', 'culture_minister', 'direct_studies',
+    900000302, 'seed_by_culture_02', false, 'BY', 'BY', 'culture_minister', 'direct_studies',
     4.4, 5, 88, null, null, 'awaiting_decision', date '2026-06-10', false
   ),
   (
@@ -165,6 +165,6 @@ insert into public.responses (
     4.1, 5, 82, null, null, 'correction_requested', date '2026-06-11', false
   ),
   (
-    900000999, 'seed_suspicious_01', false, 'Ukraina', 'Ukraina', 'nawa_director', 'direct_studies',
+    900000999, 'seed_suspicious_01', false, 'UA', 'UA', 'nawa_director', 'direct_studies',
     4.95, 5, 99, 'secondary', 99.1, 'scholarship_awarded', date '2026-03-01', true
   );

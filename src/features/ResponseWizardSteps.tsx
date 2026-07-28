@@ -149,14 +149,12 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
             hint={t.wizard.rankingCountryHint}
             value={draft.rankingCountry}
             onChange={(value) => updateDraft({ rankingCountry: value })}
-            allowLegacy={false}
           />
           <CountrySelect
             label={t.labels.schoolCountry}
             hint={t.wizard.schoolCountryHint}
             value={draft.schoolCountry}
             onChange={setSchoolCountry}
-            allowLegacy={false}
           />
         </FormSection>
       ) : null}

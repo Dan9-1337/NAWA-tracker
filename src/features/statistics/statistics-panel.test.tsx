@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { StatisticsResult } from '../../../shared/contracts';
+import { fineBuckets } from '../../../shared/test-statistics';
 import { StatisticsPanel } from './StatisticsPanel';
 
 const profile = {
@@ -48,31 +49,54 @@ describe('StatisticsPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'W górnej części grupy' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Twój wynik jest wyższy niż u 95% ankiet w tej grupie.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/większość ankiet/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Wyżej niż 95% grupy' })).toBeInTheDocument();
+    expect(screen.getByText('Powyżej mediany')).toBeInTheDocument();
+    expect(screen.getByText('Wiarygodność: średnia')).toBeInTheDocument();
+    expect(screen.getByText('Ukraina')).toBeInTheDocument();
+    expect(screen.queryByText('W górnej części grupy')).not.toBeInTheDocument();
     expect(screen.getByText('Rozkład wyników')).toBeInTheDocument();
-    expect(screen.getByText('Twoja grupa porównawcza')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Wiarygodność porównania/ }));
+    await user.click(screen.getByRole('button', { name: /Dlaczego wiarygodność jest średnia/ }));
     expect(screen.getByText('Wyniki punktowe')).toBeInTheDocument();
-    expect(screen.queryByText(/Wyższy niż u 95%/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Liczba odpowiedzi w grupie')).not.toBeInTheDocument();
   });
 
-  it('shows percentile support for detailed cohorts', () => {
+  it('shows percentile headline for detailed cohorts', () => {
     render(
       <StatisticsPanel
         state={{ status: 'success', data: detailedStatistics }}
         profile={profile}
-        userScore={75}
+        userScore={83.8}
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Powyżej mediany' })).toBeInTheDocument();
-    expect(screen.getByText('Twój wynik jest wyższy niż u 65% ankiet w tej grupie.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Wyżej niż 65% grupy' })).toBeInTheDocument();
+    expect(screen.getByText(/powyżej mediany wśród 30 ankiet/)).toBeInTheDocument();
+    expect(screen.getByText('Powyżej mediany')).toBeInTheDocument();
+    expect(screen.queryByText('65%')).not.toBeInTheDocument();
+  });
+
+  it('combines weekly growth into one activity block', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: statisticsWithGrowth }}
+        profile={profile}
+        userScore={83.8}
+        previousSnapshot={{
+          groupResponseCount: 14,
+          lowerScorePercentage: 65,
+          medianScore: 76,
+          sameTrackCount: 14,
+          sameCountryCount: 14,
+          fetchedAt: '2026-07-20T10:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Ostatnie 7 dni')).toBeInTheDocument();
+    expect(screen.getByText('+14 ankiet w Twojej grupie · +25 łącznie')).toBeInTheDocument();
+    expect(screen.getByText('Twoja pozycja nie zmieniła się istotnie')).toBeInTheDocument();
+    expect(screen.queryByText('Bez zmian od ostatniej wizyty')).not.toBeInTheDocument();
   });
 });
 
@@ -85,6 +109,8 @@ const suppressedStatistics: StatisticsResult = {
   medianScore: null,
   lowerScorePercentage: null,
   scoreBuckets: null,
+  growth7d: null,
+  history: [],
 };
 
 const qualitativeStatistics: StatisticsResult = {
@@ -95,7 +121,9 @@ const qualitativeStatistics: StatisticsResult = {
   groupResponseCount: 19,
   medianScore: 82.5,
   lowerScorePercentage: 95,
-  scoreBuckets: [1, 2, 4, 7, 5],
+  scoreBuckets: fineBuckets([1, 2, 4, 7, 5]),
+  growth7d: null,
+  history: [],
 };
 
 const detailedStatistics: StatisticsResult = {
@@ -106,5 +134,20 @@ const detailedStatistics: StatisticsResult = {
   groupResponseCount: 30,
   medianScore: 82.5,
   lowerScorePercentage: 65,
-  scoreBuckets: [2, 4, 8, 10, 6],
+  scoreBuckets: fineBuckets([2, 4, 8, 10, 6]),
+  growth7d: null,
+  history: [],
+};
+
+const statisticsWithGrowth: StatisticsResult = {
+  ...detailedStatistics,
+  groupResponseCount: 14,
+  growth7d: {
+    newResponsesTotal: 25,
+    newResponsesInGroup: 14,
+    medianThen: 76,
+    medianNow: 76.05,
+    percentileThen: 65,
+    percentileNow: 65,
+  },
 };

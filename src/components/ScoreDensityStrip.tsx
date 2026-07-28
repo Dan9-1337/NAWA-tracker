@@ -2,6 +2,8 @@ import type { ScholarshipTrack } from '../../shared/contracts';
 import { useI18n } from '../i18n/context';
 import {
   bucketFillOpacity,
+  displayBinCount,
+  displayBuckets,
   mergeSparseBuckets,
   scoreAxisForTrack,
   scoreToAxisPercent,
@@ -12,22 +14,31 @@ type ScoreDensityStripProps = {
   track: ScholarshipTrack;
   userScore: number;
   medianScore?: number | null;
+  groupSize: number;
 };
 
-const STRIP_HEIGHT = 32;
-const USER_MARKER = 11;
-const MEDIAN_MARKER = 9;
+const STRIP_HEIGHT = 28;
+const USER_MARKER = 12;
+const MEDIAN_MARKER = 8;
 
-export function ScoreDensityStrip({ buckets, track, userScore, medianScore }: ScoreDensityStripProps) {
+export function ScoreDensityStrip({ buckets, track, userScore, medianScore, groupSize }: ScoreDensityStripProps) {
   const { t } = useI18n();
-  const { origin, max, step } = scoreAxisForTrack(track);
-  const merged = mergeSparseBuckets(buckets, origin, step);
+  const { origin, max } = scoreAxisForTrack(track);
+  const targetCount = displayBinCount(groupSize);
+  const aggregated = displayBuckets(buckets, groupSize);
+  const displayStep = (max - origin) / targetCount;
+  const merged =
+    targetCount === 8
+      ? mergeSparseBuckets(aggregated, origin, displayStep)
+      : { from: origin, to: max, counts: aggregated };
   const maxCount = Math.max(...merged.counts, 1);
   const userPercent = scoreToAxisPercent(userScore, merged.from, merged.to);
   const medianPercent = medianScore != null ? scoreToAxisPercent(medianScore, merged.from, merged.to) : null;
+  const binLabels = [t.stats.densityBinLow, t.stats.densityBinBelowAvg, t.stats.densityBinAboveAvg, t.stats.densityBinHigh];
 
   const ariaLabel = [
     t.stats.densityTitle,
+    t.stats.densityCaption,
     medianScore != null ? t.stats.chartMedian(medianScore.toFixed(1)) : null,
     t.stats.chartYou(userScore.toFixed(1)),
   ]
@@ -35,24 +46,31 @@ export function ScoreDensityStrip({ buckets, track, userScore, medianScore }: Sc
     .join('. ');
 
   return (
-    <div className="mb-2 mt-4" role="img" aria-label={ariaLabel}>
-      <p className="mb-2.5 text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-        {t.stats.densityTitle}
-      </p>
+    <div className="density-strip" role="img" aria-label={ariaLabel}>
+      <div className="density-strip__header">
+        <p className="density-strip__title">{t.stats.densityTitle}</p>
+        {medianScore != null ? (
+          <span className="density-strip__median-hint">
+            <span aria-hidden="true" className="density-strip__median-marker density-strip__median-marker--on-chart" />
+            {t.stats.chartMedianLabel}
+          </span>
+        ) : null}
+      </div>
 
-      <div className="relative" style={{ height: STRIP_HEIGHT }}>
-        <div className="flex h-full gap-px overflow-hidden rounded-lg">
+      <p className="density-strip__caption">{t.stats.densityCaption}</p>
+
+      <div className="density-strip__chart" style={{ height: STRIP_HEIGHT }}>
+        <div className="density-strip__bars">
           {merged.counts.map((count, index) => (
             <div
-              key={`${merged.from + index * step}-${count}`}
+              key={`${merged.from + index * displayStep}-${count}`}
               aria-hidden="true"
-              className="relative min-w-0 flex-1 bg-[var(--tg-theme-secondary-bg-color)]"
+              className="density-strip__bar"
             >
               {count > 0 ? (
                 <div
-                  className="absolute inset-0"
+                  className="density-strip__fill"
                   style={{
-                    backgroundColor: 'var(--tg-theme-button-color)',
                     opacity: bucketFillOpacity(count, maxCount),
                   }}
                 />
@@ -64,62 +82,25 @@ export function ScoreDensityStrip({ buckets, track, userScore, medianScore }: Sc
         {medianPercent != null ? (
           <div
             aria-hidden="true"
-            className="absolute -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${medianPercent}%`, top: '50%', zIndex: 1 }}
+            className="density-strip__median"
+            style={{ left: `${medianPercent}%` }}
           >
-            <span
-              className="block border border-[var(--tg-theme-bg-color)]"
-              style={{
-                width: MEDIAN_MARKER,
-                height: MEDIAN_MARKER,
-                backgroundColor: 'var(--tg-theme-link-color)',
-                transform: 'rotate(45deg)',
-              }}
-            />
+            <span className="density-strip__median-marker density-strip__median-marker--on-chart" />
           </div>
         ) : null}
 
-        <div
-          aria-hidden="true"
-          className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${userPercent}%`, top: '50%', zIndex: 2 }}
-        >
-          <span
-            className="block rounded-full border-2 border-[var(--tg-theme-bg-color)]"
-            style={{
-              width: USER_MARKER,
-              height: USER_MARKER,
-              backgroundColor: 'var(--tg-theme-button-color)',
-            }}
-          />
+        <div aria-hidden="true" className="density-strip__user" style={{ left: `${userPercent}%` }}>
+          <span className="density-strip__user-label">{t.stats.chartYouLabel}</span>
+          <span className="density-strip__user-marker" />
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[var(--tg-theme-subtitle-text-color)]">
-        {medianScore != null ? (
-          <span className="inline-flex items-center gap-1">
-            <span
-              aria-hidden="true"
-              className="inline-block rotate-45 border border-[var(--tg-theme-bg-color)]"
-              style={{
-                width: 7,
-                height: 7,
-                backgroundColor: 'var(--tg-theme-link-color)',
-              }}
-            />
-            {t.stats.chartMedianLabel}
+      <div className="density-strip__labels" aria-hidden="true">
+        {binLabels.map((label) => (
+          <span key={label} className="density-strip__label">
+            {label}
           </span>
-        ) : (
-          <span />
-        )}
-        <span className="inline-flex items-center gap-1 font-medium text-[var(--text-primary)]">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2 w-2 rounded-full border border-[var(--tg-theme-bg-color)]"
-            style={{ backgroundColor: 'var(--tg-theme-button-color)' }}
-          />
-          {t.stats.chartYouLabel}
-        </span>
+        ))}
       </div>
     </div>
   );

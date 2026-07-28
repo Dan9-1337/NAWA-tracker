@@ -26,7 +26,7 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
         {state.backVisible ? (
           <button
             type="button"
-            className="rounded-xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold"
+            className="rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold"
             onClick={() => state.triggerBack()}
           >
             ← Back
@@ -36,7 +36,7 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
           <button
             type="button"
             disabled={!state.secondaryEnabled}
-            className="rounded-xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold disabled:opacity-50"
+            className="rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold disabled:opacity-50"
             onClick={() => state.triggerSecondary()}
           >
             {state.secondaryText}
@@ -46,7 +46,7 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
           <button
             type="button"
             disabled={!state.mainEnabled || state.mainProgress}
-            className="rounded-xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)] disabled:opacity-50"
+            className="rounded-2xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)] disabled:opacity-50"
             onClick={() => state.triggerMain()}
           >
             {state.mainProgress ? '…' : state.mainText}
@@ -60,6 +60,7 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
 type MiniAppShellProps = {
   title: string;
   children: ReactNode;
+  subtitle?: string | null;
   onOpenSettings?: () => void;
   /** When true (authenticated), header shows Settings only. Otherwise Start/gate: language only. */
   authenticatedHeader?: boolean;
@@ -69,6 +70,7 @@ type MiniAppShellProps = {
 export function MiniAppShell({
   title,
   children,
+  subtitle,
   onOpenSettings,
   authenticatedHeader = false,
   suspendActionBar = false,
@@ -85,14 +87,19 @@ export function MiniAppShell({
         background: 'var(--tg-theme-bg-color)',
       }}
     >
-      <header className="flex items-center justify-between gap-3 px-4 pb-4 pt-3">
-        <h1 className="text-lg font-semibold leading-tight">{title}</h1>
+      <header className="flex items-start justify-between gap-3 px-4 pb-4 pt-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold leading-tight">{title}</h1>
+          {subtitle ? (
+            <p className="mt-0.5 truncate text-xs text-[var(--text-disabled)]">{subtitle}</p>
+          ) : null}
+        </div>
         <div className="flex items-center gap-2">
           {authenticatedHeader && onOpenSettings ? (
             <button
               type="button"
               aria-label={t.settings.open}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[var(--text-primary)] transition-colors hover:bg-[var(--tg-theme-secondary-bg-color)] active:bg-[var(--tg-theme-secondary-bg-color)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tg-theme-link-color)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-section-bg-color)] text-[var(--text-primary)] transition-colors hover:bg-[var(--tg-theme-secondary-bg-color)] active:bg-[var(--tg-theme-secondary-bg-color)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               onClick={onOpenSettings}
             >
               <svg

@@ -2,13 +2,15 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+truncate table public.user_statistics_snapshots, public.responses restart identity cascade;
+
+select plan(32);
 
 do $$
 begin
   perform public.create_response_for_telegram_user(
     820000001, 'stats_target',
-    false, 'Ukraina', 'Ukraina',
+    false, 'UA', 'UA',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
     'submitted', current_date
@@ -24,7 +26,7 @@ insert into public.responses (
 select
   820000000 + value,
   'stats_peer_' || value,
-  false, 'Ukraina', 'Ukraina',
+  false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   value, 100, value, 'none', round(value * 0.9, 2),
   case
@@ -51,7 +53,7 @@ insert into public.responses (
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  820000090, 'stats_peer_90', false, 'Ukraina', 'Ukraina',
+  820000090, 'stats_peer_90', false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
 );
@@ -82,7 +84,7 @@ insert into public.responses (
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  820000999, 'stats_suspicious', false, 'Ukraina', 'Ukraina',
+  820000999, 'stats_suspicious', false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   0, 100, 0, 'none', 0, 'submitted', current_date, true
 );
@@ -98,7 +100,7 @@ select is(
 );
 
 update public.responses
-set ranking_country = 'Polska'
+set ranking_country = 'PL'
 where telegram_user_id in (820000070, 820000080, 820000090);
 select is(
   (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
@@ -109,7 +111,7 @@ select is(
 with mutation as (
   select public.update_current_response(
     820000001, 'stats_target',
-    false, 'Ukraina', 'Ukraina',
+    false, 'UA', 'UA',
     'nawa_director', 'direct_studies',
     50, 100, 'none',
     'scholarship_awarded', current_date
@@ -125,26 +127,34 @@ select is(
   false,
   'the first scholarship award does not mark a response suspicious'
 );
-select ok(
-  (public.update_current_response(
-    820000001, 'stats_target',
-    false, 'Ukraina', 'Ukraina',
-    'nawa_director', 'direct_studies',
-    50, 100, 'none',
-    'scholarship_not_awarded', current_date
-  )->>'updated')::boolean
-  and (select is_suspicious from public.responses where telegram_user_id = 820000001),
+select lives_ok(
+  $$select public.update_current_response(
+      820000001, 'stats_target',
+      false, 'UA', 'UA',
+      'nawa_director', 'direct_studies',
+      50, 100, 'none',
+      'scholarship_not_awarded', current_date
+    )$$,
+  'opposing scholarship awards update succeeds'
+);
+select is(
+  (select is_suspicious from public.responses where telegram_user_id = 820000001),
+  true,
   'opposing scholarship awards mark a response suspicious and keep the flag sticky'
 );
-select ok(
-  (public.update_current_response(
-    820000001, 'stats_target',
-    false, 'Ukraina', 'Ukraina',
-    'nawa_director', 'direct_studies',
-    50, 100, 'none',
-    'submitted', current_date
-  )->>'updated')::boolean
-  and (select is_suspicious from public.responses where telegram_user_id = 820000001),
+select lives_ok(
+  $$select public.update_current_response(
+      820000001, 'stats_target',
+      false, 'UA', 'UA',
+      'nawa_director', 'direct_studies',
+      50, 100, 'none',
+      'submitted', current_date
+    )$$,
+  'ordinary update after suspicious flag still succeeds'
+);
+select is(
+  (select is_suspicious from public.responses where telegram_user_id = 820000001),
+  true,
   'suspicious status remains set after a later ordinary update'
 );
 
@@ -158,7 +168,9 @@ insert into valid_statistics values (
     "groupResponseCount": 10,
     "medianScore": 50,
     "lowerScorePercentage": 40,
-    "scoreBuckets": [1, 2, 3, 2, 2]
+    "scoreBuckets": [1, 2, 3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "growth7d": null,
+    "history": []
   }'::jsonb
 );
 select is(
@@ -175,7 +187,9 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
-    "scoreBuckets": null
+    "scoreBuckets": null,
+    "growth7d": null,
+    "history": []
   }'::jsonb),
   '{
     "detailsAvailable": false,
@@ -185,7 +199,9 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
-    "scoreBuckets": null
+    "scoreBuckets": null,
+    "growth7d": null,
+    "history": []
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );
@@ -193,6 +209,16 @@ select throws_ok($$select public.assert_statistics_result(null)$$, 'P0001', 'sta
 select throws_ok($$select public.assert_statistics_result('[]'::jsonb)$$, 'P0001', 'statistics_invalid', 'statistics must be an object');
 select throws_ok($$select public.assert_statistics_result((select result - 'scoreBuckets' from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject missing keys');
 select throws_ok($$select public.assert_statistics_result((select result || '{"extra":1}'::jsonb from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject extra keys');
+
+select ok(
+  jsonb_array_length(public.get_current_statistics(820000001)->'history') >= 1,
+  'get_current_statistics records a daily history snapshot'
+);
+
+select ok(
+  public.get_current_statistics(820000001)->'growth7d' ? 'newResponsesTotal',
+  'get_current_statistics includes seven-day growth metrics'
+);
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{totalValidResponses}', '1.5') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be integers');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be nonnegative');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '9') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'disclosed country counts must meet the privacy threshold');

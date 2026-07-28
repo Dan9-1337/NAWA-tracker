@@ -52,6 +52,8 @@ function statistics(totalValidResponses: number): StatisticsResult {
     medianScore: null,
     lowerScorePercentage: null,
     scoreBuckets: null,
+    growth7d: null,
+    history: [],
   };
 }
 

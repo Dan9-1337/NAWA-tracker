@@ -10,21 +10,12 @@ type CountrySelectProps = {
   hint?: string;
   value: string;
   onChange: (value: string) => void;
-  allowLegacy?: boolean;
 };
 
-export function CountrySelect({
-  id,
-  label,
-  hint,
-  value,
-  onChange,
-  allowLegacy = true,
-}: CountrySelectProps) {
+export function CountrySelect({ id, label, hint, value, onChange }: CountrySelectProps) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const known = (countryCodes as readonly string[]).includes(value);
-  const showLegacy = allowLegacy && value.length > 0 && !known;
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -54,22 +45,15 @@ export function CountrySelect({
         id={id}
         aria-label={label}
         className="min-h-11 w-full rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-base text-[var(--tg-theme-text-color)]"
-        value={known ? value : showLegacy ? '__legacy__' : ''}
+        value={known ? value : ''}
         onChange={(event) => {
-          const next = event.target.value;
-          if (next === '__legacy__') return;
-          onChange(next);
+          onChange(event.target.value);
           setQuery('');
         }}
       >
         <option value="" disabled>
           {t.countries.placeholder}
         </option>
-        {showLegacy ? (
-          <option value="__legacy__" disabled>
-            {value}
-          </option>
-        ) : null}
         {popular.length > 0 ? (
           <optgroup label={t.countries.popular}>
             {popular.map((code) => (

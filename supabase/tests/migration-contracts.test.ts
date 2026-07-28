@@ -11,6 +11,10 @@ const cleanupMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202607280001_schema_cleanup.sql'),
   'utf8',
 );
+const snapshotsMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202607290001_statistics_snapshots.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
 function functionDefinition(name: string, source = migration): string {
@@ -66,12 +70,14 @@ describe('mutation statistics migration contract', () => {
   });
 
   it('validates the complete statistics result contract inside PostgreSQL', () => {
-    const definition = functionDefinition('assert_statistics_result', cleanupMigration);
+    const definition = functionDefinition('assert_statistics_result', snapshotsMigration);
 
     expect(definition).toContain('jsonb_object_keys');
     expect(definition).toContain('detailsAvailable');
     expect(definition).toContain('sameCountryCount');
     expect(definition).toContain('scoreBuckets');
+    expect(definition).toContain('growth7d');
+    expect(definition).toContain('history');
     expect(definition).not.toContain('statusCounts');
     expect(definition).toContain('trunc(');
     expect(definition).toContain("v_number > 100");
@@ -79,7 +85,7 @@ describe('mutation statistics migration contract', () => {
   });
 
   it('computes country-cohort statistics with orientation score or grade percentage', () => {
-    const definition = functionDefinition('compute_country_statistics', cleanupMigration);
+    const definition = functionDefinition('compute_country_statistics', snapshotsMigration);
 
     expect(definition).toContain('ranking_country');
     expect(definition).toContain('nawa_orientation_score');

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isCountryCode } from './countries';
 import {
   applicationStatuses,
   polishSchoolLevels,
@@ -16,11 +17,13 @@ import {
   type UpdateResponseResult,
 } from './contracts';
 
+const countryCodeSchema = z.string().trim().refine(isCountryCode, { message: 'invalid country code' });
+
 const baseFormSchema = z
   .object({
     hasPolishCitizenship: z.boolean(),
-    rankingCountry: z.string().trim().min(1).max(100),
-    schoolCountry: z.string().trim().min(1).max(100),
+    rankingCountry: countryCodeSchema,
+    schoolCountry: countryCodeSchema,
     scholarshipTrack: z.enum(scholarshipTracks),
     studyRoute: z.enum(studyRoutes),
     averageGrade: z.number().min(0).max(1000),
@@ -87,6 +90,25 @@ export const updateResponseRequestSchema = z
 export const currentResponseRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
 
+export const statisticsGrowth7dSchema = z
+  .object({
+    newResponsesTotal: z.number().int().nonnegative(),
+    newResponsesInGroup: z.number().int().nonnegative(),
+    medianThen: z.number().min(0).nullable(),
+    medianNow: z.number().min(0).nullable(),
+    percentileThen: z.number().min(0).max(100).nullable(),
+    percentileNow: z.number().min(0).max(100).nullable(),
+  })
+  .strict();
+
+export const statisticsHistoryPointSchema = z
+  .object({
+    recordedAt: z.string().min(1),
+    lowerScorePercentage: z.number().min(0).max(100).nullable(),
+    groupResponseCount: z.number().int().nonnegative(),
+  })
+  .strict();
+
 export const statisticsResultSchema = z
   .object({
     detailsAvailable: z.boolean(),
@@ -96,7 +118,9 @@ export const statisticsResultSchema = z
     groupResponseCount: z.number().int().nonnegative(),
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
-    scoreBuckets: z.array(z.number().int().nonnegative()).length(5).nullable(),
+    scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
+    growth7d: statisticsGrowth7dSchema.nullable(),
+    history: z.array(statisticsHistoryPointSchema),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -137,7 +161,7 @@ export const statisticsResultSchema = z
 export const publicStatisticsRequestSchema = z
   .object({
     scholarshipTrack: z.enum(scholarshipTracks),
-    rankingCountry: z.string().trim().min(1).max(100),
+    rankingCountry: countryCodeSchema,
     averageGrade: z.number().min(0).max(1000),
     maximumGrade: z.number().positive().max(1000),
     polishSchoolLevel: z.enum(polishSchoolLevels).optional(),

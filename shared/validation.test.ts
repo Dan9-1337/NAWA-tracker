@@ -8,8 +8,8 @@ import {
 
 const validForm = {
   hasPolishCitizenship: false,
-  rankingCountry: 'Ukraina',
-  schoolCountry: 'Ukraina',
+  rankingCountry: 'UA',
+  schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   averageGrade: 85,
@@ -110,6 +110,11 @@ describe('responseFormInputSchema', () => {
 
   it('rejects a malformed statusChangedAt date', () => {
     expect(() => responseFormInputSchema.parse({ ...validForm, statusChangedAt: 'not-a-date' })).toThrow();
+  });
+
+  it('rejects non-ISO country names', () => {
+    expect(responseFormInputSchema.safeParse({ ...validForm, rankingCountry: 'Ukraina' }).success).toBe(false);
+    expect(responseFormInputSchema.safeParse({ ...validForm, schoolCountry: 'Polska' }).success).toBe(false);
   });
 });
 

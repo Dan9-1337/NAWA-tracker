@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { MiniAppShell } from '../components/MiniAppShell';
 import { SettingsSheet } from '../components/SettingsSheet';
@@ -20,6 +20,7 @@ import {
 } from '../lib/api-client';
 import { clearStatsSnapshot } from '../lib/stats-snapshot';
 import { clearWizardDraft } from '../lib/draft';
+import { formatClockTime, formatShortDayTime, updatedStampKind } from '../lib/format';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 
@@ -40,13 +41,14 @@ type HomeState =
   | AuthenticatedState;
 
 export function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [state, setState] = useState<HomeState>(() =>
     getTelegramWebApp() ? { mode: 'loading', error: null } : { mode: 'gate' },
   );
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editRequestNonce, setEditRequestNonce] = useState(0);
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const epoch = useRef(0);
   const mutation = useRef<Mutation | null>(null);
   const mounted = useRef(true);
@@ -203,6 +205,14 @@ export function HomePage() {
       : {},
   );
 
+  const statsSubtitle = useMemo(() => {
+    if (!statsUpdatedAt || state.mode !== 'authenticated') return null;
+    const kind = updatedStampKind(statsUpdatedAt);
+    if (kind === 'today') return t.delta.updatedToday(formatClockTime(statsUpdatedAt, locale));
+    if (kind === 'yesterday') return t.delta.updatedYesterday(formatClockTime(statsUpdatedAt, locale));
+    return t.delta.updatedQuiet(formatShortDayTime(statsUpdatedAt, locale));
+  }, [locale, state.mode, statsUpdatedAt, t.delta]);
+
   const content = (() => {
     if (state.mode === 'gate') {
       return <TelegramGate />;
@@ -234,10 +244,12 @@ export function HomePage() {
         current={state.current}
         statistics={state.statistics}
         onSubmit={update}
+        onDelete={removeProfile}
         disabled={state.pending !== null}
         actionError={state.actionError}
         chromeSuspended={settingsOpen}
         editRequestNonce={editRequestNonce}
+        onStatsUpdatedAt={setStatsUpdatedAt}
       />
     );
   })();
@@ -245,6 +257,7 @@ export function HomePage() {
   return (
     <MiniAppShell
       title={t.app.title}
+      subtitle={statsSubtitle}
       authenticatedHeader={state.mode === 'authenticated'}
       onOpenSettings={state.mode === 'authenticated' && !settingsOpen ? () => setSettingsOpen(true) : undefined}
       suspendActionBar={settingsOpen}
@@ -264,7 +277,6 @@ export function HomePage() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         current={state.mode === 'authenticated' ? state.current : null}
-        onDelete={removeProfile}
         onEditProfile={
           state.mode === 'authenticated'
             ? () => setEditRequestNonce((value) => value + 1)

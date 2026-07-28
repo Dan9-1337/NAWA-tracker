@@ -1,6 +1,12 @@
 import type { StatisticsResult } from '../../shared/contracts';
+import { getTelegramUserId } from './telegram';
 
-const SNAPSHOT_KEY = 'nawa-stats-snapshot';
+const SNAPSHOT_KEY_PREFIX = 'nawa-stats-snapshot';
+
+// Scoped by Telegram user id so one account never sees another account's cached snapshot.
+function snapshotStorageKey(): string {
+  return `${SNAPSHOT_KEY_PREFIX}:${getTelegramUserId() ?? 'anon'}`;
+}
 
 export type StatsSnapshot = {
   groupResponseCount: number;
@@ -25,7 +31,7 @@ export function snapshotFromStatistics(data: StatisticsResult): StatsSnapshot {
 export function loadStatsSnapshot(): StatsSnapshot | null {
   if (typeof localStorage === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(SNAPSHOT_KEY);
+    const raw = localStorage.getItem(snapshotStorageKey());
     if (!raw) return null;
     return JSON.parse(raw) as StatsSnapshot;
   } catch {
@@ -35,10 +41,10 @@ export function loadStatsSnapshot(): StatsSnapshot | null {
 
 export function saveStatsSnapshot(snapshot: StatsSnapshot): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
+  localStorage.setItem(snapshotStorageKey(), JSON.stringify(snapshot));
 }
 
 export function clearStatsSnapshot(): void {
   if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(SNAPSHOT_KEY);
+  localStorage.removeItem(snapshotStorageKey());
 }

@@ -9,12 +9,16 @@ const localeCodes: Record<Locale, string> = {
   ru: 'RU',
 };
 
-export function LanguageSwitcher() {
+type LanguageSwitcherProps = {
+  fullWidth?: boolean;
+};
+
+export function LanguageSwitcher({ fullWidth = false }: LanguageSwitcherProps) {
   const { locale, setLocale, t } = useI18n();
 
   return (
     <div
-      className="inline-flex h-9 items-stretch overflow-hidden rounded-full border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)]"
+      className={`${fullWidth ? 'flex w-full' : 'inline-flex'} h-11 items-stretch overflow-hidden rounded-full border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-bg-color)]`}
       role="group"
       aria-label={t.language.label}
     >
@@ -24,7 +28,7 @@ export function LanguageSwitcher() {
           <button
             key={code}
             type="button"
-            className={`min-w-[2.25rem] px-2 text-xs font-semibold tracking-wide transition ${
+            className={`${fullWidth ? 'flex-1' : 'min-w-11'} px-2 text-xs font-semibold tracking-wide transition ${
               active
                 ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]'
                 : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
-import { isCountryCode } from '../../shared/countries';
 import { useI18n } from '../i18n/context';
+import { formatCountryLabel } from '../lib/country-label';
 import { formatDate, formatGrade } from '../lib/format';
 import type { WizardStep } from './ResponseWizardSteps';
 
@@ -12,9 +12,8 @@ type ConfirmSummaryProps = {
 
 export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
   const { t, locale } = useI18n();
-  const schoolCountry = isCountryCode(draft.schoolCountry)
-    ? t.countries[draft.schoolCountry]
-    : draft.schoolCountry;
+  const rankingCountry = formatCountryLabel(draft.rankingCountry, t.countries);
+  const schoolCountry = formatCountryLabel(draft.schoolCountry, t.countries);
 
   return (
     <section className="space-y-5">
@@ -29,6 +28,7 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         editLabel={t.wizard.editSection}
       >
         <Row label={t.labels.scholarshipTrack} value={t.choices.scholarshipTrack[draft.scholarshipTrack]} />
+        <Row label={t.labels.rankingCountry} value={rankingCountry} />
         <Row label={t.labels.schoolCountry} value={schoolCountry} />
         <Row label={t.labels.studyRoute} value={t.choices.studyRoute[draft.studyRoute]} />
       </SummaryBlock>

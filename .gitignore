@@ -2,6 +2,7 @@ node_modules
 dist
 .vite
 .vercel
+.cursor
 .DS_Store
 .env*
 !.env.example

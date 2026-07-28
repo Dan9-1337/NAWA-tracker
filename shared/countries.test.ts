@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { countryCodes, countryMaximumGrades, defaultMaximumGradeForSchoolCountry, isCountryCode } from './countries';
+import {
+  countryCodes,
+  countryMaximumGrades,
+  defaultMaximumGradeForSchoolCountry,
+  isCountryCode,
+} from './countries';
 
 describe('countries', () => {
   it('maps known school countries to a default maximum grade', () => {
@@ -9,7 +14,7 @@ describe('countries', () => {
     expect(defaultMaximumGradeForSchoolCountry('OTHER')).toBeNull();
   });
 
-  it('returns null for unknown free-text countries', () => {
+  it('rejects non-ISO country values', () => {
     expect(defaultMaximumGradeForSchoolCountry('Ukraina')).toBeNull();
     expect(isCountryCode('UA')).toBe(true);
     expect(isCountryCode('Ukraina')).toBe(false);

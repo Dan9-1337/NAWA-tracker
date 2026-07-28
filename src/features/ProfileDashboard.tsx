@@ -3,9 +3,11 @@ import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { getSequentialStatusOptions } from '../../shared/status-options';
 import { isSuspiciousStatusTransition } from '../../shared/status-transitions';
+import { DeleteProfileZone } from '../components/DeleteProfileZone';
 import { StatusDateInput } from '../components/StatusDateInput';
+import { ChevronIcon } from '../components/icons';
+import { StatusProgressStepper } from '../components/StatusProgressStepper';
 import { StatusTimeline } from '../components/StatusTimeline';
-import { VisitDeltaBanner } from '../components/VisitDeltaBanner';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
 import { formatDate } from '../lib/format';
@@ -35,20 +37,24 @@ type ProfileDashboardProps = {
   current: ResponseFormInput;
   statistics: StatisticsState;
   onSubmit: (value: ResponseFormInput) => void | Promise<void>;
+  onDelete: () => Promise<void>;
   disabled?: boolean;
   actionError?: string | null;
   chromeSuspended?: boolean;
   editRequestNonce?: number;
+  onStatsUpdatedAt?: (updatedAt: string | null) => void;
 };
 
 export function ProfileDashboard({
   current,
   statistics,
   onSubmit,
+  onDelete,
   disabled = false,
   actionError,
   chromeSuspended = false,
   editRequestNonce = 0,
+  onStatsUpdatedAt,
 }: ProfileDashboardProps) {
   const { t, locale } = useI18n();
   const [view, setView] = useState<View>('dashboard');
@@ -63,6 +69,7 @@ export function ProfileDashboard({
   const [previousSnapshot, setPreviousSnapshot] = useState<StatsSnapshot | null>(() => loadStatsSnapshot());
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const lastProcessedStatisticsRef = useRef<unknown>(null);
 
   useEffect(() => {
     setCurrentStatus(current.currentStatus);
@@ -71,14 +78,23 @@ export function ProfileDashboard({
   }, [current]);
 
   useEffect(() => {
-    if (statistics.status === 'success' || statistics.status === 'suppressed') {
-      const snapshot = snapshotFromStatistics(statistics.data);
-      const previous = loadStatsSnapshot();
-      setPreviousSnapshot(previous);
-      setStatsUpdatedAt(snapshot.fetchedAt);
-      saveStatsSnapshot(snapshot);
-    }
+    if (statistics.status !== 'success' && statistics.status !== 'suppressed') return;
+    // Guard against reprocessing the same payload (e.g. React StrictMode's double effect
+    // invocation), which would otherwise compare a freshly saved snapshot against itself
+    // and report "no changes" on a user's very first visit.
+    if (lastProcessedStatisticsRef.current === statistics.data) return;
+    lastProcessedStatisticsRef.current = statistics.data;
+
+    const snapshot = snapshotFromStatistics(statistics.data);
+    const previous = loadStatsSnapshot();
+    setPreviousSnapshot(previous);
+    setStatsUpdatedAt(snapshot.fetchedAt);
+    saveStatsSnapshot(snapshot);
   }, [statistics]);
+
+  useEffect(() => {
+    onStatsUpdatedAt?.(statsUpdatedAt);
+  }, [onStatsUpdatedAt, statsUpdatedAt]);
 
   useEffect(() => {
     if (!statusConfirmation) return undefined;
@@ -245,7 +261,12 @@ export function ProfileDashboard({
   }, [editDraft, view]);
 
   if (view === 'edit-wizard') {
-    return <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />;
+    return (
+      <>
+        <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />
+        <DeleteProfileZone onDelete={onDelete} disabled={disabled || pending} />
+      </>
+    );
   }
 
   if (view === 'edit-confirm') {
@@ -258,17 +279,13 @@ export function ProfileDashboard({
             <p className="mt-1 text-[var(--tg-theme-subtitle-text-color)]">{t.form.cohortChangeBody}</p>
           </div>
         ) : null}
+        <DeleteProfileZone onDelete={onDelete} disabled={disabled || pending} />
       </>
     );
   }
 
-  const statsData =
-    statistics.status === 'success' || statistics.status === 'suppressed' ? statistics.data : null;
-
   return (
     <div className="space-y-3">
-      {statsData ? <VisitDeltaBanner previous={previousSnapshot} current={statsData} /> : null}
-
       {statusConfirmation ? (
         <p className="text-sm text-[var(--tg-theme-success-text-color)]" role="status" aria-live="polite">
           ✓ {t.form.statusSaved}
@@ -279,32 +296,33 @@ export function ProfileDashboard({
         state={statistics}
         profile={current}
         userScore={userOrientationScore}
-        updatedAt={statsUpdatedAt}
+        previousSnapshot={previousSnapshot}
       />
-
-      <hr className="section-divider-strong" />
 
       {!statusEditorOpen ? (
         <button
           type="button"
-          className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
+          className="mt-6 flex w-full flex-col gap-0 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
           onClick={() => setStatusEditorOpen(true)}
         >
-          <span className="min-w-0">
-            <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-              {t.labels.currentStatus}
+          <span className="flex items-center justify-between gap-3">
+            <span className="min-w-0">
+              <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
+                {t.labels.currentStatus}
+              </span>
+              <span className="mt-1 block text-sm font-semibold leading-snug">{t.choices.currentStatus[currentStatus]}</span>
+              <span className="mt-0.5 block text-xs text-[var(--tg-theme-subtitle-text-color)]">
+                {t.form.statusUpdatedShort} {formatDate(statusChangedAt, locale)}
+              </span>
             </span>
-            <span className="mt-1 block text-sm font-medium">{t.choices.currentStatus[currentStatus]}</span>
-            <span className="mt-0.5 block text-xs text-[var(--tg-theme-subtitle-text-color)]">
-              {t.form.statusUpdatedShort} {formatDate(statusChangedAt, locale)}
+            <span className="disclosure-row__chevron">
+              <ChevronIcon />
             </span>
           </span>
-          <span className="shrink-0 text-[var(--tg-theme-hint-color)]" aria-hidden="true">
-            ›
-          </span>
+          <StatusProgressStepper status={currentStatus} />
         </button>
       ) : (
-        <section className="space-y-3">
+        <section className="mt-6 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
               {t.labels.currentStatus}

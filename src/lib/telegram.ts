@@ -18,6 +18,14 @@ export type TelegramThemeParams = {
   destructive_text_color?: string;
 };
 
+export type StoryShareParams = {
+  text?: string;
+  widgetLink?: {
+    url: string;
+    name?: string;
+  };
+};
+
 export type TelegramWebAppBridge = {
   initData: string;
   isTelegram: boolean;
@@ -62,6 +70,7 @@ export type TelegramWebAppBridge = {
   onThemeChanged: (handler: () => void) => void;
   offThemeChanged: (handler: () => void) => void;
   applyChromeColors: () => void;
+  shareToStory: (mediaUrl: string, params?: StoryShareParams) => void;
 };
 
 type ClickHandler = () => void;
@@ -171,6 +180,11 @@ function createDevBridge(initData: string): TelegramWebAppBridge {
       themeChangedHandlers.delete(handler);
     },
     applyChromeColors: noop,
+    shareToStory: (mediaUrl, params) => {
+      if (import.meta.env.DEV) {
+        console.info('[dev] shareToStory', mediaUrl, params);
+      }
+    },
   };
 }
 
@@ -226,6 +240,18 @@ function createTelegramBridge(initData: string): TelegramWebAppBridge {
       if (bg) WebApp.setBackgroundColor(bg);
       if (header) WebApp.setHeaderColor(header);
     },
+    shareToStory: (mediaUrl, params) => {
+      const webApp = WebApp as typeof WebApp & {
+        shareToStory?: (url: string, storyParams?: { text?: string; widget_link?: { url: string; name?: string } }) => void;
+      };
+      if (typeof webApp.shareToStory !== 'function') return;
+      webApp.shareToStory(mediaUrl, {
+        text: params?.text,
+        widget_link: params?.widgetLink
+          ? { url: params.widgetLink.url, name: params.widgetLink.name }
+          : undefined,
+      });
+    },
   };
 }
 
@@ -247,6 +273,24 @@ export function getTelegramWebApp(): TelegramWebAppBridge | null {
 
 export function getTelegramInitData(): string | null {
   return bridge?.initData ?? null;
+}
+
+export function getTelegramUserId(): string | null {
+  const initData = getTelegramInitData();
+  if (!initData) return null;
+  try {
+    const params = new URLSearchParams(initData);
+    const userRaw = params.get('user');
+    if (!userRaw) return null;
+    const parsed: unknown = JSON.parse(userRaw);
+    if (parsed != null && typeof parsed === 'object' && 'id' in parsed) {
+      const id = (parsed as { id: unknown }).id;
+      if (typeof id === 'number' || typeof id === 'string') return String(id);
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function initializeTelegramWebApp(): void {
