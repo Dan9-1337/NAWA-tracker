@@ -675,6 +675,28 @@ body {
   font-size: 0.6875rem;
 }
 
+.result-preview-card {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.result-preview__user-marker {
+  animation: result-preview-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes result-preview-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent),
+      0 1px 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent),
+      0 1px 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  }
+}
+
 [data-theme='dark'] {
   --section-divider-color: rgba(205, 214, 244, 0.12);
   --app-aurora-top: color-mix(in srgb, var(--color-median) 16%, transparent);

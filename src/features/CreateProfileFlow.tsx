@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { responseFormInputSchema } from '../../shared/validation';
-import { PrivacySheet } from '../components/PrivacySheet';
+import { HowItWorksPanel } from '../components/HowItWorksPanel';
 import { ResultPreviewCard } from '../components/ResultPreviewCard';
+import { ChevronIcon } from '../components/icons';
 import { useI18n } from '../i18n/context';
 import {
   clearWizardDraft,
@@ -63,8 +64,7 @@ export function CreateProfileFlow({
   const [stepIndex, setStepIndex] = useState(() => restoredSession.current?.stepIndex ?? 0);
   const [pending, setPending] = useState(false);
   const [dirty, setDirty] = useState(() => restoredSession.current != null);
-  const [showPrivacy, setShowPrivacy] = useState(false);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [openFaq, setOpenFaq] = useState<'how' | 'what' | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(pendingResume);
   const [startCtaInView, setStartCtaInView] = useState(true);
   const startCtaRef = useRef<HTMLButtonElement>(null);
@@ -226,7 +226,10 @@ export function CreateProfileFlow({
           ) : null}
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-helper)]">
-              {t.start.kicker}
+              {t.start.kicker}{' '}
+              <span className="text-[0.625rem] font-medium normal-case tracking-normal opacity-80">
+                ({t.start.kickerNote})
+              </span>
             </p>
             <h2 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
               {t.start.title}
@@ -243,34 +246,47 @@ export function CreateProfileFlow({
           >
             {t.start.cta}
           </button>
-          <p className="text-xs leading-5 text-[var(--text-helper)]">
-            {t.start.dataLine}{' · '}
+          <p className="text-center text-xs font-medium text-[var(--text-helper)]">{t.start.timePromise}</p>
+
+          <div className="overflow-hidden rounded-2xl border border-[var(--section-divider-color)]">
             <button
               type="button"
-              className="font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
-              onClick={() => setShowPrivacy(true)}
+              className="flex w-full min-h-11 items-center justify-between gap-3 px-4 py-3 text-left"
+              aria-expanded={openFaq === 'what'}
+              onClick={() => setOpenFaq((value) => (value === 'what' ? null : 'what'))}
             >
-              {t.start.dataLineLink}
+              <span className="text-sm font-medium text-[var(--text-primary)]">{t.start.whatYouSee}</span>
+              <span
+                className={`shrink-0 text-[var(--tg-theme-hint-color)] transition-transform ${
+                  openFaq === 'what' ? 'rotate-90' : ''
+                }`}
+              >
+                <ChevronIcon />
+              </span>
             </button>
-          </p>
-          <button
-            type="button"
-            className="text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
-            onClick={() => setShowHowItWorks((value) => !value)}
-            aria-expanded={showHowItWorks}
-          >
-            {t.start.howItWorks}
-          </button>
-        </section>
-        {showHowItWorks ? (
-          <div className="mt-4 rounded-2xl border border-[var(--section-divider-color)] px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-helper)]">
-              {t.start.howItWorks}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{t.stats.disclaimer}</p>
+            {openFaq === 'what' ? (
+              <p className="border-t border-[var(--section-divider-color)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]">
+                {t.start.whatYouSeeBody}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="flex w-full min-h-11 items-center justify-between gap-3 border-t border-[var(--section-divider-color)] px-4 py-3 text-left"
+              aria-expanded={openFaq === 'how'}
+              onClick={() => setOpenFaq((value) => (value === 'how' ? null : 'how'))}
+            >
+              <span className="text-sm font-medium text-[var(--text-primary)]">{t.start.howItWorks}</span>
+              <span
+                className={`shrink-0 text-[var(--tg-theme-hint-color)] transition-transform ${
+                  openFaq === 'how' ? 'rotate-90' : ''
+                }`}
+              >
+                <ChevronIcon />
+              </span>
+            </button>
+            {openFaq === 'how' ? <HowItWorksPanel /> : null}
           </div>
-        ) : null}
-        <PrivacySheet open={showPrivacy} onClose={() => setShowPrivacy(false)} />
+        </section>
       </>
     );
   }

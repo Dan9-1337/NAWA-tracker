@@ -71,7 +71,7 @@ beforeEach(async () => {
 
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {
   const buttons = await screen.findAllByRole('button', {
-    name: /Porównaj mój wynik|Dalej|Zapisz odpowiedź/,
+    name: /Zobacz mój wynik|Dalej|Zapisz odpowiedź/,
   });
   const button = buttons.find((candidate) => !candidate.disabled) ?? buttons[buttons.length - 1];
   await waitFor(() => expect(button).toBeEnabled());
@@ -98,7 +98,7 @@ describe('HomePage', () => {
   it('opens create mode with start screen when no profile exists', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     render(<HomePage />);
-    expect(await screen.findByText('Gdzie jest Twoje zgłoszenie na tle innych?')).toBeInTheDocument();
+    expect(await screen.findByText('Gdzie jesteś wśród kandydatów NAWA?')).toBeInTheDocument();
   });
 
   it('loads an authenticated profile and statistics', async () => {
@@ -124,7 +124,7 @@ describe('HomePage', () => {
     const user = userEvent.setup();
     render(<HomePage />);
 
-    await screen.findByText('Gdzie jest Twoje zgłoszenie na tle innych?');
+    await screen.findByText('Gdzie jesteś wśród kandydatów NAWA?');
     await clickMain(user);
 
     for (let step = 0; step < 4; step += 1) {

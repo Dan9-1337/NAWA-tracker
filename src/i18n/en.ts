@@ -5,20 +5,47 @@ export const en = {
     title: 'NAWAmeter',
   },
   start: {
-    kicker: 'Unofficial NAWA 2026 tracker',
-    title: 'Where does your application stand?',
-    subtitle: 'We compare your result with results from participants in your group.',
-    cta: 'Compare my result',
+    kicker: 'NAWA 2026 tracker',
+    kickerNote: 'unofficial',
+    title: 'Where do you stand among NAWA candidates?',
+    subtitle: 'See your percentile, where you sit vs the median, and how your group is shifting.',
+    cta: 'See my result',
     howItWorks: 'How is the result calculated?',
+    whatYouSee: 'What you will see after filling in',
+    whatYouSeeBody:
+      'Your score, group percentile, position vs the median, and how the stats move as new responses arrive.',
+    howScoreTitle: 'Orientation score',
+    howScoreBody:
+      'The orientation score follows NAWA program rules based on your secondary-school average and, when applicable, bonus points for finishing a Polish or Polonia school.',
+    howScoreFormula:
+      'average grade × 90 / scale maximum\n+ 0, 5, or 10 bonus points',
+    howScoreDisclaimer: 'This is not an official NAWA decision and not a scholarship forecast.',
+    howPercentileTitle: 'What does the percentile mean?',
+    howPercentileBody:
+      'The percentile shows what share of tracker participant results sit below yours.',
+    howPercentileExample:
+      'For example, the 70–80 percentile means your result is higher than about 70–80% of results in the selected group.',
+    howDensityTitle: 'What do the strip colors mean?',
+    howDensityBody:
+      'The strip shows how participant results are distributed across ranges. Brighter segments have more applications in that range.',
+    howDensityLess: 'Fewer applications',
+    howDensityMore: 'More applications',
+    howDensityHint: 'Color shows the number of applications',
+    howDensityMedian: 'Median — half of participants scored below, half above',
+    howDensityYou: 'You — your orientation result',
+    howDensityNotQuality:
+      'Colors do not mean a result is good or bad, and they do not show the chance of getting a scholarship.',
     previewBadge: 'Sample result',
     previewScoreValue: '82.4',
     previewScoreUnit: 'pts',
-    previewAboveMedian: 'Above the median',
+    previewAboveMedianBy: '6.2 points above the median',
     previewPercentileRange: '70–80',
     previewPercentileLabel: 'percentile',
-    previewGroupSize: 'Among 48 applications',
-    dataLine: 'No name, email, or application number',
-    dataLineLink: 'About your data',
+    previewMedianLabel: 'median',
+    previewYouLabel: 'you',
+    previewLive: '48 applications · +7 this week',
+    previewDensityHint: 'Color shows the number of applications',
+    timePromise: 'Takes about 1 minute',
     resumeTitle: 'You have saved progress',
     resumeBody: 'Continue where you left off or start the survey again from scratch.',
     resumeContinue: 'Continue',
@@ -338,11 +365,6 @@ export const en = {
     updatedYesterday: (time: string) => `Updated yesterday at ${time}`,
   },
   privacyNotice: {
-    quickTitle: 'What data we use',
-    quickBody:
-      'We store your survey answers and a technical Telegram identifier to give you access to your profile and prevent duplicate entries.',
-    quickNoPersonalData: 'We do not ask for your name, email, or application number.',
-    fullPolicyToggle: 'Data processing policy',
     title: 'What data is stored?',
     body:
       'Your data is not shown to other users. We technically link your survey to your Telegram account to prevent duplicate submissions.',

@@ -3,20 +3,47 @@ export const pl = {
     title: 'NAWAmeter',
   },
   start: {
-    kicker: 'Nieoficjalny tracker NAWA 2026',
-    title: 'Gdzie jest Twoje zgłoszenie na tle innych?',
-    subtitle: 'Porównamy Twój wynik z wynikami uczestników z Twojej grupy.',
-    cta: 'Porównaj mój wynik',
+    kicker: 'Tracker NAWA 2026',
+    kickerNote: 'nieoficjalny',
+    title: 'Gdzie jesteś wśród kandydatów NAWA?',
+    subtitle: 'Zobacz swój percentyl, pozycję względem mediany i jak zmienia się Twoja grupa.',
+    cta: 'Zobacz mój wynik',
     howItWorks: 'Jak obliczany jest wynik?',
+    whatYouSee: 'Co zobaczysz po wypełnieniu',
+    whatYouSeeBody:
+      'Twój wynik, percentyl w grupie, pozycję względem mediany oraz jak zmienia się statystyka wraz z nowymi odpowiedziami.',
+    howScoreTitle: 'Wynik orientacyjny',
+    howScoreBody:
+      'Wynik orientacyjny jest liczony według zasad programu NAWA na podstawie średniej z świadectwa oraz — jeśli dotyczy — dodatkowych punktów za ukończenie szkoły polskiej lub polonijnej.',
+    howScoreFormula:
+      'średnia × 90 / maksimum skali\n+ 0, 5 lub 10 dodatkowych punktów',
+    howScoreDisclaimer: 'To nie jest oficjalna decyzja NAWA i nie jest prognozą przyznania stypendium.',
+    howPercentileTitle: 'Co oznacza percentyl?',
+    howPercentileBody:
+      'Percentyl pokazuje, jaka część wyników uczestników trackera znajduje się poniżej Twojego.',
+    howPercentileExample:
+      'Na przykład percentyl 70–80 oznacza, że Twój wynik jest wyższy niż około 70–80% wyników w wybranej grupie.',
+    howDensityTitle: 'Co oznaczają kolory na pasku?',
+    howDensityBody:
+      'Pasek pokazuje rozkład wyników uczestników w przedziałach. Im jaśniejszy segment, tym więcej zgłoszeń w tym zakresie.',
+    howDensityLess: 'Mniej zgłoszeń',
+    howDensityMore: 'Więcej zgłoszeń',
+    howDensityHint: 'Kolor pokazuje liczbę wyników w danym przedziale',
+    howDensityMedian: 'Mediana — połowa uczestników ma wynik poniżej, połowa powyżej',
+    howDensityYou: 'Ty — Twój wynik orientacyjny',
+    howDensityNotQuality:
+      'Kolory nie oznaczają, że wynik jest dobry lub zły, i nie pokazują szansy na stypendium.',
     previewBadge: 'Przykładowy wynik',
     previewScoreValue: '82,4',
     previewScoreUnit: 'pkt',
-    previewAboveMedian: 'Powyżej mediany',
+    previewAboveMedianBy: 'Powyżej mediany o 6,2 pkt',
     previewPercentileRange: '70–80',
     previewPercentileLabel: 'percentyl',
-    previewGroupSize: 'Wśród 48 zgłoszeń',
-    dataLine: 'Bez imienia, e-maila i numeru wniosku',
-    dataLineLink: 'O danych',
+    previewMedianLabel: 'mediana',
+    previewYouLabel: 'ty',
+    previewLive: '48 zgłoszeń · +7 w tym tygodniu',
+    previewDensityHint: 'Kolor pokazuje liczbę wyników w danym przedziale',
+    timePromise: 'Zajmie około 1 minuty',
     resumeTitle: 'Masz zapisany postęp',
     resumeBody: 'Możesz wrócić do miejsca, w którym skończyłeś/aś, albo zacząć od nowa.',
     resumeContinue: 'Kontynuuj',
@@ -337,11 +364,6 @@ export const pl = {
     updatedYesterday: (time: string) => `Zaktualizowano wczoraj o ${time}`,
   },
   privacyNotice: {
-    quickTitle: 'Jakie dane wykorzystujemy',
-    quickBody:
-      'Zapisujemy odpowiedzi z ankiety oraz techniczny identyfikator Telegram, aby dać Ci dostęp do profilu i ograniczyć duplikaty.',
-    quickNoPersonalData: 'Nie prosimy o imię, e-mail ani numer wniosku.',
-    fullPolicyToggle: 'Zasady przetwarzania danych',
     title: 'Jakie dane są zapisywane?',
     body:
       'Twoje dane nie są pokazywane innym użytkownikom. Technicznie łączymy ankietę z kontem Telegram, aby zapobiec wielokrotnym zgłoszeniom.',

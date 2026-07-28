@@ -41,7 +41,7 @@ describe('bootstrapApplication', () => {
     });
 
     expect(initializeTelegramWebApp).toHaveBeenCalled();
-    expect(await screen.findByText('Gdzie jest Twoje zgłoszenie na tle innych?')).toBeInTheDocument();
+    expect(await screen.findByText('Gdzie jesteś wśród kandydatów NAWA?')).toBeInTheDocument();
     act(() => root.unmount());
   });
 });
