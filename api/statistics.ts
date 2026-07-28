@@ -1,6 +1,7 @@
 import { statisticsRequestSchema, statisticsResultSchema } from '../shared/validation.js';
 import { unauthorized } from './_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
+import { assertSameOrigin } from './_lib/origin.js';
 import { assertRpcSucceeded, parseStatistics, type RpcClient } from './_lib/questionnaire.js';
 import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
@@ -13,11 +14,13 @@ type StatisticsRequest = {
 
 type StatisticsDependencies = {
   getClient: () => RpcClient;
+  assertSameOrigin: (request: StatisticsRequest) => void;
   requireTelegramIdentity: (request: StatisticsRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: StatisticsDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
+  assertSameOrigin,
   requireTelegramIdentity,
 };
 
@@ -27,6 +30,7 @@ export function createStatisticsHandler(overrides: Partial<StatisticsDependencie
   return async function statisticsHandler(request: StatisticsRequest, response: HttpResponse): Promise<void> {
     try {
       assertMethod(request, response, 'POST');
+      dependencies.assertSameOrigin(request);
       parseJsonBody(request, statisticsRequestSchema);
       const identity = dependencies.requireTelegramIdentity(request);
       const client = dependencies.getClient();

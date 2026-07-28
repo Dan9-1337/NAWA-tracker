@@ -1,6 +1,7 @@
 import { currentResponseRequestSchema, currentResponseResultSchema } from '../../shared/validation.js';
 import { unauthorized } from '../_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from '../_lib/http.js';
+import { assertSameOrigin } from '../_lib/origin.js';
 import {
   assertRpcSucceeded,
   parseCurrentResponse,
@@ -17,11 +18,13 @@ type CurrentRequest = {
 
 type CurrentDependencies = {
   getClient: () => RpcClient;
+  assertSameOrigin: (request: CurrentRequest) => void;
   requireTelegramIdentity: (request: CurrentRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: CurrentDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
+  assertSameOrigin,
   requireTelegramIdentity,
 };
 
@@ -31,6 +34,7 @@ export function createCurrentResponseHandler(overrides: Partial<CurrentDependenc
   return async function currentResponseHandler(request: CurrentRequest, response: HttpResponse): Promise<void> {
     try {
       assertMethod(request, response, 'POST');
+      dependencies.assertSameOrigin(request);
       parseJsonBody(request, currentResponseRequestSchema);
       const identity = dependencies.requireTelegramIdentity(request);
       const client = dependencies.getClient();

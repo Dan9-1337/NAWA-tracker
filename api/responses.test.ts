@@ -26,22 +26,8 @@ const validForm = {
   statusChangedAt: '2026-07-01',
 } as const;
 
-const statusCounts = {
-  submitted: 2,
-  formal_review_in_progress: 1,
-  correction_requested: 0,
-  formal_review_completed: 1,
-  merit_review_in_progress: 1,
-  merit_review_positive: 1,
-  merit_review_negative: 1,
-  awaiting_decision: 1,
-  scholarship_awarded: 1,
-  scholarship_not_awarded: 1,
-} as const;
-
 const statistics = {
   detailsAvailable: true,
-  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
   sameCountryCount: 12,
@@ -49,7 +35,6 @@ const statistics = {
   medianScore: 82.5,
   lowerScorePercentage: 40,
   scoreBuckets: [1, 2, 3, 2, 2],
-  statusCounts,
 } as const;
 
 type Request = {
@@ -224,6 +209,21 @@ describe('PUT /api/responses', () => {
 });
 
 describe('POST /api/responses/current', () => {
+  it('requires the configured Origin before loading the profile', async () => {
+    const handler = createCurrentResponseHandler({
+      getClient: vi.fn(),
+      assertSameOrigin: vi.fn(() => {
+        throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+      }),
+      requireTelegramIdentity: vi.fn(),
+    });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(403);
+  });
+
   it('loads the owned profile for the Telegram user', async () => {
     const handler = createCurrentResponseHandler({
       getClient: vi.fn(() => ({
@@ -232,6 +232,7 @@ describe('POST /api/responses/current', () => {
           error: null,
         }),
       })),
+      assertSameOrigin: vi.fn(),
       requireTelegramIdentity: vi.fn(() => ({
         user: { id: USER_ID, username: 'tester' },
         authDate: 1_700_000_000,
@@ -247,11 +248,27 @@ describe('POST /api/responses/current', () => {
 });
 
 describe('POST /api/statistics', () => {
+  it('requires the configured Origin before returning statistics', async () => {
+    const handler = createStatisticsHandler({
+      getClient: vi.fn(),
+      assertSameOrigin: vi.fn(() => {
+        throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+      }),
+      requireTelegramIdentity: vi.fn(),
+    });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(403);
+  });
+
   it('returns owned statistics for the Telegram user', async () => {
     const handler = createStatisticsHandler({
       getClient: vi.fn(() => ({
         rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
       })),
+      assertSameOrigin: vi.fn(),
       requireTelegramIdentity: vi.fn(() => ({
         user: { id: USER_ID },
         authDate: 1_700_000_000,

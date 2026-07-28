@@ -40,7 +40,6 @@ const responseFields = [
 
 const statisticsFields = [
   'detailsAvailable',
-  'group',
   'totalValidResponses',
   'sameTrackCount',
   'sameCountryCount',
@@ -48,7 +47,6 @@ const statisticsFields = [
   'medianScore',
   'lowerScorePercentage',
   'scoreBuckets',
-  'statusCounts',
 ] as const;
 
 function projectFields(value: unknown, fields: readonly string[]): Record<string, unknown> {

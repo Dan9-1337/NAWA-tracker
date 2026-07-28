@@ -40,14 +40,8 @@ export type ResponseFormInput = {
   statusChangedAt: string;
 };
 
-export const comparisonGroups = ['track-country', 'track'] as const;
-export type ComparisonGroup = (typeof comparisonGroups)[number];
-
-export type StatusCounts = Record<ApplicationStatus, number>;
-
 export type StatisticsResult = {
   detailsAvailable: boolean;
-  group: ComparisonGroup | null;
   totalValidResponses: number;
   sameTrackCount: number;
   sameCountryCount: number | null;
@@ -56,7 +50,6 @@ export type StatisticsResult = {
   lowerScorePercentage: number | null;
   /** Five bucket counts for the cohort score distribution (low → high). */
   scoreBuckets: number[] | null;
-  statusCounts: StatusCounts | null;
 };
 
 export type PublicStatisticsRequest = {

@@ -44,6 +44,16 @@ describe('server environment', () => {
 
     expect(() => loadServerEnv(unsafe)).toThrow('Invalid server environment');
   });
+
+  it('rejects the known local-dev bot token in production', () => {
+    expect(() =>
+      loadServerEnv({
+        ...validEnvironment,
+        TELEGRAM_BOT_TOKEN: 'local-dev-telegram-bot-token-0000000001',
+        VERCEL_ENV: 'production',
+      }),
+    ).toThrow('Invalid server environment');
+  });
 });
 
 describe('request boundaries', () => {

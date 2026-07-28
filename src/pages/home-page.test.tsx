@@ -45,7 +45,6 @@ const currentResponse: ResponseFormInput = {
 function statistics(totalValidResponses: number): StatisticsResult {
   return {
     detailsAvailable: false,
-    group: null,
     totalValidResponses,
     sameTrackCount: totalValidResponses,
     sameCountryCount: null,
@@ -53,7 +52,6 @@ function statistics(totalValidResponses: number): StatisticsResult {
     medianScore: null,
     lowerScorePercentage: null,
     scoreBuckets: null,
-    statusCounts: null,
   };
 }
 

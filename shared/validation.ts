@@ -1,12 +1,10 @@
 import { z } from 'zod';
 import {
   applicationStatuses,
-  comparisonGroups,
   polishSchoolLevels,
   scholarshipTracks,
   studyRoutes,
   type ApiError,
-  type ApplicationStatus,
   type CreateResponseRequest,
   type CreateResponseResult,
   type CurrentResponseResult,
@@ -14,7 +12,6 @@ import {
   type PublicStatisticsRequest,
   type PublicStatisticsResult,
   type StatisticsResult,
-  type StatusCounts,
   type UpdateResponseRequest,
   type UpdateResponseResult,
 } from './contracts';
@@ -90,16 +87,9 @@ export const updateResponseRequestSchema = z
 export const currentResponseRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
 
-const statusCountsShape = Object.fromEntries(
-  applicationStatuses.map((status) => [status, z.number().int().nonnegative()]),
-) as Record<ApplicationStatus, z.ZodNumber>;
-
-export const statusCountsSchema = z.object(statusCountsShape).strict() satisfies z.ZodType<StatusCounts>;
-
 export const statisticsResultSchema = z
   .object({
     detailsAvailable: z.boolean(),
-    group: z.enum(comparisonGroups).nullable(),
     totalValidResponses: z.number().int().nonnegative(),
     sameTrackCount: z.number().int().nonnegative(),
     sameCountryCount: z.number().int().min(10).nullable(),
@@ -107,7 +97,6 @@ export const statisticsResultSchema = z
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
     scoreBuckets: z.array(z.number().int().nonnegative()).length(5).nullable(),
-    statusCounts: statusCountsSchema.nullable(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -123,31 +112,23 @@ export const statisticsResultSchema = z
 
     if (value.detailsAvailable) {
       if (
-        value.group === null ||
         value.groupResponseCount < 10 ||
         value.medianScore === null ||
         value.lowerScorePercentage === null ||
-        value.scoreBuckets === null ||
-        value.statusCounts === null
+        value.scoreBuckets === null
       ) {
         ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require every detailed field' });
         return;
-      }
-      const total = Object.values(value.statusCounts).reduce((sum, count) => sum + count, 0);
-      if (total !== value.groupResponseCount) {
-        ctx.addIssue({ code: 'custom', path: ['statusCounts'], message: 'statusCounts must sum to groupResponseCount' });
       }
       const bucketTotal = value.scoreBuckets.reduce((sum, count) => sum + count, 0);
       if (bucketTotal !== value.groupResponseCount) {
         ctx.addIssue({ code: 'custom', path: ['scoreBuckets'], message: 'scoreBuckets must sum to groupResponseCount' });
       }
     } else if (
-      value.group !== null ||
       value.groupResponseCount !== 0 ||
       value.medianScore !== null ||
       value.lowerScorePercentage !== null ||
-      value.scoreBuckets !== null ||
-      value.statusCounts !== null
+      value.scoreBuckets !== null
     ) {
       ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'suppressed statistics cannot retain detailed fields' });
     }

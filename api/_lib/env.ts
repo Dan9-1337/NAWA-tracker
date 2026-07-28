@@ -4,6 +4,9 @@ import { z } from 'zod';
 
 const nonEmptySecret = z.string().min(32);
 
+/** Matches scripts/write-local-env.mjs — must never be used in production. */
+const LOCAL_DEV_BOT_TOKEN_PREFIX = 'local-dev-telegram-bot-token-';
+
 const serverEnvironmentSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: nonEmptySecret,
@@ -56,6 +59,13 @@ export function loadServerEnv(
   const isProduction = result.data.VERCEL_ENV
     ? result.data.VERCEL_ENV === 'production'
     : result.data.NODE_ENV === 'production';
+
+  if (
+    isProduction &&
+    result.data.TELEGRAM_BOT_TOKEN.startsWith(LOCAL_DEV_BOT_TOKEN_PREFIX)
+  ) {
+    throw new Error('Invalid server environment');
+  }
 
   if (
     result.data.APP_PUBLIC_URL.includes('?') ||

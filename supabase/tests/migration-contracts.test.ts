@@ -7,14 +7,20 @@ const migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202607130001_initial_schema.sql'),
   'utf8',
 );
+const cleanupMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202607280001_schema_cleanup.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
-function functionDefinition(name: string): string {
-  const start = migration.indexOf(`create function public.${name}(`);
-  const end = migration.indexOf('\n$$;', start);
-  expect(start, `${name} definition`).toBeGreaterThanOrEqual(0);
-  expect(end, `${name} terminator`).toBeGreaterThan(start);
-  return migration.slice(start, end + 4);
+function functionDefinition(name: string, source = migration): string {
+  const start = source.indexOf(`create function public.${name}(`);
+  const replaceStart = source.indexOf(`create or replace function public.${name}(`);
+  const resolvedStart = replaceStart >= 0 ? replaceStart : start;
+  const end = source.indexOf('\n$$;', resolvedStart);
+  expect(resolvedStart, `${name} definition`).toBeGreaterThanOrEqual(0);
+  expect(end, `${name} terminator`).toBeGreaterThan(resolvedStart);
+  return source.slice(resolvedStart, end + 4);
 }
 
 describe('mutation statistics migration contract', () => {
@@ -60,26 +66,25 @@ describe('mutation statistics migration contract', () => {
   });
 
   it('validates the complete statistics result contract inside PostgreSQL', () => {
-    const definition = functionDefinition('assert_statistics_result');
+    const definition = functionDefinition('assert_statistics_result', cleanupMigration);
 
     expect(definition).toContain('jsonb_object_keys');
     expect(definition).toContain('detailsAvailable');
     expect(definition).toContain('sameCountryCount');
-    expect(definition).toContain('statusCounts');
-    expect(definition).toContain('track-country');
+    expect(definition).toContain('scoreBuckets');
+    expect(definition).not.toContain('statusCounts');
     expect(definition).toContain('trunc(');
     expect(definition).toContain("v_number > 100");
     expect(definition).toContain("message = 'statistics_invalid'");
   });
 
   it('computes country-cohort statistics with orientation score or grade percentage', () => {
-    const definition = functionDefinition('compute_country_statistics');
+    const definition = functionDefinition('compute_country_statistics', cleanupMigration);
 
     expect(definition).toContain('ranking_country');
     expect(definition).toContain('nawa_orientation_score');
     expect(definition).toContain('grade_percentage');
-    expect(definition).toContain("'track-country'");
-    expect(definition).toContain("'track'");
+    expect(definition).not.toContain('statusCounts');
   });
 
   it.each([

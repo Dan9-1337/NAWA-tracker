@@ -26,22 +26,8 @@ const validForm = {
   statusChangedAt: '2026-07-13',
 } as const;
 
-const validStatusCounts = {
-  submitted: 2,
-  formal_review_in_progress: 2,
-  correction_requested: 0,
-  formal_review_completed: 2,
-  merit_review_in_progress: 1,
-  merit_review_positive: 1,
-  merit_review_negative: 0,
-  awaiting_decision: 1,
-  scholarship_awarded: 1,
-  scholarship_not_awarded: 0,
-} as const;
-
 const validStatistics = {
   detailsAvailable: true,
-  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
   sameCountryCount: 10,
@@ -49,7 +35,6 @@ const validStatistics = {
   medianScore: 82.5,
   lowerScorePercentage: 40,
   scoreBuckets: [1, 2, 3, 2, 2],
-  statusCounts: validStatusCounts,
 } as const;
 
 describe('API request contracts', () => {

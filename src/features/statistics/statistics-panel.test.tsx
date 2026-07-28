@@ -78,7 +78,6 @@ describe('StatisticsPanel', () => {
 
 const suppressedStatistics: StatisticsResult = {
   detailsAvailable: false,
-  group: null,
   totalValidResponses: 9,
   sameTrackCount: 9,
   sameCountryCount: null,
@@ -86,12 +85,10 @@ const suppressedStatistics: StatisticsResult = {
   medianScore: null,
   lowerScorePercentage: null,
   scoreBuckets: null,
-  statusCounts: null,
 };
 
 const qualitativeStatistics: StatisticsResult = {
   detailsAvailable: true,
-  group: 'track-country',
   totalValidResponses: 20,
   sameTrackCount: 18,
   sameCountryCount: 12,
@@ -99,23 +96,10 @@ const qualitativeStatistics: StatisticsResult = {
   medianScore: 82.5,
   lowerScorePercentage: 95,
   scoreBuckets: [1, 2, 4, 7, 5],
-  statusCounts: {
-    submitted: 4,
-    formal_review_in_progress: 3,
-    correction_requested: 1,
-    formal_review_completed: 2,
-    merit_review_in_progress: 2,
-    merit_review_positive: 2,
-    merit_review_negative: 1,
-    awaiting_decision: 2,
-    scholarship_awarded: 1,
-    scholarship_not_awarded: 1,
-  },
 };
 
 const detailedStatistics: StatisticsResult = {
   detailsAvailable: true,
-  group: 'track-country',
   totalValidResponses: 40,
   sameTrackCount: 36,
   sameCountryCount: 30,
@@ -123,16 +107,4 @@ const detailedStatistics: StatisticsResult = {
   medianScore: 82.5,
   lowerScorePercentage: 65,
   scoreBuckets: [2, 4, 8, 10, 6],
-  statusCounts: {
-    submitted: 2,
-    formal_review_in_progress: 2,
-    correction_requested: 0,
-    formal_review_completed: 2,
-    merit_review_in_progress: 1,
-    merit_review_positive: 1,
-    merit_review_negative: 0,
-    awaiting_decision: 1,
-    scholarship_awarded: 1,
-    scholarship_not_awarded: 0,
-  },
 };

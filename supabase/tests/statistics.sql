@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(34);
+select plan(28);
 
 do $$
 begin
@@ -42,11 +42,9 @@ select is(
   false,
   'details are suppressed when every comparison group has fewer than ten responses'
 );
-select is(public.get_current_statistics(820000001)->>'group', null, 'suppressed statistics disclose no fallback group');
 select is(public.get_current_statistics(820000001)->>'medianScore', null, 'suppressed statistics disclose no median');
 select is(public.get_current_statistics(820000001)->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
 select is(public.get_current_statistics(820000001)->>'sameCountryCount', null, 'country count below ten is suppressed');
-select is(public.get_current_statistics(820000001)->>'statusCounts', null, 'suppressed statistics disclose no status counts');
 
 insert into public.responses (
   telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
@@ -58,11 +56,6 @@ insert into public.responses (
   90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
 );
 
-select is(
-  public.get_current_statistics(820000001)->>'group',
-  'track-country',
-  'statistics choose the track-country group when at least ten responses share the ranking country'
-);
 select is(
   (public.get_current_statistics(820000001)->>'groupResponseCount')::integer,
   10,
@@ -77,11 +70,6 @@ select is(
   (public.get_current_statistics(820000001)->>'lowerScorePercentage')::numeric,
   40::numeric,
   'percentile counts only strictly lower orientation scores'
-);
-select is(
-  (public.get_current_statistics(820000001)->'statusCounts'->>'awaiting_decision')::integer,
-  2,
-  'status counts include every application status in the selected group'
 );
 select is(
   (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
@@ -112,11 +100,6 @@ select is(
 update public.responses
 set ranking_country = 'Polska'
 where telegram_user_id in (820000070, 820000080, 820000090);
-select is(
-  public.get_current_statistics(820000001)->>'group',
-  'track',
-  'statistics fall back to track when the ranking-country cohort drops below ten'
-);
 select is(
   (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
   null,
@@ -169,26 +152,13 @@ create temporary table valid_statistics(result jsonb) on commit drop;
 insert into valid_statistics values (
   '{
     "detailsAvailable": true,
-    "group": "track",
     "totalValidResponses": 20,
     "sameTrackCount": 15,
     "sameCountryCount": null,
     "groupResponseCount": 10,
     "medianScore": 50,
     "lowerScorePercentage": 40,
-    "scoreBuckets": [1, 2, 3, 2, 2],
-    "statusCounts": {
-      "submitted": 2,
-      "formal_review_in_progress": 1,
-      "correction_requested": 0,
-      "formal_review_completed": 1,
-      "merit_review_in_progress": 1,
-      "merit_review_positive": 1,
-      "merit_review_negative": 1,
-      "awaiting_decision": 1,
-      "scholarship_awarded": 1,
-      "scholarship_not_awarded": 1
-    }
+    "scoreBuckets": [1, 2, 3, 2, 2]
   }'::jsonb
 );
 select is(
@@ -199,41 +169,35 @@ select is(
 select is(
   public.assert_statistics_result('{
     "detailsAvailable": false,
-    "group": null,
     "totalValidResponses": 2,
     "sameTrackCount": 2,
     "sameCountryCount": null,
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
-    "scoreBuckets": null,
-    "statusCounts": null
+    "scoreBuckets": null
   }'::jsonb),
   '{
     "detailsAvailable": false,
-    "group": null,
     "totalValidResponses": 2,
     "sameTrackCount": 2,
     "sameCountryCount": null,
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
-    "scoreBuckets": null,
-    "statusCounts": null
+    "scoreBuckets": null
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );
 select throws_ok($$select public.assert_statistics_result(null)$$, 'P0001', 'statistics_unavailable', 'null statistics are unavailable');
 select throws_ok($$select public.assert_statistics_result('[]'::jsonb)$$, 'P0001', 'statistics_invalid', 'statistics must be an object');
-select throws_ok($$select public.assert_statistics_result((select result - 'group' from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject missing keys');
+select throws_ok($$select public.assert_statistics_result((select result - 'scoreBuckets' from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject missing keys');
 select throws_ok($$select public.assert_statistics_result((select result || '{"extra":1}'::jsonb from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject extra keys');
-select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{group}', '"invalid"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject unknown groups');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{totalValidResponses}', '1.5') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be integers');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be nonnegative');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '9') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'disclosed country counts must meet the privacy threshold');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{lowerScorePercentage}', '101') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics percentages must stay within bounds');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{detailsAvailable}', 'false') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'suppressed statistics cannot retain detailed values');
-select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{group}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'available details require a comparison group');
 
 create temporary table response_before_failed_statistics(result jsonb) on commit drop;
 insert into response_before_failed_statistics
