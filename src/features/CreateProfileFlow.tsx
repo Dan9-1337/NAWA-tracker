@@ -66,6 +66,8 @@ export function CreateProfileFlow({
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(pendingResume);
+  const [startCtaInView, setStartCtaInView] = useState(true);
+  const startCtaRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
 
   const effectiveSteps = getWizardEffectiveSteps();
@@ -77,6 +79,20 @@ export function CreateProfileFlow({
       setDirty(true);
     }
   }, [draft, screen, stepIndex]);
+
+  useEffect(() => {
+    if (screen !== 'start') return undefined;
+    const node = startCtaRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      setStartCtaInView(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => setStartCtaInView(entry.isIntersecting), {
+      threshold: 0,
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [screen]);
 
   const goWizardNext = useCallback(() => {
     if (!canAdvanceWizardStep(currentStep, draft)) return;
@@ -157,7 +173,7 @@ export function CreateProfileFlow({
     chromeSuspended
       ? {}
       : screen === 'start'
-        ? { main: { text: t.start.cta, visible: true, enabled: !disabled, onClick: startWizard } }
+        ? { main: { text: t.start.cta, visible: !startCtaInView, enabled: !disabled, onClick: startWizard } }
         : screen === 'wizard'
           ? {
               main: {
@@ -185,7 +201,7 @@ export function CreateProfileFlow({
   if (screen === 'start') {
     return (
       <>
-        <section className="space-y-5">
+        <section className="space-y-4">
           {showResumePrompt ? (
             <div className="rounded-2xl border border-[var(--tg-theme-button-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-4">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{t.start.resumeTitle}</p>
@@ -208,22 +224,18 @@ export function CreateProfileFlow({
               </div>
             </div>
           ) : null}
-          <div>
-            <h2 className="text-2xl font-semibold leading-tight text-[var(--text-primary)]">{t.start.title}</h2>
-            <p className="mt-3 text-sm leading-7 text-[var(--text-secondary)]">{t.start.subtitle}</p>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-helper)]">
+              {t.start.kicker}
+            </p>
+            <h2 className="text-[1.75rem] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)]">
+              {t.start.title}
+            </h2>
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">{t.start.subtitle}</p>
           </div>
-          <ul className="space-y-2 text-sm leading-6 text-[var(--text-secondary)]">
-            {t.start.bullets.map((bullet) => (
-              <li key={bullet} className="flex gap-2">
-                <span aria-hidden="true" className="text-[var(--text-primary)]">
-                  •
-                </span>
-                <span>{bullet}</span>
-              </li>
-            ))}
-          </ul>
           <ResultPreviewCard />
           <button
+            ref={startCtaRef}
             type="button"
             disabled={disabled}
             className="min-h-12 w-full rounded-2xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)] disabled:opacity-50"
@@ -231,18 +243,16 @@ export function CreateProfileFlow({
           >
             {t.start.cta}
           </button>
-          <div className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm leading-6">
-            <p className="font-semibold text-[var(--text-primary)]">{t.start.trustTitle}</p>
-            <p className="mt-1 text-[var(--text-helper)]">{t.start.trustBody}</p>
+          <p className="text-xs leading-5 text-[var(--text-helper)]">
+            {t.start.dataLine}{' · '}
             <button
               type="button"
-              className="mt-2 min-h-11 text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
+              className="font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
               onClick={() => setShowPrivacy(true)}
             >
-              {t.start.privacyLink}
+              {t.start.dataLineLink}
             </button>
-          </div>
-          <p className="text-xs leading-5 text-[var(--text-helper)]">{t.start.consentLine}</p>
+          </p>
           <button
             type="button"
             className="text-sm font-medium text-[var(--tg-theme-link-color)] underline-offset-2 hover:underline"
@@ -253,7 +263,7 @@ export function CreateProfileFlow({
           </button>
         </section>
         {showHowItWorks ? (
-          <div className="mt-4 rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3">
+          <div className="mt-4 rounded-2xl border border-[var(--section-divider-color)] px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-helper)]">
               {t.start.howItWorks}
             </p>

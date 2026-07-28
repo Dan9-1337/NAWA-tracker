@@ -1,9 +1,10 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 
 export type SearchableSelectOption = {
   value: string;
   label: string;
   group?: string;
+  leading?: ReactNode;
 };
 
 type SearchableSelectProps = {
@@ -37,7 +38,8 @@ export function SearchableSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? '';
+  const selected = options.find((option) => option.value === value);
+  const selectedLabel = selected?.label ?? '';
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -94,10 +96,19 @@ export function SearchableSelect({
         }`}
         onClick={() => (open ? setOpen(false) : openList())}
       >
-        <span className={selectedLabel ? 'text-[var(--tg-theme-text-color)]' : 'text-[var(--tg-theme-subtitle-text-color)]'}>
-          {selectedLabel || placeholder}
+        <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+          {selected?.leading ? <span className="shrink-0">{selected.leading}</span> : null}
+          <span
+            className={`truncate ${
+              selectedLabel ? 'text-[var(--tg-theme-text-color)]' : 'text-[var(--tg-theme-subtitle-text-color)]'
+            }`}
+          >
+            {selectedLabel || placeholder}
+          </span>
         </span>
-        <span className="text-[var(--tg-theme-hint-color)]" aria-hidden="true">▾</span>
+        <span className="shrink-0 text-[var(--tg-theme-hint-color)]" aria-hidden="true">
+          ▾
+        </span>
       </button>
 
       {error ? (
@@ -108,7 +119,7 @@ export function SearchableSelect({
 
       {open ? (
         <div className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] shadow-lg">
-          <div className="border-b border-[var(--section-divider-color)] p-2">
+          <div className="sticky top-0 z-10 border-b border-[var(--section-divider-color)] bg-[var(--tg-theme-section-bg-color)] p-2">
             <input
               ref={searchRef}
               type="search"
@@ -119,12 +130,7 @@ export function SearchableSelect({
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
-          <ul
-            id={listId}
-            role="listbox"
-            aria-label={label}
-            className="max-h-56 overflow-y-auto py-1"
-          >
+          <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <li className="px-4 py-3 text-sm text-[var(--tg-theme-subtitle-text-color)]">{placeholder}</li>
             ) : (
@@ -144,14 +150,20 @@ export function SearchableSelect({
                             type="button"
                             role="option"
                             aria-selected={active}
-                            className={`w-full px-4 py-2.5 text-left text-sm transition ${
+                            className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition ${
                               active
                                 ? 'bg-[var(--tg-theme-secondary-bg-color)] font-semibold text-[var(--tg-theme-text-color)]'
                                 : 'text-[var(--tg-theme-text-color)] hover:bg-[color-mix(in_srgb,var(--tg-theme-hint-color)_12%,transparent)]'
                             }`}
                             onClick={() => selectOption(option.value)}
                           >
-                            {option.label}
+                            {option.leading ? <span className="shrink-0">{option.leading}</span> : null}
+                            <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                            {active ? (
+                              <span className="shrink-0 text-[var(--color-accent)]" aria-hidden="true">
+                                ✓
+                              </span>
+                            ) : null}
                           </button>
                         </li>
                       );

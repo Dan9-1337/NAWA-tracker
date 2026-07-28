@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
-import { countryCodes, type CountryCode } from '../../shared/countries';
+import { countryCodes, getCountryDisplayName, popularCountryCodes } from '../../shared/countries';
 import { useI18n } from '../i18n/context';
+import { CountryFlag } from './CountryFlag';
 import { SearchableSelect } from './SearchableSelect';
-
-const popularCountryCodes: CountryCode[] = ['UA', 'BY', 'KZ', 'PL', 'RU'];
 
 type CountrySelectProps = {
   id?: string;
@@ -15,23 +14,29 @@ type CountrySelectProps = {
 };
 
 export function CountrySelect({ id, label, hint, value, onChange, error }: CountrySelectProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const options = useMemo(() => {
-    const popular = popularCountryCodes.filter((code) => (countryCodes as readonly string[]).includes(code));
-    const rest = countryCodes.filter((code) => !popularCountryCodes.includes(code));
-    return [
-      ...popular.map((code) => ({
+    const popularOrder = new Map<string, number>(
+      popularCountryCodes.map((code, index) => [code, index]),
+    );
+
+    return countryCodes
+      .map((code) => ({
         value: code,
-        label: t.countries[code],
-        group: t.countries.popular,
-      })),
-      ...rest.map((code) => ({
-        value: code,
-        label: t.countries[code as CountryCode],
-      })),
-    ];
-  }, [t.countries]);
+        label: getCountryDisplayName(code, locale) ?? code,
+        group: popularOrder.has(code) ? t.countries.popular : undefined,
+        leading: <CountryFlag code={code} size={20} />,
+      }))
+      .sort((a, b) => {
+        const aPopular = popularOrder.get(a.value);
+        const bPopular = popularOrder.get(b.value);
+        if (aPopular != null && bPopular != null) return aPopular - bPopular;
+        if (aPopular != null) return -1;
+        if (bPopular != null) return 1;
+        return a.label.localeCompare(b.label, locale);
+      });
+  }, [locale, t.countries.popular]);
 
   return (
     <SearchableSelect

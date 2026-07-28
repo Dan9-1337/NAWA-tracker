@@ -98,7 +98,7 @@ function heroMedianContext(
 }
 
 export function StatisticsPanel({ state, profile, userScore, previousSnapshot }: StatisticsPanelProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [showDetails, setShowDetails] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
   const titleId = 'statistics-hero';
@@ -107,7 +107,7 @@ export function StatisticsPanel({ state, profile, userScore, previousSnapshot }:
   const progressCount = data ? getCohortProgressCount(data) : 0;
   const showDistribution = data ? canShowScoreDistribution(groupSize, data.scoreBuckets) : false;
 
-  const schoolCountry = formatCountryLabel(profile?.schoolCountry, t.countries);
+  const schoolCountry = formatCountryLabel(profile?.schoolCountry, locale);
 
   if (state.status === 'unavailable') {
     return (

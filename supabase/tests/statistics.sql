@@ -100,7 +100,7 @@ select is(
 );
 
 update public.responses
-set ranking_country = 'PL'
+set ranking_country = 'DE'
 where telegram_user_id in (820000070, 820000080, 820000090);
 select is(
   (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,

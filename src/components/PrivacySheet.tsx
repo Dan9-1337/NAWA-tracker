@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useI18n } from '../i18n/context';
+import { ChevronIcon } from './icons';
 
 type PrivacySheetProps = {
   open: boolean;
@@ -9,6 +10,7 @@ type PrivacySheetProps = {
 export function PrivacySheet({ open, onClose }: PrivacySheetProps) {
   const { t } = useI18n();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const [showFullPolicy, setShowFullPolicy] = useState(false);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -25,6 +27,10 @@ export function PrivacySheet({ open, onClose }: PrivacySheetProps) {
     };
   }, [onClose, open]);
 
+  useEffect(() => {
+    if (!open) setShowFullPolicy(false);
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -37,17 +43,41 @@ export function PrivacySheet({ open, onClose }: PrivacySheetProps) {
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="privacy-sheet-title" className="text-lg font-semibold">
-          {t.privacyNotice.title}
+          {t.privacyNotice.quickTitle}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">{t.privacyNotice.body}</p>
-        <ul className="mt-3 space-y-2 text-sm leading-6">
-          {t.privacyNotice.points.map((point) => (
-            <li key={point} className="flex gap-2">
-              <span aria-hidden="true">•</span>
-              <span>{point}</span>
-            </li>
-          ))}
-        </ul>
+        <p className="mt-2 text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">
+          {t.privacyNotice.quickBody}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">
+          {t.privacyNotice.quickNoPersonalData}
+        </p>
+
+        <button
+          type="button"
+          className="disclosure-row mt-1"
+          aria-expanded={showFullPolicy}
+          onClick={() => setShowFullPolicy((value) => !value)}
+        >
+          <span className="disclosure-row__label">{t.privacyNotice.fullPolicyToggle}</span>
+          <span className="disclosure-row__chevron">
+            <ChevronIcon />
+          </span>
+        </button>
+
+        {showFullPolicy ? (
+          <div className="mt-1">
+            <p className="text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">{t.privacyNotice.body}</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6">
+              {t.privacyNotice.points.map((point) => (
+                <li key={point} className="flex gap-2">
+                  <span aria-hidden="true">•</span>
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <button
           ref={closeRef}
           type="button"

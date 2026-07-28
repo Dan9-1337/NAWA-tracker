@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { pl } from '../i18n/pl';
-import { ru } from '../i18n/ru';
 import { formatCountryLabel } from './country-label';
 
 describe('formatCountryLabel', () => {
   it('localizes ISO country codes', () => {
-    expect(formatCountryLabel('UA', pl.countries)).toBe('Ukraina');
-    expect(formatCountryLabel('UA', ru.countries)).toBe('Украина');
+    expect(formatCountryLabel('UA', 'pl')).toBe('Ukraina');
+    expect(formatCountryLabel('UA', 'ru')).toBe('Украина');
   });
 
-  it('falls back to OTHER for unknown values', () => {
-    expect(formatCountryLabel('Ukraina', pl.countries)).toBe('Inny kraj');
-    expect(formatCountryLabel('Atlantis', pl.countries)).toBe('Inny kraj');
+  it('falls back for unknown values', () => {
+    expect(formatCountryLabel('Ukraina', 'pl')).toBe('—');
+    expect(formatCountryLabel('Atlantis', 'pl')).toBe('—');
+    expect(formatCountryLabel('OTHER', 'pl')).toBe('—');
+    expect(formatCountryLabel('PL', 'pl')).toBe('—');
+    expect(formatCountryLabel(null, 'pl')).toBe('—');
   });
 });

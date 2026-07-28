@@ -37,7 +37,7 @@ select is(
 with mutation as (
   select public.update_current_response(
     810001, 'first_user',
-    false, 'PL', 'PL',
+    false, 'DE', 'DE',
     'culture_minister', 'preparatory_course', null,
     4.0, 5, null,
     'awaiting_decision', current_date

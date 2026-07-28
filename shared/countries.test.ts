@@ -4,6 +4,7 @@ import {
   countryMaximumGrades,
   defaultMaximumGradeForSchoolCountry,
   isCountryCode,
+  popularCountryCodes,
 } from './countries';
 
 describe('countries', () => {
@@ -11,18 +12,31 @@ describe('countries', () => {
     expect(defaultMaximumGradeForSchoolCountry('UA')).toBe(12);
     expect(defaultMaximumGradeForSchoolCountry('BY')).toBe(10);
     expect(defaultMaximumGradeForSchoolCountry('KZ')).toBe(5);
-    expect(defaultMaximumGradeForSchoolCountry('OTHER')).toBeNull();
+    expect(defaultMaximumGradeForSchoolCountry('US')).toBeNull();
   });
 
-  it('rejects non-ISO country values', () => {
+  it('rejects non-ISO and excluded country values', () => {
     expect(defaultMaximumGradeForSchoolCountry('Ukraina')).toBeNull();
     expect(isCountryCode('UA')).toBe(true);
+    expect(isCountryCode('US')).toBe(true);
+    expect(isCountryCode('PL')).toBe(false);
+    expect(isCountryCode('OTHER')).toBe(false);
     expect(isCountryCode('Ukraina')).toBe(false);
   });
 
-  it('defines a maximum grade entry for every country code', () => {
-    for (const code of countryCodes) {
-      expect(code in countryMaximumGrades).toBe(true);
+  it('excludes Poland from the selectable list', () => {
+    expect(countryCodes.includes('PL' as (typeof countryCodes)[number])).toBe(false);
+    expect(popularCountryCodes.includes('PL' as never)).toBe(false);
+  });
+
+  it('offers a full ISO set without OTHER', () => {
+    expect(countryCodes.length).toBeGreaterThan(200);
+    expect(countryCodes.includes('OTHER' as (typeof countryCodes)[number])).toBe(false);
+  });
+
+  it('defines maximum grades only for known school systems', () => {
+    for (const code of Object.keys(countryMaximumGrades)) {
+      expect(isCountryCode(code)).toBe(true);
     }
   });
 });

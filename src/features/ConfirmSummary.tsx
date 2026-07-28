@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { getUniversityById } from '../../shared/universities';
+import { CountryFlag } from '../components/CountryFlag';
 import { useI18n } from '../i18n/context';
 import { formatCountryLabel } from '../lib/country-label';
 import { formatDate, formatGrade } from '../lib/format';
@@ -13,8 +14,8 @@ type ConfirmSummaryProps = {
 
 export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
   const { t, locale } = useI18n();
-  const rankingCountry = formatCountryLabel(draft.rankingCountry, t.countries);
-  const schoolCountry = formatCountryLabel(draft.schoolCountry, t.countries);
+  const rankingCountry = formatCountryLabel(draft.rankingCountry, locale);
+  const schoolCountry = formatCountryLabel(draft.schoolCountry, locale);
   const universityName =
     draft.targetUniversity != null ? (getUniversityById(draft.targetUniversity)?.name ?? draft.targetUniversity) : null;
 
@@ -31,8 +32,16 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         editLabel={t.wizard.editSection}
       >
         <Row label={t.labels.scholarshipTrack} value={t.choices.scholarshipTrack[draft.scholarshipTrack]} />
-        <Row label={t.labels.rankingCountry} value={rankingCountry} />
-        <Row label={t.labels.schoolCountry} value={schoolCountry} />
+        <Row
+          label={t.labels.rankingCountry}
+          value={rankingCountry}
+          leading={<CountryFlag code={draft.rankingCountry} size={18} />}
+        />
+        <Row
+          label={t.labels.schoolCountry}
+          value={schoolCountry}
+          leading={<CountryFlag code={draft.schoolCountry} size={18} />}
+        />
         <Row label={t.labels.studyRoute} value={t.choices.studyRoute[draft.studyRoute]} />
         {universityName ? <Row label={t.labels.targetUniversity} value={universityName} /> : null}
       </SummaryBlock>
@@ -89,13 +98,16 @@ function SummaryBlock({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, leading }: { label: string; value: string; leading?: ReactNode }) {
   return (
     <div className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3">
       <dt className="text-xs font-medium text-[var(--tg-theme-subtitle-text-color)]">
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
+      <dd className="mt-1 flex items-center gap-2 text-sm font-medium">
+        {leading}
+        <span>{value}</span>
+      </dd>
     </div>
   );
 }
