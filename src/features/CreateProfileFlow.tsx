@@ -46,9 +46,15 @@ type CreateProfileFlowProps = {
   onSubmit: (value: ResponseFormInput) => void | Promise<void>;
   disabled?: boolean;
   actionError?: string | null;
+  chromeSuspended?: boolean;
 };
 
-export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: CreateProfileFlowProps) {
+export function CreateProfileFlow({
+  onSubmit,
+  disabled = false,
+  actionError,
+  chromeSuspended = false,
+}: CreateProfileFlowProps) {
   const { t } = useI18n();
   const restoredSession = useRef(loadWizardSession());
   const pendingResume = hasRestoredWizardSession(restoredSession.current);
@@ -148,30 +154,32 @@ export function CreateProfileFlow({ onSubmit, disabled = false, actionError }: C
   }, [effectiveSteps.length]);
 
   useMiniAppChrome(
-    screen === 'start'
-      ? { main: { text: t.start.cta, visible: true, enabled: !disabled, onClick: startWizard } }
-      : screen === 'wizard'
-        ? {
-            main: {
-              text: t.wizard.next,
-              visible: true,
-              enabled: !disabled && canAdvanceWizardStep(currentStep, draft),
-              onClick: goWizardNext,
+    chromeSuspended
+      ? {}
+      : screen === 'start'
+        ? { main: { text: t.start.cta, visible: true, enabled: !disabled, onClick: startWizard } }
+        : screen === 'wizard'
+          ? {
+              main: {
+                text: t.wizard.next,
+                visible: true,
+                enabled: !disabled && canAdvanceWizardStep(currentStep, draft),
+                onClick: goWizardNext,
+              },
+              back: { visible: true, onClick: goWizardBack },
+              closingConfirmation: dirty,
+            }
+          : {
+              main: {
+                text: t.form.submitCreate,
+                visible: true,
+                enabled: !disabled && !pending,
+                loading: pending,
+                onClick: handleSubmit,
+              },
+              back: { visible: true, onClick: backToLastWizardStep },
+              closingConfirmation: dirty,
             },
-            back: { visible: true, onClick: goWizardBack },
-            closingConfirmation: dirty,
-          }
-        : {
-            main: {
-              text: t.form.submitCreate,
-              visible: true,
-              enabled: !disabled && !pending,
-              loading: pending,
-              onClick: handleSubmit,
-            },
-            back: { visible: true, onClick: backToLastWizardStep },
-            closingConfirmation: dirty,
-          },
   );
 
   if (screen === 'start') {

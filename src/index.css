@@ -58,7 +58,8 @@ body {
 }
 
 #root {
-  min-height: var(--tg-viewport-stable-height, 100dvh);
+  height: var(--tg-viewport-stable-height, 100dvh);
+  overflow: hidden;
 }
 
 @media (prefers-color-scheme: dark) {

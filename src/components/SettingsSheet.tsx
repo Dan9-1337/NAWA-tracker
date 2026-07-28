@@ -14,6 +14,7 @@ import {
 } from './icons';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { DeleteProfileZone } from './DeleteProfileZone';
 
 type SettingsView = 'menu' | 'data' | 'privacy' | 'language' | 'appearance';
 
@@ -22,6 +23,7 @@ type SettingsSheetProps = {
   onClose: () => void;
   current: ResponseFormInput | null;
   onEditProfile?: () => void;
+  onDelete?: () => Promise<void>;
 };
 
 function resolveThemePreference(): ThemePreference {
@@ -73,7 +75,7 @@ function SettingsMenuRow({
   );
 }
 
-export function SettingsSheet({ open, onClose, current, onEditProfile }: SettingsSheetProps) {
+export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete }: SettingsSheetProps) {
   const { t, locale } = useI18n();
   const [view, setView] = useState<SettingsView>('menu');
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -168,11 +170,13 @@ export function SettingsSheet({ open, onClose, current, onEditProfile }: Setting
                     }}
                   />
                 ) : null}
-                <SettingsMenuRow
-                  label={t.settings.viewData}
-                  icon={<DocumentIcon size={17} />}
-                  onClick={() => setView('data')}
-                />
+                {current ? (
+                  <SettingsMenuRow
+                    label={t.settings.viewData}
+                    icon={<DocumentIcon size={17} />}
+                    onClick={() => setView('data')}
+                  />
+                ) : null}
                 <SettingsMenuRow
                   label={t.settings.privacyPolicy}
                   icon={<ShieldIcon size={17} />}
@@ -207,8 +211,9 @@ export function SettingsSheet({ open, onClose, current, onEditProfile }: Setting
           ) : null}
 
           {view === 'data' && current ? (
-            <div className="mt-5">
+            <div className="mt-5 space-y-4">
               <ConfirmSummary draft={current} />
+              {onDelete ? <DeleteProfileZone onDelete={onDelete} /> : null}
             </div>
           ) : null}
 

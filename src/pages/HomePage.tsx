@@ -236,7 +236,14 @@ export function HomePage() {
     }
 
     if (state.mode === 'create') {
-      return <CreateProfileFlow onSubmit={create} disabled={state.pending} actionError={state.actionError ?? null} />;
+      return (
+        <CreateProfileFlow
+          onSubmit={create}
+          disabled={state.pending}
+          actionError={state.actionError ?? null}
+          chromeSuspended={settingsOpen}
+        />
+      );
     }
 
     return (
@@ -244,7 +251,6 @@ export function HomePage() {
         current={state.current}
         statistics={state.statistics}
         onSubmit={update}
-        onDelete={removeProfile}
         disabled={state.pending !== null}
         actionError={state.actionError}
         chromeSuspended={settingsOpen}
@@ -258,8 +264,11 @@ export function HomePage() {
     <MiniAppShell
       title={t.app.title}
       subtitle={statsSubtitle}
-      showLanguageSwitcher={state.mode === 'create' || state.mode === 'gate'}
-      onOpenSettings={state.mode === 'authenticated' && !settingsOpen ? () => setSettingsOpen(true) : undefined}
+      onOpenSettings={
+        !settingsOpen && (state.mode === 'authenticated' || state.mode === 'create' || state.mode === 'gate')
+          ? () => setSettingsOpen(true)
+          : undefined
+      }
       suspendActionBar={settingsOpen}
     >
       {offline ? (
@@ -282,6 +291,7 @@ export function HomePage() {
             ? () => setEditRequestNonce((value) => value + 1)
             : undefined
         }
+        onDelete={state.mode === 'authenticated' ? removeProfile : undefined}
       />
     </MiniAppShell>
   );

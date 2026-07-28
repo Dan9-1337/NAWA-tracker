@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '../i18n/context';
 import { getDevChromeState, getTelegramWebApp } from '../lib/telegram';
 
@@ -19,8 +18,10 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] p-3"
-      style={{ paddingBottom: 'max(0.75rem, var(--tg-content-safe-area-inset-bottom, 0px))' }}
+      className="shrink-0 border-t border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] p-3"
+      style={{
+        paddingBottom: 'max(0.75rem, var(--tg-content-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))',
+      }}
     >
       <div className="mx-auto flex max-w-md flex-col gap-2">
         {state.backVisible ? (
@@ -62,8 +63,6 @@ type MiniAppShellProps = {
   children: ReactNode;
   subtitle?: string | null;
   onOpenSettings?: () => void;
-  /** Language switcher in header — only before profile exists (no Settings yet). */
-  showLanguageSwitcher?: boolean;
   suspendActionBar?: boolean;
 };
 
@@ -72,22 +71,20 @@ export function MiniAppShell({
   children,
   subtitle,
   onOpenSettings,
-  showLanguageSwitcher = false,
   suspendActionBar = false,
 }: MiniAppShellProps) {
   const { t } = useI18n();
   return (
-    <div className="app-shell min-h-[var(--tg-viewport-stable-height,100dvh)] w-full text-[var(--tg-theme-text-color)]">
+    <div className="app-shell h-[var(--tg-viewport-stable-height,100dvh)] w-full text-[var(--tg-theme-text-color)]">
       <div
-        className="mx-auto flex min-h-[var(--tg-viewport-stable-height,100dvh)] w-full max-w-md flex-col"
+        className="mx-auto flex h-full w-full max-w-md flex-col overflow-hidden"
         style={{
-          paddingTop: 'var(--tg-content-safe-area-inset-top, 0px)',
-          paddingRight: 'var(--tg-content-safe-area-inset-right, 0px)',
-          paddingLeft: 'var(--tg-content-safe-area-inset-left, 0px)',
-          paddingBottom: 'calc(var(--tg-content-safe-area-inset-bottom, 0px) + 5.5rem)',
+          paddingTop: 'var(--tg-content-safe-area-inset-top, env(safe-area-inset-top, 0px))',
+          paddingRight: 'var(--tg-content-safe-area-inset-right, env(safe-area-inset-right, 0px))',
+          paddingLeft: 'var(--tg-content-safe-area-inset-left, env(safe-area-inset-left, 0px))',
         }}
       >
-        <header className="flex items-start justify-between gap-3 px-4 pb-4 pt-3">
+        <header className="flex shrink-0 items-start justify-between gap-3 px-4 pb-4 pt-3">
           <div className="min-w-0">
             <h1 className="text-lg font-semibold leading-tight">{title}</h1>
             {subtitle ? (
@@ -113,10 +110,9 @@ export function MiniAppShell({
                 </svg>
               </button>
             ) : null}
-            {showLanguageSwitcher ? <LanguageSwitcher /> : null}
           </div>
         </header>
-        <main className="flex-1 px-4 pb-4">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{children}</main>
         <DevActionBar hidden={suspendActionBar} />
       </div>
     </div>

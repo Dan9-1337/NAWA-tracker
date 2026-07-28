@@ -3,7 +3,6 @@ import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { getSequentialStatusOptions } from '../../shared/status-options';
 import { isSuspiciousStatusTransition } from '../../shared/status-transitions';
-import { DeleteProfileZone } from '../components/DeleteProfileZone';
 import { StatusDateInput } from '../components/StatusDateInput';
 import { ChevronIcon } from '../components/icons';
 import { StatusProgressStepper } from '../components/StatusProgressStepper';
@@ -37,7 +36,6 @@ type ProfileDashboardProps = {
   current: ResponseFormInput;
   statistics: StatisticsState;
   onSubmit: (value: ResponseFormInput) => void | Promise<void>;
-  onDelete: () => Promise<void>;
   disabled?: boolean;
   actionError?: string | null;
   chromeSuspended?: boolean;
@@ -49,7 +47,6 @@ export function ProfileDashboard({
   current,
   statistics,
   onSubmit,
-  onDelete,
   disabled = false,
   actionError,
   chromeSuspended = false,
@@ -274,7 +271,6 @@ export function ProfileDashboard({
             <p className="mt-1 text-[var(--tg-theme-subtitle-text-color)]">{t.form.cohortChangeBody}</p>
           </div>
         ) : null}
-        <DeleteProfileZone onDelete={onDelete} disabled={disabled || pending} />
       </>
     );
   }

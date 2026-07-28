@@ -9,6 +9,9 @@ const localeCodes: Record<Locale, string> = {
   ru: 'RU',
 };
 
+const headerButtonClass =
+  'flex h-11 shrink-0 items-center justify-center rounded-xl border text-xs font-semibold tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]';
+
 type LanguageSwitcherProps = {
   fullWidth?: boolean;
 };
@@ -18,7 +21,7 @@ export function LanguageSwitcher({ fullWidth = false }: LanguageSwitcherProps) {
 
   return (
     <div
-      className={`${fullWidth ? 'flex w-full' : 'inline-flex'} h-11 items-stretch overflow-hidden rounded-full border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-bg-color)]`}
+      className={`${fullWidth ? 'flex w-full gap-2' : 'flex items-center gap-2'}`}
       role="group"
       aria-label={t.language.label}
     >
@@ -28,10 +31,10 @@ export function LanguageSwitcher({ fullWidth = false }: LanguageSwitcherProps) {
           <button
             key={code}
             type="button"
-            className={`${fullWidth ? 'flex-1' : 'min-w-11'} px-2 text-xs font-semibold tracking-wide transition ${
+            className={`${headerButtonClass} ${fullWidth ? 'flex-1' : 'w-11'} ${
               active
-                ? 'bg-[var(--tg-theme-button-color)] text-[var(--tg-theme-button-text-color)]'
-                : 'text-[var(--text-disabled)] hover:text-[var(--text-secondary)]'
+                ? 'border-[var(--tg-theme-button-color)] bg-[var(--tg-theme-secondary-bg-color)] text-[var(--color-accent)]'
+                : 'border-[var(--section-divider-color)] bg-[var(--tg-theme-section-bg-color)] text-[var(--text-disabled)] hover:bg-[var(--tg-theme-secondary-bg-color)] hover:text-[var(--text-secondary)] active:bg-[var(--tg-theme-secondary-bg-color)]'
             }`}
             aria-pressed={active}
             aria-label={t.language[code]}
