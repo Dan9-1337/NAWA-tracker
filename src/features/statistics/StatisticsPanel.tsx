@@ -1,23 +1,46 @@
-import { useState } from 'react';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
-import { PositionHistoryList } from '../../components/PositionHistoryList';
-import { ChevronIcon } from '../../components/icons';
-import { ScoreDensityStrip } from '../../components/ScoreDensityStrip';
-import { ScorePositionChart } from '../../components/ScorePositionChart';
-import { WeeklyActivityBlock } from '../../components/SinceLastVisitCard';
-import { useI18n } from '../../i18n/context';
-import { formatCountryLabel } from '../../lib/country-label';
-import type { StatsSnapshot } from '../../lib/stats-snapshot';
-import { canShowScoreDistribution } from '../../lib/score-buckets';
-import { getTelegramWebApp } from '../../lib/telegram';
 import {
-  formatPercentileValue,
-  getCohortProgressCount,
-  getMedianBand,
-  getReliabilityLevel,
-  MIN_DETAILED_COHORT,
-  QUALITATIVE_COHORT_MAX,
-} from '../../lib/stats-verdict';
+  calculateCountryAllocation,
+  calculateCountryGroupAllocation,
+  getAllocationDisplayMode,
+  getConfidenceExplanation,
+  type SeatAllocationEstimate,
+} from '../../../shared/allocation-calculator';
+import { getIllustrativeGroupIdForCountry } from '../../../shared/country-allocation-profiles';
+import {
+  getCountryHistoricalSeatRecords,
+  getHistoricalGroupsForCountry,
+  getHistoricalSeatRecordByGroupId,
+} from '../../../shared/historical-seat-records';
+import { computeSampleCompositionQuality } from '../../../shared/sample-composition';
+import { getDefaultTotalSeatScenario } from '../../../shared/total-seat-scenarios';
+import { getScoreBreakdown } from '../../../shared/nawa-score';
+import type { DashboardSectionId } from '../../../shared/dashboard-layout';
+import { getDashboardSectionOrder } from '../../../shared/dashboard-layout';
+import { PositionHistoryList } from '../../components/PositionHistoryList';
+import { useI18n } from '../../i18n/context';
+import { canShowScoreDistribution } from '../../lib/score-buckets';
+import type { StatsSnapshot } from '../../lib/stats-snapshot';
+import { getCohortProgressCount, MIN_DETAILED_COHORT } from '../../lib/stats-verdict';
+import { hasReturningVisitChanges } from '../../lib/position-change';
+import { trackProductEvent } from '../../lib/product-events';
+import { DistributionDetailsSection } from '../dashboard/DistributionDetailsSection';
+import { MeritNegativeOutcomeCard } from '../dashboard/MeritNegativeOutcomeCard';
+import { ProgressInGroupCard } from '../dashboard/ProgressInGroupCard';
+import { ReportedMeritOutcomesCard } from '../dashboard/ReportedMeritOutcomesCard';
+import { ResultHeroCard } from '../dashboard/ResultHeroCard';
+import { ScholarshipAwardedCard } from '../dashboard/ScholarshipAwardedCard';
+import { WhatChangedCard } from '../dashboard/WhatChangedCard';
+import {
+  AllocationEstimateCard,
+  type SeatAllocationEstimateView,
+} from '../dashboard/allocation/AllocationEstimateCard';
+import { AllocationUnavailableNotice } from '../dashboard/allocation/AllocationUnavailableNotice';
+import {
+  HistoricalAllocationContext,
+  type HistoricalSeatRecordView,
+} from '../dashboard/allocation/HistoricalAllocationContext';
+import { useEffect, useMemo, useRef } from 'react';
 
 export type StatisticsState =
   | { status: 'unavailable' }
@@ -37,77 +60,251 @@ export function statisticsStateFromResult(data: StatisticsResult): StatisticsSta
   return data.detailsAvailable ? { status: 'success', data } : { status: 'suppressed', data };
 }
 
-function medianBandLabel(t: ReturnType<typeof useI18n>['t'], lowerScorePercentage: number | null): string | null {
-  const band = getMedianBand(lowerScorePercentage);
-  if (band === 'above') return t.stats.heroAbove;
-  if (band === 'below') return t.stats.heroBelow;
-  if (band === 'around') return t.stats.heroAround;
-  return null;
+function estimateSampleComposition(data: StatisticsResult, rankingCountry: string) {
+  const countryCount = data.sameCountryCount ?? data.groupResponseCount;
+  const remainder = Math.max(0, data.sameTrackCount - countryCount);
+  const impliedCountries = Math.max(5, Math.min(12, Math.round(data.sameTrackCount / Math.max(countryCount, 1))));
+  const otherShare = impliedCountries > 1 ? Math.floor(remainder / (impliedCountries - 1)) : 0;
+
+  return computeSampleCompositionQuality({
+    countryCounts: [
+      { country: rankingCountry, applicationCount: countryCount },
+      ...Array.from({ length: impliedCountries - 1 }, (_, index) => ({
+        country: `OTHER_${index}`,
+        applicationCount: otherShare,
+      })),
+    ],
+    shareStability: 'stable',
+    largestCohortsStable: true,
+  });
 }
 
-function reliabilityShortLabel(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
-  const level = getReliabilityLevel(groupSize);
-  if (level === 'low') return t.stats.reliabilityShortLow;
-  if (level === 'medium') return t.stats.reliabilityShortMedium;
-  return t.stats.reliabilityShortHigh;
+function toEstimateView(
+  estimate: SeatAllocationEstimate,
+  sampleComposition: ReturnType<typeof estimateSampleComposition>,
+  groupScenarioLabel?: string,
+): SeatAllocationEstimateView {
+  return {
+    scope: estimate.scope,
+    applicationCount: estimate.applicationCount,
+    totalApplicationCount: estimate.totalApplicationCount,
+    applicationShare: estimate.applicationShare,
+    estimatedSeatRange: estimate.estimatedSeatRange,
+    userRankInScope: estimate.userRankInScope,
+    sampleSize: estimate.sampleSize,
+    dataBasis: estimate.dataBasis,
+    confidenceExplanation: getConfidenceExplanation(estimate, sampleComposition),
+    groupScenarioLabel,
+  };
 }
 
-function reliabilityHint(t: ReturnType<typeof useI18n>['t'], groupSize: number): string {
-  const level = getReliabilityLevel(groupSize);
-  if (level === 'low') return t.stats.reliabilityLow(String(groupSize));
-  if (level === 'medium') return t.stats.reliabilityMedium(String(groupSize));
-  return t.stats.reliabilityHigh(String(groupSize));
-}
+function buildHistoricalRecords(rankingCountry: string): HistoricalSeatRecordView[] {
+  const records: HistoricalSeatRecordView[] = [];
 
-function heroVerdict(
-  t: ReturnType<typeof useI18n>['t'],
-  lowerScorePercentage: number | null,
-  groupSize: number,
-): string {
-  if (lowerScorePercentage == null) return t.stats.unavailable;
-
-  const band = getMedianBand(lowerScorePercentage);
-  if (groupSize < MIN_DETAILED_COHORT) {
-    if (band === 'above') return t.stats.heroUpperPart;
-    if (band === 'below') return t.stats.heroLowerPart;
-    return t.stats.heroAround;
+  for (const record of getCountryHistoricalSeatRecords(rankingCountry)) {
+    records.push({
+      year: record.year,
+      scope: record.scope,
+      seats: record.seats,
+      sourceLabel: record.sourceLabel,
+      sourceNote: record.sourceNote,
+      country: record.country,
+    });
   }
 
-  if (lowerScorePercentage >= 90) return t.stats.heroTopDecile;
-  if (lowerScorePercentage >= 67) return t.stats.heroUpperThird;
-  if (lowerScorePercentage <= 10) return t.stats.heroBottomDecile;
-  if (lowerScorePercentage <= 33) return t.stats.heroLowerThird;
-  if (band === 'above') return t.stats.heroAbove;
-  if (band === 'below') return t.stats.heroBelow;
-  return t.stats.heroAround;
+  for (const record of getHistoricalGroupsForCountry(rankingCountry)) {
+    records.push({
+      year: record.year,
+      scope: record.scope,
+      seats: record.seats,
+      sourceLabel: record.sourceLabel,
+      sourceNote: record.sourceNote,
+      groupMembers: record.groupMembers,
+    });
+  }
+
+  return records;
 }
 
-function heroMedianContext(
-  t: ReturnType<typeof useI18n>['t'],
-  lowerScorePercentage: number | null,
-  groupSize: number,
-): string | null {
-  if (lowerScorePercentage == null || groupSize < MIN_DETAILED_COHORT) return null;
+function buildAllocationSection(
+  data: StatisticsResult,
+  profile: ResponseFormInput,
+): {
+  showEstimate: boolean;
+  countryEstimate: SeatAllocationEstimateView | null;
+  groupEstimate: SeatAllocationEstimateView | null;
+  unavailableExplanation: string | null;
+} {
+  const applicationCountInScope = data.sameCountryCount ?? data.groupResponseCount;
+  const totalApplicationCount = data.sameTrackCount;
+  const sampleComposition = estimateSampleComposition(data, profile.rankingCountry);
+  const displayMode = getAllocationDisplayMode({
+    country: profile.rankingCountry,
+    applicationCountInScope,
+    totalApplicationCount,
+    scopeShareStability: 'stable',
+    sampleComposition,
+  });
 
-  const band = getMedianBand(lowerScorePercentage);
-  const count = String(groupSize);
-  if (band === 'above') return t.stats.heroMedianAbove(count);
-  if (band === 'below') return t.stats.heroMedianBelow(count);
-  if (band === 'around') return t.stats.heroMedianAround(count);
-  return null;
+  if (displayMode === 'insufficient_data') {
+    return {
+      showEstimate: false,
+      countryEstimate: null,
+      groupEstimate: null,
+      unavailableExplanation: getConfidenceExplanation(
+        calculateCountryAllocation({
+          country: profile.rankingCountry,
+          applicationCountInScope,
+          totalApplicationCount,
+          totalSeatScenario: getDefaultTotalSeatScenario().totalSeats,
+        }),
+        sampleComposition,
+      ),
+    };
+  }
+
+  const totalSeatScenario = getDefaultTotalSeatScenario().totalSeats;
+  const countryEstimate = calculateCountryAllocation({
+    country: profile.rankingCountry,
+    applicationCountInScope,
+    totalApplicationCount,
+    totalSeatScenario,
+    userRankInScope: data.rankPosition,
+  });
+
+  let groupEstimate: SeatAllocationEstimate | null = null;
+  if (displayMode === 'country_and_group_estimate') {
+    const groupId = getIllustrativeGroupIdForCountry(profile.rankingCountry);
+    const groupRecord = groupId ? getHistoricalSeatRecordByGroupId(groupId) : null;
+    if (groupRecord?.groupMembers) {
+      const groupApplicationCount = Math.max(
+        applicationCountInScope,
+        Math.round(totalApplicationCount * (groupRecord.groupMembers.length / 20)),
+      );
+      groupEstimate = calculateCountryGroupAllocation({
+        groupId,
+        applicationCountInScope: groupApplicationCount,
+        totalApplicationCount,
+        totalSeatScenario,
+        userRankInScope: data.rankPosition,
+      });
+    }
+  }
+
+  return {
+    showEstimate: true,
+    countryEstimate: toEstimateView(countryEstimate, sampleComposition),
+    groupEstimate: groupEstimate
+      ? toEstimateView(groupEstimate, sampleComposition, groupEstimate.scopeId)
+      : null,
+    unavailableExplanation: null,
+  };
+}
+
+function usesSmallCountryHero(state: StatisticsState, data: StatisticsResult, groupSize: number): boolean {
+  if (state.status === 'suppressed') return true;
+  if (groupSize < MIN_DETAILED_COHORT) return true;
+  return data.sameCountryCount != null && data.sameCountryCount < MIN_DETAILED_COHORT;
 }
 
 export function StatisticsPanel({ state, profile, userScore, previousSnapshot }: StatisticsPanelProps) {
-  const { t, locale } = useI18n();
-  const [showDetails, setShowDetails] = useState(false);
-  const [showWhy, setShowWhy] = useState(false);
-  const titleId = 'statistics-hero';
+  const { t } = useI18n();
+  const trackedEvents = useRef(new Set<string>());
   const data = state.status === 'success' || state.status === 'suppressed' ? state.data : null;
+  const isReturningVisit = previousSnapshot != null;
   const groupSize = data?.groupResponseCount ?? 0;
   const progressCount = data ? getCohortProgressCount(data) : 0;
-  const showDistribution = data ? canShowScoreDistribution(groupSize, data.scoreBuckets) : false;
+  const hasChanges =
+    isReturningVisit && data != null && hasReturningVisitChanges(previousSnapshot ?? null, data);
 
-  const schoolCountry = formatCountryLabel(profile?.schoolCountry, locale);
+  const scoreBreakdown = useMemo(() => {
+    if (!profile || profile.scholarshipTrack !== 'nawa_director') return null;
+    return getScoreBreakdown(
+      profile.averageGrade,
+      profile.maximumGrade,
+      profile.polishSchoolLevel ?? 'none',
+    );
+  }, [profile]);
+
+  const allocation = useMemo(() => {
+    if (!data || !profile) return null;
+    return buildAllocationSection(data, profile);
+  }, [data, profile]);
+
+  const availableSections = useMemo(() => {
+    const sections = new Set<DashboardSectionId>();
+    if (!data || !profile || !scoreBreakdown || userScore == null) return sections;
+
+    sections.add('result_hero');
+
+    if (hasChanges) sections.add('what_changed');
+
+    if (
+      state.status === 'success' &&
+      canShowScoreDistribution(groupSize, data.scoreBuckets)
+    ) {
+      sections.add('distribution_detailed');
+    }
+
+    if (
+      hasChanges &&
+      data.reportedMeritOutcomes &&
+      data.reportedMeritOutcomes.positiveCount + data.reportedMeritOutcomes.negativeCount > 0
+    ) {
+      sections.add('reported_merit_outcomes');
+    }
+
+    if (isReturningVisit && data.groupProgress) sections.add('group_progress');
+
+    if (allocation?.showEstimate || allocation?.unavailableExplanation) {
+      sections.add('allocation');
+    }
+
+    return sections;
+  }, [
+    allocation?.showEstimate,
+    allocation?.unavailableExplanation,
+    data,
+    groupSize,
+    hasChanges,
+    isReturningVisit,
+    profile,
+    scoreBreakdown,
+    state.status,
+    userScore,
+  ]);
+
+  const sectionOrder = useMemo(
+    () =>
+      getDashboardSectionOrder(
+        { isReturningVisit, hasChanges },
+        availableSections,
+      ),
+    [availableSections, hasChanges, isReturningVisit],
+  );
+
+  const heroVariant = useMemo(() => {
+    if (!data) return 'small_country' as const;
+    return usesSmallCountryHero(state, data, groupSize) ? 'small_country' : 'detailed';
+  }, [data, groupSize, state]);
+
+  useEffect(() => {
+    if (!data || !profile || state.status === 'loading') return;
+
+    const maybeTrack = (eventName: Parameters<typeof trackProductEvent>[0]) => {
+      if (trackedEvents.current.has(eventName)) return;
+      trackedEvents.current.add(eventName);
+      void trackProductEvent(eventName);
+    };
+
+    if (scoreBreakdown) maybeTrack('score_viewed');
+
+    if (availableSections.has('result_hero')) {
+      maybeTrack('position_or_fallback_viewed');
+    }
+
+    if (isReturningVisit) maybeTrack('dashboard_revisit');
+  }, [availableSections, data, isReturningVisit, profile, scoreBreakdown, state.status]);
 
   if (state.status === 'unavailable') {
     return (
@@ -142,171 +339,89 @@ export function StatisticsPanel({ state, profile, userScore, previousSnapshot }:
     );
   }
 
-  if (!data || !profile) return null;
+  if (!data || !profile || !scoreBreakdown || userScore == null) return null;
 
-  if (state.status === 'suppressed') {
-    return (
-      <section aria-labelledby={titleId} className="space-y-2" role="region">
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-          {t.stats.heroLabel}
-        </p>
-        <h2 id={titleId} className="text-2xl font-semibold leading-tight tracking-tight">
-          {t.stats.suppressedTitle}
-        </h2>
-        <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">
-          {t.stats.suppressedCurrent(String(progressCount))} ·{' '}
-          {t.stats.suppressedRemaining(String(Math.max(0, MIN_DETAILED_COHORT - progressCount)))}
-        </p>
-        <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.unofficialNote}</p>
-      </section>
-    );
-  }
-
-  const percentileValue =
-    data.lowerScorePercentage != null && groupSize >= MIN_DETAILED_COHORT
-      ? formatPercentileValue(data.lowerScorePercentage, groupSize)
-      : null;
-  const medianBadge = medianBandLabel(t, data.lowerScorePercentage);
-  const medianContext = heroMedianContext(t, data.lowerScorePercentage, groupSize);
-  const reliabilityShort = reliabilityShortLabel(t, groupSize);
-  const reliabilityLevel = getReliabilityLevel(groupSize);
-  const trackLabel = t.choices.scholarshipTrack[profile.scholarshipTrack];
-  const heroTitle =
-    percentileValue != null
-      ? t.stats.heroHeadline(String(percentileValue))
-      : heroVerdict(t, data.lowerScorePercentage, groupSize);
+  const historicalRecords = buildHistoricalRecords(profile.rankingCountry);
+  const countryCount = data.sameCountryCount ?? progressCount;
+  const showTerminalMeritNegative = profile.currentStatus === 'merit_review_negative';
+  const showTerminalScholarship = profile.currentStatus === 'scholarship_awarded';
 
   return (
-    <section aria-labelledby={titleId} className="space-y-0" role="region">
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <h2 id={titleId} className="text-2xl font-bold leading-tight tracking-tight text-[var(--text-primary)]">
-            {heroTitle}
-          </h2>
-          {medianContext ? (
-            <p className="text-sm leading-snug text-[var(--text-secondary)]">{medianContext}</p>
-          ) : null}
-        </div>
+    <section className="space-y-3" aria-label={t.stats.heroLabel}>
+      {showTerminalMeritNegative ? <MeritNegativeOutcomeCard /> : null}
 
-        <div className="flex flex-wrap gap-2">
-          {medianBadge ? <span className="stat-badge stat-badge--accent">{medianBadge}</span> : null}
-          <span className="stat-badge stat-badge--reliability">{t.stats.reliabilityBadgeWithLevel(reliabilityShort)}</span>
-        </div>
-
-        <WeeklyActivityBlock previous={previousSnapshot ?? null} current={data} />
-      </div>
-
-      {showDistribution && userScore != null ? (
-        <ScoreDensityStrip
-          buckets={data.scoreBuckets!}
-          track={profile.scholarshipTrack}
-          userScore={userScore}
-          medianScore={data.medianScore}
-          groupSize={groupSize}
-        />
+      {showTerminalScholarship ? (
+        <ScholarshipAwardedCard statusChangedAt={profile.statusChangedAt} />
       ) : null}
 
-      <PositionHistoryList history={data.history} />
+      {sectionOrder.map((sectionId) => {
+        switch (sectionId) {
+          case 'result_hero':
+            return (
+              <ResultHeroCard
+                key={sectionId}
+                variant={heroVariant}
+                total={scoreBreakdown.total}
+                gradesScore={scoreBreakdown.gradesScore}
+                polishSchoolBonus={scoreBreakdown.polishSchoolBonus}
+                rankingCountry={profile.rankingCountry}
+                userScore={userScore}
+                data={heroVariant === 'detailed' ? data : undefined}
+                track={profile.scholarshipTrack}
+                countryCount={countryCount}
+                trackWideMedian={data.trackWideMedian}
+              />
+            );
+          case 'distribution_detailed':
+            return data.scoreBuckets ? (
+              <DistributionDetailsSection
+                key={sectionId}
+                buckets={data.scoreBuckets}
+                track={profile.scholarshipTrack}
+                userScore={userScore}
+                medianScore={data.medianScore}
+                groupSize={groupSize}
+              />
+            ) : null;
+          case 'what_changed':
+            return <WhatChangedCard key={sectionId} previous={previousSnapshot ?? null} current={data} />;
+          case 'reported_merit_outcomes':
+            return data.reportedMeritOutcomes ? (
+              <ReportedMeritOutcomesCard key={sectionId} stats={data.reportedMeritOutcomes} />
+            ) : null;
+          case 'group_progress':
+            return data.groupProgress ? (
+              <ProgressInGroupCard key={sectionId} progress={data.groupProgress} />
+            ) : null;
+          case 'allocation':
+            if (allocation?.showEstimate && allocation.countryEstimate) {
+              return (
+                <div key={sectionId} className="space-y-3">
+                  <AllocationEstimateCard
+                    estimate={allocation.countryEstimate}
+                    groupEstimate={allocation.groupEstimate}
+                  />
+                  <HistoricalAllocationContext records={historicalRecords} rankingCountry={profile.rankingCountry} />
+                </div>
+              );
+            }
+            if (allocation?.unavailableExplanation) {
+              return (
+                <AllocationUnavailableNotice
+                  key={sectionId}
+                  explanation={allocation.unavailableExplanation}
+                />
+              );
+            }
+            return null;
+          default:
+            return null;
+        }
+      })}
 
-      <hr className="section-divider" />
+      {state.status === 'success' ? <PositionHistoryList history={data.history} /> : null}
 
-      <button
-        type="button"
-        className="disclosure-row"
-        aria-expanded={showWhy}
-        onClick={() => setShowWhy((value) => !value)}
-      >
-        <span className="min-w-0">
-          <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-            {t.stats.cohortCompareLabel}
-          </span>
-          {!showWhy ? (
-            <dl className="cohort-grid cohort-grid--stacked">
-              <div className="cohort-grid__full">
-                <dt>{t.stats.cohortFieldTrack}</dt>
-                <dd>{trackLabel}</dd>
-              </div>
-              <div>
-                <dt>{t.stats.cohortFieldCountry}</dt>
-                <dd>{schoolCountry ?? t.stats.noValue}</dd>
-              </div>
-              <div>
-                <dt>{t.stats.cohortFieldSize}</dt>
-                <dd>{t.stats.cohortResponses(String(groupSize))}</dd>
-              </div>
-              <div className="cohort-grid__full">
-                <dt>{t.stats.cohortFieldRoute}</dt>
-                <dd>{t.choices.studyRoute[profile.studyRoute]}</dd>
-              </div>
-            </dl>
-          ) : (
-            <span className="mt-2 block text-sm leading-6 text-[var(--tg-theme-subtitle-text-color)]">
-              {t.stats.cohortWhyBody}
-            </span>
-          )}
-        </span>
-        <span className="disclosure-row__chevron">
-          <ChevronIcon />
-        </span>
-      </button>
-
-      <div className="disclosure-slot">
-        <button
-          type="button"
-          className="disclosure-row disclosure-row--slot"
-          aria-expanded={showDetails}
-          onClick={() => setShowDetails((value) => !value)}
-        >
-          <span className="disclosure-row__label">{t.stats.reliabilityWhyLabel(reliabilityShort)}</span>
-          <span className="disclosure-row__chevron">
-            <ChevronIcon />
-          </span>
-        </button>
-      </div>
-
-      {getTelegramWebApp()?.isTelegram && data.lowerScorePercentage != null ? (
-        <div className="mt-3">
-          <button
-            type="button"
-            className="w-full rounded-2xl border border-[var(--section-divider-color)] px-4 py-2.5 text-sm font-medium text-[var(--tg-theme-button-color)]"
-            onClick={() => {
-              const initData = getTelegramWebApp()?.initData;
-              if (!initData) return;
-              const url = `${window.location.origin}/api/share-card?initData=${encodeURIComponent(initData)}`;
-              getTelegramWebApp()?.shareToStory(url, {
-                text: heroTitle,
-              });
-            }}
-          >
-            {t.stats.shareToStory}
-          </button>
-          <p className="mt-1 text-xs text-[var(--tg-theme-subtitle-text-color)]">{t.stats.shareToStoryPremiumNote}</p>
-        </div>
-      ) : null}
-
-      {showDetails ? (
-        <div className="reliability-details">
-          <p className="reliability-details__summary">{reliabilityHint(t, groupSize)}</p>
-
-          {userScore != null ? (
-            <ScorePositionChart userScore={userScore} medianScore={data.medianScore} variant="compact" />
-          ) : null}
-
-          <ul className="reliability-details__factors">
-            <li>{t.stats.reliabilityFactorSize(String(groupSize))}</li>
-            <li>{t.stats.reliabilityFactorQuality(String(groupSize))}</li>
-            <li>{t.stats.reliabilityFactorStability}</li>
-          </ul>
-
-          {reliabilityLevel !== 'high' ? (
-            <p className="reliability-details__threshold">
-              {t.stats.reliabilityThreshold(String(QUALITATIVE_COHORT_MAX + 1))}
-            </p>
-          ) : null}
-
-          <p className="reliability-details__disclaimer">{t.stats.disclaimerShort}</p>
-        </div>
-      ) : null}
+      <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">{t.stats.disclaimerShort}</p>
     </section>
   );
 }

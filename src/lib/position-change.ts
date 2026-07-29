@@ -64,3 +64,24 @@ export function hasGrowthActivity(
       Math.round(growth.percentileThen) !== Math.round(growth.percentileNow))
   );
 }
+
+export function hasReturningVisitChanges(
+  previous: StatsSnapshot | null,
+  current: StatisticsResult,
+): boolean {
+  if (!previous) return false;
+
+  if (hasGrowthActivity(current.growth7d)) return true;
+  if (previous.groupResponseCount !== current.groupResponseCount) return true;
+  if (hasPositionChanged(previous, current)) return true;
+
+  if (
+    previous.medianScore != null &&
+    current.medianScore != null &&
+    Math.abs(current.medianScore - previous.medianScore) >= MEDIAN_STABLE_THRESHOLD
+  ) {
+    return true;
+  }
+
+  return false;
+}

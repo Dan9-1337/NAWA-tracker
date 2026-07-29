@@ -5,15 +5,10 @@ export type StatusPhaseId = (typeof statusPhaseOrder)[number];
 
 const statusPhaseByStatus: Record<ApplicationStatus, StatusPhaseId> = {
   submitted: 'submitted',
-  formal_review_in_progress: 'formal',
-  correction_requested: 'formal',
-  formal_review_completed: 'formal',
-  merit_review_in_progress: 'merit',
+  formal_review_positive: 'formal',
   merit_review_positive: 'merit',
   merit_review_negative: 'merit',
-  awaiting_decision: 'outcome',
   scholarship_awarded: 'outcome',
-  scholarship_not_awarded: 'outcome',
 };
 
 export function getStatusPhase(status: ApplicationStatus): StatusPhaseId {
@@ -21,13 +16,23 @@ export function getStatusPhase(status: ApplicationStatus): StatusPhaseId {
 }
 
 export function getStatusPhaseIndex(status: ApplicationStatus): number {
+  if (status === 'merit_review_negative') {
+    return statusPhaseOrder.indexOf('merit');
+  }
   return statusPhaseOrder.indexOf(getStatusPhase(status));
+}
+
+export function getVisibleStatusPhases(status: ApplicationStatus): readonly StatusPhaseId[] {
+  if (status === 'merit_review_negative') {
+    return ['submitted', 'formal', 'merit'];
+  }
+  return statusPhaseOrder;
 }
 
 export type StatusOutcomeTone = 'neutral' | 'positive' | 'negative';
 
 export function getStatusOutcomeTone(status: ApplicationStatus): StatusOutcomeTone {
   if (status === 'scholarship_awarded' || status === 'merit_review_positive') return 'positive';
-  if (status === 'scholarship_not_awarded' || status === 'merit_review_negative') return 'negative';
+  if (status === 'merit_review_negative') return 'negative';
   return 'neutral';
 }

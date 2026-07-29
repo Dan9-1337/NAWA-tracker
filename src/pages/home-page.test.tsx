@@ -52,9 +52,17 @@ function statistics(totalValidResponses: number): StatisticsResult {
     groupResponseCount: 0,
     medianScore: null,
     lowerScorePercentage: null,
+    rankPosition: null,
+    rankTotal: null,
+    gradesScore: null,
+    polishSchoolBonus: null,
+    trackWideMedian: null,
     scoreBuckets: null,
+    cohortScores: null,
     growth7d: null,
     history: [],
+    groupProgress: null,
+    reportedMeritOutcomes: null,
   };
 }
 
@@ -127,7 +135,7 @@ describe('HomePage', () => {
     await screen.findByText('Gdzie jesteś wśród kandydatów NAWA?');
     await clickMain(user);
 
-    for (let step = 0; step < 4; step += 1) {
+    for (let step = 0; step < 3; step += 1) {
       if (screen.queryByLabelText('Uczelnia docelowa')) {
         await pickSearchableOption(user, 'Uczelnia docelowa', /Uniwersytet Warszawski/i);
       }

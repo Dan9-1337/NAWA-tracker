@@ -1,4 +1,5 @@
 import type { PolishSchoolLevel } from './contracts';
+import type { ScoreBreakdown } from './contracts';
 
 export const nawaOrientationThreshold = 60;
 
@@ -18,7 +19,25 @@ export function calculateNawaOrientationScore(
   maximumGrade: number,
   polishSchoolLevel: PolishSchoolLevel,
 ): number {
-  if (maximumGrade <= 0) return 0;
-  const raw = (averageGrade / maximumGrade) * 90 + polishSchoolBonus[polishSchoolLevel];
-  return Math.round(raw * 100) / 100;
+  return getScoreBreakdown(averageGrade, maximumGrade, polishSchoolLevel).total;
+}
+
+export function getScoreBreakdown(
+  averageGrade: number,
+  maximumGrade: number,
+  polishSchoolLevel: PolishSchoolLevel,
+): ScoreBreakdown {
+  if (maximumGrade <= 0) {
+    return { gradesScore: 0, polishSchoolBonus: 0, total: 0 };
+  }
+
+  const gradesScore = Math.round((averageGrade / maximumGrade) * 90 * 100) / 100;
+  const bonus = polishSchoolBonus[polishSchoolLevel];
+  const total = Math.round((gradesScore + bonus) * 100) / 100;
+
+  return {
+    gradesScore,
+    polishSchoolBonus: bonus,
+    total,
+  };
 }

@@ -33,10 +33,10 @@
   --text-helper: #6c6f85;
   --text-disabled: #8c8fa1;
   --section-divider-color: rgba(76, 79, 105, 0.14);
-  --app-aurora-top: color-mix(in srgb, #ffffff 55%, transparent);
-  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 16%, transparent);
-  --app-aurora-depth: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 70%, transparent);
-  --app-grain-opacity: 0.045;
+  --app-aurora-top: color-mix(in srgb, var(--color-median) 20%, transparent);
+  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 26%, transparent);
+  --app-aurora-depth: color-mix(in srgb, #7287fd 18%, transparent);
+  --app-grain-opacity: 0.06;
   --tg-viewport-stable-height: 100dvh;
   --tg-content-safe-area-inset-top: 0px;
   --tg-content-safe-area-inset-right: 0px;
@@ -707,10 +707,10 @@ body {
 
 [data-theme='light'] {
   --section-divider-color: rgba(76, 79, 105, 0.14);
-  --app-aurora-top: color-mix(in srgb, #ffffff 55%, transparent);
-  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 16%, transparent);
-  --app-aurora-depth: color-mix(in srgb, var(--tg-theme-secondary-bg-color) 70%, transparent);
-  --app-grain-opacity: 0.045;
+  --app-aurora-top: color-mix(in srgb, var(--color-median) 20%, transparent);
+  --app-aurora-accent: color-mix(in srgb, var(--color-accent) 26%, transparent);
+  --app-aurora-depth: color-mix(in srgb, #7287fd 18%, transparent);
+  --app-grain-opacity: 0.06;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -68,6 +68,14 @@ function refineSharedQuestionnaireRules(
     });
   }
 
+  if (value.scholarshipTrack !== 'nawa_director') {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['scholarshipTrack'],
+      message: 'only nawa_director is available in the current release',
+    });
+  }
+
   if (value.scholarshipTrack === 'health_minister' && value.studyRoute !== 'preparatory_course') {
     ctx.addIssue({
       code: 'custom',
@@ -145,6 +153,26 @@ export const statisticsHistoryPointSchema = z
     recordedAt: z.string().min(1),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
     groupResponseCount: z.number().int().nonnegative(),
+    rankPosition: z.number().int().positive().nullable(),
+  })
+  .strict();
+
+export const groupProgressSchema = z
+  .object({
+    submitted: z.number().int().nonnegative(),
+    formalPositive: z.number().int().nonnegative(),
+    meritPositive: z.number().int().nonnegative(),
+    scholarshipAwarded: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const reportedMeritOutcomeStatsSchema = z
+  .object({
+    positiveCount: z.number().int().nonnegative(),
+    negativeCount: z.number().int().nonnegative(),
+    lowestReportedPositiveScore: z.number().min(0).nullable(),
+    highestReportedNegativeScore: z.number().min(0).nullable(),
+    boundaryState: z.enum(['insufficient_data', 'positive_only', 'interval', 'overlapping_results']),
   })
   .strict();
 
@@ -157,9 +185,17 @@ export const statisticsResultSchema = z
     groupResponseCount: z.number().int().nonnegative(),
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
+    rankPosition: z.number().int().positive().nullable(),
+    rankTotal: z.number().int().positive().nullable(),
+    gradesScore: z.number().min(0).nullable(),
+    polishSchoolBonus: z.number().min(0).nullable(),
+    trackWideMedian: z.number().min(0).nullable(),
     scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
+    cohortScores: z.array(z.number().min(0)).nullable(),
     growth7d: statisticsGrowth7dSchema.nullable(),
     history: z.array(statisticsHistoryPointSchema),
+    groupProgress: groupProgressSchema.nullable(),
+    reportedMeritOutcomes: reportedMeritOutcomeStatsSchema.nullable(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -265,3 +301,25 @@ export const apiErrorSchema = z
       .strict(),
   })
   .strict() satisfies z.ZodType<ApiError>;
+
+export const productEventNames = [
+  'wizard_started',
+  'wizard_completed',
+  'score_viewed',
+  'position_or_fallback_viewed',
+  'status_updated',
+  'dashboard_revisit',
+] as const;
+
+export const productEventRequestSchema = z
+  .object({
+    eventName: z.enum(productEventNames),
+    payload: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict();
+
+export const productEventResultSchema = z
+  .object({
+    logged: z.literal(true),
+  })
+  .strict();

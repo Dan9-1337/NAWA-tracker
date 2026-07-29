@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
 import type { HttpResponse } from '../api/_lib/http.js';
-import { createShareCardHandler } from '../api/share-card.js';
+import { createProductEventsHandler } from '../api/product-events.js';
 import { createResponsesHandler } from '../api/responses.js';
 import { createCurrentResponseHandler } from '../api/responses/current.js';
 import { createStatisticsHandler } from '../api/statistics.js';
@@ -27,7 +27,7 @@ const routes: Array<{ method: string; path: string; handler: ApiHandler }> = [
   { method: 'POST', path: '/api/responses/current', handler: createCurrentResponseHandler() },
   { method: 'POST', path: '/api/statistics', handler: createStatisticsHandler() },
   { method: 'POST', path: '/api/statistics/public', handler: createPublicStatisticsHandler() },
-  { method: 'GET', path: '/api/share-card', handler: createShareCardHandler() as ApiHandler },
+  { method: 'POST', path: '/api/product-events', handler: createProductEventsHandler() },
 ];
 
 function adaptResponse(res: ServerResponse): HttpResponse & { send(body: Buffer): void } {

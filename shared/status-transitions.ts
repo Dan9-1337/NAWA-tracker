@@ -1,3 +1,4 @@
+import { isAllowedStatusTransition } from './status-options';
 import { type ApplicationStatus, terminalApplicationStatuses } from './contracts';
 
 const terminalStatusSet = new Set<ApplicationStatus>(terminalApplicationStatuses);
@@ -5,8 +6,6 @@ const terminalStatusSet = new Set<ApplicationStatus>(terminalApplicationStatuses
 export function isTerminalApplicationStatus(status: ApplicationStatus): boolean {
   return terminalStatusSet.has(status);
 }
-
-const opposingAwardStatuses = new Set(['scholarship_awarded', 'scholarship_not_awarded']);
 
 /**
  * Non-blocking hint used only for client-side warnings. The Supabase update
@@ -22,7 +21,7 @@ export function isSuspiciousStatusTransition(
     return true;
   }
 
-  if (opposingAwardStatuses.has(previousStatus) && opposingAwardStatuses.has(nextStatus)) {
+  if (!isAllowedStatusTransition(previousStatus, nextStatus)) {
     return true;
   }
 

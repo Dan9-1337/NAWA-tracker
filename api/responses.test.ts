@@ -36,9 +36,17 @@ const statistics = {
   groupResponseCount: 10,
   medianScore: 82.5,
   lowerScorePercentage: 40,
+  rankPosition: 6,
+  rankTotal: 10,
+  gradesScore: 76.5,
+  polishSchoolBonus: 0,
+  trackWideMedian: 80,
   scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
+  cohortScores: [95, 90, 88, 85],
   growth7d: null,
   history: [],
+  groupProgress: null,
+  reportedMeritOutcomes: null,
 } as const;
 
 type Request = {

@@ -172,27 +172,17 @@ export const pl = {
     },
     currentStatus: {
       submitted: 'Wniosek złożony',
-      formal_review_in_progress: 'Ocena formalna w toku',
-      correction_requested: 'Wniosek do korekty',
-      formal_review_completed: 'Ocena formalna ukończona',
-      merit_review_in_progress: 'Ocena merytoryczna w toku',
+      formal_review_positive: 'Ocena formalna pozytywna',
       merit_review_positive: 'Ocena merytoryczna pozytywna',
       merit_review_negative: 'Ocena merytoryczna negatywna',
-      awaiting_decision: 'Oczekiwanie na decyzję',
       scholarship_awarded: 'Stypendium przyznane',
-      scholarship_not_awarded: 'Stypendium nieprzyznane',
     },
     currentStatusHint: {
       submitted: 'Wysłałeś/aś wniosek — trafił do kolejki NAWA.',
-      formal_review_in_progress: 'NAWA sprawdza kompletność i poprawność Twoich dokumentów.',
-      correction_requested: 'NAWA wykryła problem z dokumentami — szczegóły znajdziesz w mailu.',
-      formal_review_completed: 'Dokumenty przeszły weryfikację formalną i trafiły do oceny merytorycznej.',
-      merit_review_in_progress: 'Komisja ocenia Twoje osiągnięcia i kwalifikacje.',
+      formal_review_positive: 'Dokumenty przeszły weryfikację formalną i trafiły do oceny merytorycznej.',
       merit_review_positive: 'Komisja rekomendowała Cię do stypendium, ostateczna decyzja jeszcze nie zapadła.',
       merit_review_negative: 'Komisja nie rekomendowała Cię do stypendium.',
-      awaiting_decision: 'Wszystkie oceny zakończone — czekasz na oficjalną decyzję.',
       scholarship_awarded: 'Gratulacje — otrzymałeś/aś stypendium.',
-      scholarship_not_awarded: 'W tej edycji nie przyznano Ci stypendium.',
     },
   },
   universities: {
@@ -325,8 +315,6 @@ export const pl = {
     loading: 'Wczytywanie statystyk…',
     error: 'Nie udało się wczytać statystyk. Sprawdź połączenie i spróbuj ponownie.',
     unavailable: 'Statystyki pojawią się po zapisaniu ankiety.',
-    shareToStory: 'Udostępnij w Story',
-    shareToStoryPremiumNote: 'Link w Story jest dostępny dla użytkowników Telegram Premium.',
     historyTitle: 'Historia',
     historyTrend: (from: string, to: string) => `${from}% → ${to}%`,
     historyDelta: (delta: string) => `${delta} p.p.`,
@@ -425,5 +413,123 @@ export const pl = {
     dark: 'Ciemny',
     switchToDark: 'Włącz ciemny motyw',
     switchToLight: 'Włącz jasny motyw',
+  },
+  dataSource: {
+    official: 'Oficjalne',
+    historical: 'Dane historyczne',
+    estimate: 'Szacunek NAWAmeter',
+    reported: 'Zgłoszone przez użytkowników',
+  },
+  scholarshipEntry: {
+    cta: 'Sprawdź swoją pozycję',
+    comingSoon: 'Wkrótce',
+  },
+  dashboard: {
+    score: {
+      title: 'Wynik orientacyjny',
+      unit: 'pkt',
+      gradesLabel: 'Punkty za oceny',
+      polishSchoolLabel: 'Szkoła polska / polonijna',
+      disclaimer: 'To nie jest oficjalny wynik NAWA ani prognoza przyznania stypendium.',
+    },
+    position: {
+      title: 'Miejsce w grupie',
+      rankLine: (rank: string, total: string, country: string) =>
+        country ? `${rank}. z ${total} · ${country}` : `${rank}. z ${total}`,
+      percentileLine: (percentage: string) => `Wyżej niż ${percentage}% grupy`,
+      sampleDisclaimer:
+        'To miejsce wśród użytkowników NAWAmeter, a nie oficjalny ranking wszystkich kandydatów.',
+    },
+    hero: {
+      title: 'Twój wynik',
+      densityHint: 'Rozkład wyników w Twojej grupie',
+      aboveMedianBy: (delta: string) => `Powyżej mediany o ${delta} pkt`,
+      belowMedianBy: (delta: string) => `Poniżej mediany o ${delta} pkt`,
+      aroundMedian: 'Blisko mediany grupy',
+      cohortMeta: (count: string, median: string) => `${count} w wyborce · mediana ${median} pkt`,
+      cohortSizeOnly: (count: string) => `${count} w wyborce`,
+      expandDistribution: 'Pokaż pełny rozkład wyników',
+      collapseDistribution: 'Ukryj pełny rozkład wyników',
+    },
+    smallCountry: {
+      title: 'Mała grupa w Twoim kraju',
+      participants: (country: string, count: string) =>
+        `W ${country} jest obecnie ${count} uczestników.`,
+      remaining: (count: string) => `Do rankingu krajowego potrzeba jeszcze ${count} ankiet.`,
+      benchmarkTitle: 'Porównanie z całą ścieżką',
+      aboveTrackMedian: 'Twój wynik jest powyżej mediany całej ścieżki Dyrektora NAWA.',
+      aroundTrackMedian: 'Twój wynik jest blisko mediany całej ścieżki Dyrektora NAWA.',
+      belowTrackMedian: 'Twój wynik jest poniżej mediany całej ścieżki Dyrektora NAWA.',
+      benchmarkMedian: (median: string) => `Mediana całej ścieżki: ${median} pkt`,
+      benchmarkDisclaimer:
+        'Ogólny benchmark — nie jest to oficjalny ranking konkursu.',
+    },
+    whatChanged: {
+      title: 'Od ostatniej wizyty',
+      position: 'Percentyl',
+      groupSize: 'Wielkość grupy',
+      median: 'Mediana',
+      countryShare: 'Udział kraju',
+      seatRange: 'Zakres miejsc',
+      valueChange: (from: string, to: string) => `${from} → ${to}`,
+      seatRangeValue: (min: string, max: string) => `${min}–${max}`,
+    },
+    groupProgress: {
+      title: 'Postęp w grupie',
+      submitted: 'Złożone',
+      formalPositive: 'Pozytywna formalna',
+      meritPositive: 'Pozytywna merytoryczna',
+      scholarshipAwarded: 'Stypendium przyznane',
+      disclaimer: 'Statusy zgłaszane przez użytkowników NAWAmeter.',
+    },
+    meritOutcomes: {
+      title: 'Zgłoszone wyniki oceny merytorycznej',
+      insufficient: (count: string) => `Zgłoszono ${count} wyników — za mało, by wskazać granicę.`,
+      positiveOnly: (count: string, score: string) =>
+        `${count} uczestników zgłosiło pozytywną ocenę merytoryczną. Najniższy zgłoszony wynik: ${score} pkt`,
+      interval: (lowestPositive: string, highestNegative: string) =>
+        `Zgłoszony przedział: pozytywne od ${lowestPositive} pkt, negatywne do ${highestNegative} pkt`,
+      overlapping: 'Zgłoszone wyniki pozytywne i negatywne się pokrywają — nie wskazujemy jednej granicy.',
+      counts: (positive: string, negative: string) =>
+        `Pozytywne: ${positive} · Negatywne: ${negative}`,
+      disclaimer: 'To nie jest potwierdzony wynik konkursu NAWA.',
+    },
+    terminal: {
+      meritNegativeTitle: 'Ocena merytoryczna zakończona negatywnie',
+      meritNegativeBody: 'Twoje dane pozostają w anonimowej statystyce konkursu.',
+      meritNegativeNote: 'Nie pokazujemy dalszych prognoz szans na stypendium.',
+      scholarshipAwardedTitle: 'Stypendium przyznane',
+      awardedDate: 'Data przyznania',
+      finalScore: 'Końcowy wynik',
+      finalRank: 'Miejsce w wyborce',
+      rankValue: (rank: string, total: string) => `${rank}. z ${total}`,
+      scholarshipAwardedNote: 'To miejsce w wyborce NAWAmeter w momencie przyznania stypendium.',
+    },
+    allocation: {
+      title: 'Orientacyjne rozłożenie miejsc',
+      titleGroup: 'Jak mogą rozdzielać się miejsca',
+      countryShare: 'Udział kraju w wyborce',
+      seatRange: 'Orientacyjny zakres miejsc',
+      seatRangeValue: (min: string, max: string) => `${min}–${max}`,
+      yourRank: 'Twoje miejsce w wyborce',
+      rankInSample: (rank: string, total: string) => `${rank} z ${total}`,
+      basisSubmittedProxy:
+        'Na razie używamy wszystkich ankiet oznaczonych jako złożone.',
+      basisFormalPositive:
+        'Rachunek opiera się na użytkownikach, którzy zgłosili pozytywną ocenę formalną.',
+      disclaimer:
+        'To orientacyjny scenariusz, a nie oficjalny limit NAWA ani prognoza przyznania stypendium.',
+      unavailableTitle: 'Rozłożenie miejsc nie jest jeszcze liczone',
+      historicalTitle: 'Dane historyczne',
+      historicalCountryLine: (country: string, year: string, seats: string) =>
+        `${country}, ${year}: ${seats} miejsc`,
+      historicalGroupLine: (year: string, seats: string) =>
+        `Grupa krajów, ${year}: ${seats} miejsc łącznie`,
+      historicalProgrammeLine: (year: string, seats: string) =>
+        `Program łącznie, ${year}: ${seats} miejsc`,
+      historicalGroupMembers: (members: string) => `Skład grupy: ${members}`,
+      historicalDisclaimer:
+        'Historyczne limity nie przewidują składu grup ani limitów na 2026 rok.',
+    },
   },
 } as const;

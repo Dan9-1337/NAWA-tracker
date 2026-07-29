@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import type {
-  ApplicationStatus,
   PolishSchoolLevel,
   ResponseFormInput,
-  ScholarshipTrack,
   StudyRoute,
 } from '../../shared/contracts';
-import { scholarshipTracks } from '../../shared/contracts';
 import { defaultMaximumGradeForSchoolCountry, isCountryCode } from '../../shared/countries';
-import { getCreateWizardStatusOptions, getInitialStatusOptions } from '../../shared/status-options';
 import type { Messages } from '../i18n/types';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { isUniversityAllowedForTrack } from '../../shared/universities';
@@ -17,15 +13,13 @@ import { FormSection } from '../components/FormSection';
 import { GradeInputs } from '../components/GradeInputs';
 import { NawaScorePreview } from '../components/NawaScorePreview';
 import { RadioGroup } from '../components/RadioOption';
-import { StatusDateInput } from '../components/StatusDateInput';
-import { StatusTimeline } from '../components/StatusTimeline';
 import { UniversitySelect } from '../components/UniversitySelect';
 import { WizardProgressBar } from '../components/WizardProgressBar';
 import { useI18n } from '../i18n/context';
 import { type WizardDraft } from '../lib/draft';
 import { getTelegramWebApp } from '../lib/telegram';
 
-const steps = ['application', 'education', 'grades', 'status'] as const;
+const steps = ['application', 'education', 'grades'] as const;
 export type WizardStep = (typeof steps)[number];
 
 export const WIZARD_STEPS: readonly WizardStep[] = steps;
@@ -34,11 +28,13 @@ type ResponseWizardStepsProps = {
   draft: WizardDraft;
   onDraftChange: (draft: WizardDraft) => void;
   stepIndex: number;
-  /** Use shortened status list on first-time create wizard. */
-  createFlow?: boolean;
 };
 
-export function ResponseWizardSteps({ draft, onDraftChange, stepIndex, createFlow = false }: ResponseWizardStepsProps) {
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: ResponseWizardStepsProps) {
   const { t } = useI18n();
   const [resetWarning, setResetWarning] = useState<string | null>(null);
   const currentStep = steps[Math.min(stepIndex, steps.length - 1)];
@@ -91,7 +87,6 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex, createFlo
     : null;
   const maximumGradeLocked = countryDefaultScale != null;
   const countryScaleHint = maximumGradeLocked ? t.wizard.maximumGradeLockedHint : null;
-  const statusOptions = createFlow ? getCreateWizardStatusOptions() : getInitialStatusOptions();
   const stepBlocked = !canAdvanceWizardStep(currentStep, draft);
   const stepHint = stepBlocked ? wizardStepValidationHint(currentStep, draft, t) : null;
   const universityError =
@@ -138,21 +133,7 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex, createFlo
             <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
               {t.wizard.scholarshipTrackLockedToNawa}
             </p>
-          ) : (
-            <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">{t.wizard.scholarshipTrackQuestion}</legend>
-              <RadioGroup
-                name="scholarshipTrack"
-                value={draft.scholarshipTrack}
-                options={scholarshipTracks.map((track) => ({
-                  value: track,
-                  label: t.choices.scholarshipTrack[track],
-                }))}
-                onChange={(value) => updateDraft({ scholarshipTrack: value as ScholarshipTrack })}
-                onSelect={hapticSelect}
-              />
-            </fieldset>
-          )}
+          ) : null}
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">{t.labels.studyRoute}</legend>
             <RadioGroup
@@ -231,22 +212,6 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex, createFlo
         </FormSection>
       ) : null}
 
-      {currentStep === 'status' ? (
-        <FormSection title={t.wizard.statusTitle} description={t.wizard.statusDescription}>
-          <StatusTimeline
-            savedStatus={draft.currentStatus}
-            selectedStatus={draft.currentStatus}
-            options={statusOptions}
-            onChange={(currentStatus: ApplicationStatus) => updateDraft({ currentStatus })}
-            showHints
-          />
-          <StatusDateInput
-            value={draft.statusChangedAt}
-            onChange={(statusChangedAt) => updateDraft({ statusChangedAt })}
-          />
-        </FormSection>
-      ) : null}
-
       {stepHint ? (
         <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status">
           {stepHint}
@@ -274,8 +239,6 @@ export function wizardStepValidationHint(step: WizardStep, draft: WizardDraft, t
         return t.wizard.averageAboveMaximum;
       }
       return t.wizard.validation.gradesRequired;
-    case 'status':
-      return t.wizard.validation.statusDateRequired;
     default:
       return null;
   }
@@ -294,8 +257,8 @@ export function toResponseInput(draft: WizardDraft): ResponseFormInput {
     averageGrade: draft.averageGrade ?? 0,
     maximumGrade: draft.maximumGrade ?? 0,
     ...(draft.scholarshipTrack === 'nawa_director' ? { polishSchoolLevel: draft.polishSchoolLevel } : {}),
-    currentStatus: draft.currentStatus,
-    statusChangedAt: draft.statusChangedAt,
+    currentStatus: 'submitted',
+    statusChangedAt: todayIsoDate(),
   };
 }
 
@@ -317,8 +280,6 @@ export function canAdvanceWizardStep(step: WizardStep, draft: WizardDraft): bool
         draft.averageGrade >= 0 &&
         draft.averageGrade <= draft.maximumGrade
       );
-    case 'status':
-      return draft.statusChangedAt.trim().length > 0;
     default:
       return true;
   }

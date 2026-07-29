@@ -21,9 +21,17 @@ export function makeStatisticsResult(overrides: Partial<StatisticsResult> & Pick
     groupResponseCount: 0,
     medianScore: null,
     lowerScorePercentage: null,
+    rankPosition: null,
+    rankTotal: null,
+    gradesScore: null,
+    polishSchoolBonus: null,
+    trackWideMedian: null,
     scoreBuckets: null,
+    cohortScores: null,
     growth7d: null,
     history: [],
+    groupProgress: null,
+    reportedMeritOutcomes: null,
   };
 
   return { ...base, ...overrides };

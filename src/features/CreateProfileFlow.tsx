@@ -3,6 +3,7 @@ import type { ResponseFormInput } from '../../shared/contracts';
 import { responseFormInputSchema } from '../../shared/validation';
 import { HowItWorksPanel } from '../components/HowItWorksPanel';
 import { ResultPreviewCard } from '../components/ResultPreviewCard';
+import { ScholarshipEntryCards } from '../components/ScholarshipEntryCards';
 import { ChevronIcon } from '../components/icons';
 import { useI18n } from '../i18n/context';
 import {
@@ -13,6 +14,7 @@ import {
   type WizardDraft,
   type WizardScreen,
 } from '../lib/draft';
+import { trackProductEvent } from '../lib/product-events';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { ConfirmSummary } from './ConfirmSummary';
@@ -115,10 +117,19 @@ export function CreateProfileFlow({
 
   const startWizard = useCallback(() => {
     getTelegramWebApp()?.haptic.selection();
+    void trackProductEvent('wizard_started');
     setShowResumePrompt(false);
     setScreen('wizard');
     setStepIndex(0);
   }, []);
+
+  const startWizardForTrack = useCallback(
+    (track: ResponseFormInput['scholarshipTrack']) => {
+      setDraft((current) => ({ ...current, scholarshipTrack: track }));
+      startWizard();
+    },
+    [startWizard],
+  );
 
   const continueResume = useCallback(() => {
     const session = restoredSession.current;
@@ -148,6 +159,7 @@ export function CreateProfileFlow({
     setPending(true);
     try {
       await onSubmit(result.data);
+      void trackProductEvent('wizard_completed');
       clearWizardDraft();
       setDirty(false);
       getTelegramWebApp()?.haptic.notification('success');
@@ -237,11 +249,12 @@ export function CreateProfileFlow({
             <p className="text-sm leading-6 text-[var(--text-secondary)]">{t.start.subtitle}</p>
           </div>
           <ResultPreviewCard />
+          <ScholarshipEntryCards onSelect={startWizardForTrack} disabled={disabled} />
           <button
             ref={startCtaRef}
             type="button"
             disabled={disabled}
-            className="min-h-12 w-full rounded-2xl bg-[var(--tg-theme-button-color)] px-4 py-3 text-sm font-semibold text-[var(--tg-theme-button-text-color)] disabled:opacity-50"
+            className="sr-only"
             onClick={startWizard}
           >
             {t.start.cta}
@@ -307,5 +320,5 @@ export function CreateProfileFlow({
     );
   }
 
-  return <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} createFlow />;
+  return <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />;
 }

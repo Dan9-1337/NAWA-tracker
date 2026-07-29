@@ -1,41 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { getCreateWizardStatusOptions, getInitialStatusOptions, getSequentialStatusOptions } from './status-options';
+import { getSequentialStatusOptions } from './status-options';
 
 describe('getSequentialStatusOptions', () => {
-  it('from submitted only offers nearby formal-review steps', () => {
-    expect(getSequentialStatusOptions('submitted')).toEqual([
-      'submitted',
-      'formal_review_in_progress',
-      'correction_requested',
-      'formal_review_completed',
+  it('from submitted offers formal review positive', () => {
+    expect(getSequentialStatusOptions('submitted')).toEqual(['submitted', 'formal_review_positive']);
+  });
+
+  it('from formal review offers merit outcomes', () => {
+    expect(getSequentialStatusOptions('formal_review_positive')).toEqual([
+      'formal_review_positive',
+      'merit_review_positive',
+      'merit_review_negative',
     ]);
   });
 
-  it('does not offer award outcomes until awaiting_decision', () => {
-    expect(getSequentialStatusOptions('submitted')).not.toContain('scholarship_awarded');
-    expect(getSequentialStatusOptions('formal_review_completed')).not.toContain('scholarship_awarded');
-    expect(getSequentialStatusOptions('awaiting_decision')).toEqual([
-      'awaiting_decision',
+  it('from positive merit offers scholarship awarded', () => {
+    expect(getSequentialStatusOptions('merit_review_positive')).toEqual([
+      'merit_review_positive',
       'scholarship_awarded',
-      'scholarship_not_awarded',
     ]);
   });
 
   it('keeps terminal statuses as current-only', () => {
     expect(getSequentialStatusOptions('scholarship_awarded')).toEqual(['scholarship_awarded']);
     expect(getSequentialStatusOptions('merit_review_negative')).toEqual(['merit_review_negative']);
-  });
-});
-
-describe('getCreateWizardStatusOptions', () => {
-  it('matches early pipeline options from submitted', () => {
-    expect(getCreateWizardStatusOptions()).toEqual(getSequentialStatusOptions('submitted'));
-  });
-});
-
-describe('getInitialStatusOptions', () => {
-  it('exposes the full status list for first declaration', () => {
-    expect(getInitialStatusOptions().length).toBe(10);
-    expect(getInitialStatusOptions()[0]).toBe('submitted');
   });
 });

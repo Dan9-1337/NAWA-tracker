@@ -9,23 +9,20 @@ export type PolishSchoolLevel = (typeof polishSchoolLevels)[number];
 
 export const applicationStatuses = [
   'submitted',
-  'formal_review_in_progress',
-  'correction_requested',
-  'formal_review_completed',
-  'merit_review_in_progress',
+  'formal_review_positive',
   'merit_review_positive',
   'merit_review_negative',
-  'awaiting_decision',
   'scholarship_awarded',
-  'scholarship_not_awarded',
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
-export const terminalApplicationStatuses = [
-  'merit_review_negative',
-  'scholarship_awarded',
-  'scholarship_not_awarded',
-] as const;
+export const terminalApplicationStatuses = ['merit_review_negative', 'scholarship_awarded'] as const;
+
+export type ScoreBreakdown = {
+  gradesScore: number;
+  polishSchoolBonus: number;
+  total: number;
+};
 
 export type ResponseFormInput = {
   hasPolishCitizenship: boolean;
@@ -55,6 +52,22 @@ export type StatisticsHistoryPoint = {
   recordedAt: string;
   lowerScorePercentage: number | null;
   groupResponseCount: number;
+  rankPosition: number | null;
+};
+
+export type GroupProgress = {
+  submitted: number;
+  formalPositive: number;
+  meritPositive: number;
+  scholarshipAwarded: number;
+};
+
+export type ReportedMeritOutcomeStats = {
+  positiveCount: number;
+  negativeCount: number;
+  lowestReportedPositiveScore: number | null;
+  highestReportedNegativeScore: number | null;
+  boundaryState: 'insufficient_data' | 'positive_only' | 'interval' | 'overlapping_results';
 };
 
 export type StatisticsResult = {
@@ -65,10 +78,18 @@ export type StatisticsResult = {
   groupResponseCount: number;
   medianScore: number | null;
   lowerScorePercentage: number | null;
+  rankPosition: number | null;
+  rankTotal: number | null;
+  gradesScore: number | null;
+  polishSchoolBonus: number | null;
+  trackWideMedian: number | null;
   /** Sixteen fine bucket counts for the cohort score distribution (low → high). */
   scoreBuckets: number[] | null;
+  cohortScores: number[] | null;
   growth7d: StatisticsGrowth7d | null;
   history: StatisticsHistoryPoint[];
+  groupProgress: GroupProgress | null;
+  reportedMeritOutcomes: ReportedMeritOutcomeStats | null;
 };
 
 export type PublicStatisticsRequest = {

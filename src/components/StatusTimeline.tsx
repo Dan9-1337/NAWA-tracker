@@ -1,4 +1,5 @@
 import type { ApplicationStatus } from '../../shared/contracts';
+import { applicationStatuses } from '../../shared/contracts';
 import { useI18n } from '../i18n/context';
 import { getTelegramWebApp } from '../lib/telegram';
 
@@ -10,28 +11,16 @@ type StatusTimelineProps = {
   showHints?: boolean;
 };
 
+function optionsIndex(status: ApplicationStatus): number {
+  return applicationStatuses.indexOf(status);
+}
+
 function markerFor(status: ApplicationStatus, savedStatus: ApplicationStatus, selectedStatus: ApplicationStatus): string {
   if (selectedStatus === status) return '●';
   const savedIndex = optionsIndex(savedStatus);
   const statusIndex = optionsIndex(status);
   if (statusIndex < savedIndex) return '✓';
   return '○';
-}
-
-function optionsIndex(status: ApplicationStatus): number {
-  const order: ApplicationStatus[] = [
-    'submitted',
-    'formal_review_in_progress',
-    'correction_requested',
-    'formal_review_completed',
-    'merit_review_in_progress',
-    'merit_review_positive',
-    'merit_review_negative',
-    'awaiting_decision',
-    'scholarship_awarded',
-    'scholarship_not_awarded',
-  ];
-  return order.indexOf(status);
 }
 
 export function StatusTimeline({

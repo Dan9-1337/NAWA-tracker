@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import type { StatisticsResult } from '../../../shared/contracts';
-import { fineBuckets } from '../../../shared/test-statistics';
+import { fineBuckets, makeStatisticsResult } from '../../../shared/test-statistics';
 import { StatisticsPanel } from './StatisticsPanel';
 
 const profile = {
@@ -32,37 +31,15 @@ describe('StatisticsPanel', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać statystyk');
   });
 
-  it('renders suppressed state as progress toward threshold', () => {
-    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} profile={profile} />);
+  it('renders suppressed state with small-country hero', () => {
+    render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} profile={profile} userScore={81} />);
 
-    expect(screen.getByText('Czekamy na więcej ankiet')).toBeInTheDocument();
-    expect(screen.getByText(/W Twojej grupie: 9/)).toBeInTheDocument();
-    expect(screen.getByText(/brakuje 1/)).toBeInTheDocument();
+    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByText(/Do rankingu krajowego potrzeba jeszcze 1 ankiet/)).toBeInTheDocument();
+    expect(screen.queryByText('Pokaż pełny rozkład wyników')).not.toBeInTheDocument();
   });
 
-  it('uses band hero for small cohorts and keeps exact percentile in details', async () => {
-    const user = userEvent.setup();
-    render(
-      <StatisticsPanel
-        state={{ status: 'success', data: qualitativeStatistics }}
-        profile={profile}
-        userScore={75}
-      />,
-    );
-
-    expect(screen.getByRole('heading', { name: 'Wyżej niż 95% grupy' })).toBeInTheDocument();
-    expect(screen.getByText('Powyżej mediany')).toBeInTheDocument();
-    expect(screen.getByText('Wiarygodność: średnia')).toBeInTheDocument();
-    expect(screen.getByText('Ukraina')).toBeInTheDocument();
-    expect(screen.queryByText('W górnej części grupy')).not.toBeInTheDocument();
-    expect(screen.getByText('Rozkład wyników')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /Dlaczego wiarygodność jest średnia/ }));
-    expect(screen.getByText('Wyniki punktowe')).toBeInTheDocument();
-    expect(screen.queryByText('Liczba odpowiedzi w grupie')).not.toBeInTheDocument();
-  });
-
-  it('shows percentile headline for detailed cohorts', () => {
+  it('renders result hero with rank and expandable distribution for detailed cohorts', () => {
     render(
       <StatisticsPanel
         state={{ status: 'success', data: detailedStatistics }}
@@ -71,13 +48,14 @@ describe('StatisticsPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Wyżej niż 65% grupy' })).toBeInTheDocument();
-    expect(screen.getByText(/powyżej mediany wśród 30 ankiet/)).toBeInTheDocument();
-    expect(screen.getByText('Powyżej mediany')).toBeInTheDocument();
-    expect(screen.queryByText('65%')).not.toBeInTheDocument();
+    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByText(/6\. z 30/)).toBeInTheDocument();
+    expect(screen.getByText('Wyżej niż 65% grupy')).toBeInTheDocument();
+    expect(screen.getByText('Pokaż pełny rozkład wyników')).toBeInTheDocument();
+    expect(screen.getByText('Rozkład wyników w Twojej grupie')).toBeInTheDocument();
   });
 
-  it('combines weekly growth into one activity block', () => {
+  it('shows what changed before hero on returning visits with changes', () => {
     render(
       <StatisticsPanel
         state={{ status: 'success', data: statisticsWithGrowth }}
@@ -94,50 +72,56 @@ describe('StatisticsPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Ostatnie 7 dni')).toBeInTheDocument();
-    expect(screen.getByText('+14 ankiet w Twojej grupie · +25 łącznie')).toBeInTheDocument();
-    expect(screen.getByText('Twoja pozycja nie zmieniła się istotnie')).toBeInTheDocument();
-    expect(screen.queryByText('Bez zmian od ostatniej wizyty')).not.toBeInTheDocument();
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
+    expect(headings.indexOf('Od ostatniej wizyty')).toBeLessThan(headings.indexOf('Twój wynik'));
+  });
+
+  it('renders terminal merit-negative screen with result hero', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: detailedStatistics }}
+        profile={{ ...profile, currentStatus: 'merit_review_negative' }}
+        userScore={83.8}
+      />,
+    );
+
+    expect(screen.getByText('Ocena merytoryczna zakończona negatywnie')).toBeInTheDocument();
+    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+  });
+
+  it('renders scholarship awarded outcome before result hero', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: detailedStatistics }}
+        profile={{ ...profile, currentStatus: 'scholarship_awarded' }}
+        userScore={83.8}
+      />,
+    );
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
+    expect(headings.indexOf('Stypendium przyznane')).toBeLessThan(headings.indexOf('Twój wynik'));
   });
 });
 
-const suppressedStatistics: StatisticsResult = {
+const suppressedStatistics = makeStatisticsResult({
   detailsAvailable: false,
   totalValidResponses: 9,
   sameTrackCount: 9,
-  sameCountryCount: null,
-  groupResponseCount: 0,
-  medianScore: null,
-  lowerScorePercentage: null,
-  scoreBuckets: null,
-  growth7d: null,
-  history: [],
-};
-
-const qualitativeStatistics: StatisticsResult = {
-  detailsAvailable: true,
-  totalValidResponses: 20,
-  sameTrackCount: 18,
-  sameCountryCount: 12,
-  groupResponseCount: 19,
-  medianScore: 82.5,
-  lowerScorePercentage: 95,
-  scoreBuckets: fineBuckets([1, 2, 4, 7, 5]),
-  growth7d: null,
-  history: [],
-};
+  groupResponseCount: 9,
+});
 
 const detailedStatistics: StatisticsResult = {
-  detailsAvailable: true,
+  ...makeStatisticsResult({ detailsAvailable: true }),
   totalValidResponses: 40,
   sameTrackCount: 36,
   sameCountryCount: 30,
   groupResponseCount: 30,
   medianScore: 82.5,
   lowerScorePercentage: 65,
+  rankPosition: 6,
+  rankTotal: 30,
+  trackWideMedian: 80,
   scoreBuckets: fineBuckets([2, 4, 8, 10, 6]),
-  growth7d: null,
-  history: [],
 };
 
 const statisticsWithGrowth: StatisticsResult = {

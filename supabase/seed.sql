@@ -47,10 +47,8 @@ select
   round(grade / 5 * 90 + case (g % 3) when 1 then 5 when 2 then 10 else 0 end, 2),
   case
     when g <= 3 then 'scholarship_awarded'
-    when g <= 5 then 'scholarship_not_awarded'
-    when g <= 7 then 'awaiting_decision'
-    when g <= 9 then 'merit_review_in_progress'
-    when g <= 11 then 'correction_requested'
+    when g <= 7 then 'merit_review_positive'
+    when g <= 9 then 'formal_review_positive'
     else 'submitted'
   end,
   case
@@ -98,7 +96,7 @@ insert into public.responses (
   82,
   'secondary',
   83.8,
-  'merit_review_in_progress',
+  'formal_review_positive',
   date '2026-06-10',
   false
 );
@@ -123,7 +121,7 @@ insert into public.responses (
 ) values
   (
     900000013, 'seed_ua_nawa_13', false, 'UA', 'UA', 'nawa_director', 'direct_studies', 'science-071',
-    4.5, 5, 90, 'primary', 86, 'formal_review_completed', date '2026-06-02', false
+    4.5, 5, 90, 'primary', 86, 'formal_review_positive', date '2026-06-02', false
   ),
   (
     900000101, 'seed_by_nawa_01', false, 'BY', 'BY', 'nawa_director', 'direct_studies', 'science-048',
@@ -131,19 +129,19 @@ insert into public.responses (
   ),
   (
     900000102, 'seed_lt_nawa_01', false, 'Litwa', 'Litwa', 'nawa_director', 'direct_studies', 'science-097',
-    4.2, 5, 84, 'secondary', 85.6, 'awaiting_decision', date '2026-06-04', false
+    4.2, 5, 84, 'secondary', 85.6, 'merit_review_positive', date '2026-06-04', false
   ),
   (
     900000103, 'seed_kz_nawa_01', false, 'KZ', 'KZ', 'nawa_director', 'preparatory_course', null,
-    3.8, 5, 76, 'none', 68.4, 'formal_review_in_progress', date '2026-06-05', false
+    3.8, 5, 76, 'none', 68.4, 'submitted', date '2026-06-05', false
   ),
   (
     900000104, 'seed_ge_nawa_01', false, 'Gruzja', 'Gruzja', 'nawa_director', 'direct_studies', 'science-049',
-    3.55, 5, 71, 'primary', 36.95, 'correction_requested', date '2026-06-06', false
+    3.55, 5, 71, 'primary', 36.95, 'submitted', date '2026-06-06', false
   ),
   (
     900000201, 'seed_ua_health_01', false, 'UA', 'UA', 'health_minister', 'preparatory_course', null,
-    4.55, 5, 91, null, null, 'awaiting_decision', date '2026-06-07', false
+    4.55, 5, 91, null, null, 'merit_review_positive', date '2026-06-07', false
   ),
   (
     900000202, 'seed_by_health_02', false, 'BY', 'BY', 'health_minister', 'preparatory_course', null,
@@ -151,11 +149,11 @@ insert into public.responses (
   ),
   (
     900000203, 'seed_kz_health_03', false, 'KZ', 'KZ', 'health_minister', 'preparatory_course', null,
-    4.2, 5, 84, null, null, 'merit_review_in_progress', date '2026-06-08', false
+    4.2, 5, 84, null, null, 'formal_review_positive', date '2026-06-08', false
   ),
   (
     900000204, 'seed_ge_health_04', false, 'Gruzja', 'Gruzja', 'health_minister', 'preparatory_course', null,
-    3.75, 5, 75, null, null, 'scholarship_not_awarded', date '2026-05-10', false
+    3.75, 5, 75, null, null, 'merit_review_positive', date '2026-05-10', false
   ),
   (
     900000301, 'seed_ua_culture_01', false, 'UA', 'UA', 'culture_minister', 'direct_studies', 'culture-013',
@@ -163,11 +161,11 @@ insert into public.responses (
   ),
   (
     900000302, 'seed_by_culture_02', false, 'BY', 'BY', 'culture_minister', 'direct_studies', 'culture-009',
-    4.4, 5, 88, null, null, 'awaiting_decision', date '2026-06-10', false
+    4.4, 5, 88, null, null, 'merit_review_positive', date '2026-06-10', false
   ),
   (
     900000303, 'seed_lt_culture_03', false, 'Litwa', 'Litwa', 'culture_minister', 'preparatory_course', null,
-    4.1, 5, 82, null, null, 'correction_requested', date '2026-06-11', false
+    4.1, 5, 82, null, null, 'submitted', date '2026-06-11', false
   ),
   (
     900000999, 'seed_suspicious_01', false, 'UA', 'UA', 'nawa_director', 'direct_studies', 'science-096',

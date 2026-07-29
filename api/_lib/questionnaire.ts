@@ -48,9 +48,17 @@ const statisticsFields = [
   'groupResponseCount',
   'medianScore',
   'lowerScorePercentage',
+  'rankPosition',
+  'rankTotal',
+  'gradesScore',
+  'polishSchoolBonus',
+  'trackWideMedian',
   'scoreBuckets',
+  'cohortScores',
   'growth7d',
   'history',
+  'groupProgress',
+  'reportedMeritOutcomes',
 ] as const;
 
 function projectFields(value: unknown, fields: readonly string[]): Record<string, unknown> {

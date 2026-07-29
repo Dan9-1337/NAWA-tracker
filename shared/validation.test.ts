@@ -28,15 +28,10 @@ describe('responseFormInputSchema', () => {
     expect(polishSchoolLevels).toEqual(['none', 'primary', 'secondary']);
     expect(applicationStatuses).toEqual([
       'submitted',
-      'formal_review_in_progress',
-      'correction_requested',
-      'formal_review_completed',
-      'merit_review_in_progress',
+      'formal_review_positive',
       'merit_review_positive',
       'merit_review_negative',
-      'awaiting_decision',
       'scholarship_awarded',
-      'scholarship_not_awarded',
     ]);
   });
 
@@ -83,7 +78,7 @@ describe('responseFormInputSchema', () => {
         studyRoute: 'preparatory_course',
         targetUniversity: undefined,
       }),
-    ).not.toThrow();
+    ).toThrow();
     expect(() =>
       responseFormInputSchema.parse({
         ...validForm,

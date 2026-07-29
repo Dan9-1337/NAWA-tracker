@@ -2,8 +2,8 @@ import type { ApplicationStatus } from '../../shared/contracts';
 import { useI18n } from '../i18n/context';
 import {
   getStatusOutcomeTone,
-  getStatusPhaseIndex,
-  statusPhaseOrder,
+  getStatusPhase,
+  getVisibleStatusPhases,
   type StatusPhaseId,
 } from '../lib/status-phases';
 
@@ -17,18 +17,19 @@ function phaseLabel(t: ReturnType<typeof useI18n>['t'], phase: StatusPhaseId): s
 
 export function StatusProgressStepper({ status }: StatusProgressStepperProps) {
   const { t } = useI18n();
-  const activeIndex = getStatusPhaseIndex(status);
+  const visiblePhases = getVisibleStatusPhases(status);
+  const activePhase = getStatusPhase(status);
+  const activeIndex = visiblePhases.indexOf(activePhase);
   const tone = getStatusOutcomeTone(status);
-  const activePhase = statusPhaseOrder[activeIndex];
   const stepperLabel = phaseLabel(t, activePhase);
 
   return (
     <div className="status-stepper" role="img" aria-label={stepperLabel}>
       <div className="status-stepper__track">
-        {statusPhaseOrder.map((phase, index) => {
+        {visiblePhases.map((phase, index) => {
           const completed = index < activeIndex;
           const active = index === activeIndex;
-          const isLast = index === statusPhaseOrder.length - 1;
+          const isLast = index === visiblePhases.length - 1;
 
           let nodeClass = 'status-stepper__node';
           if (completed) nodeClass += ' status-stepper__node--completed';
@@ -49,7 +50,7 @@ export function StatusProgressStepper({ status }: StatusProgressStepperProps) {
         })}
       </div>
       <div className="status-stepper__labels">
-        {statusPhaseOrder.map((phase, index) => (
+        {visiblePhases.map((phase, index) => (
           <span
             key={phase}
             className={`status-stepper__label${

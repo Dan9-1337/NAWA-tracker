@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { getSequentialStatusOptions } from '../../shared/status-options';
-import { isSuspiciousStatusTransition } from '../../shared/status-transitions';
+import { isSuspiciousStatusTransition, isTerminalApplicationStatus } from '../../shared/status-transitions';
 import { StatusDateInput } from '../components/StatusDateInput';
 import { ChevronIcon } from '../components/icons';
 import { StatusProgressStepper } from '../components/StatusProgressStepper';
@@ -17,6 +17,7 @@ import {
   snapshotFromStatistics,
   type StatsSnapshot,
 } from '../lib/stats-snapshot';
+import { trackProductEvent } from '../lib/product-events';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { ConfirmSummary } from './ConfirmSummary';
@@ -102,6 +103,7 @@ export function ProfileDashboard({
   const statusOptions = useMemo(() => getSequentialStatusOptions(current.currentStatus), [current.currentStatus]);
   const suspicious = isSuspiciousStatusTransition(current.currentStatus, currentStatus);
   const statusDirty = currentStatus !== current.currentStatus || statusChangedAt !== current.statusChangedAt;
+  const terminalStatus = isTerminalApplicationStatus(current.currentStatus);
 
   const userOrientationScore = useMemo(() => {
     if (current.scholarshipTrack !== 'nawa_director') return null;
@@ -121,6 +123,7 @@ export function ProfileDashboard({
     setPending(true);
     try {
       await onSubmit({ ...current, currentStatus, statusChangedAt });
+      void trackProductEvent('status_updated', { from: current.currentStatus, to: currentStatus });
       setStatusConfirmation(true);
       setStatusEditorOpen(false);
       getTelegramWebApp()?.haptic.notification('success');
@@ -290,7 +293,7 @@ export function ProfileDashboard({
         previousSnapshot={previousSnapshot}
       />
 
-      {!statusEditorOpen ? (
+      {!terminalStatus && !statusEditorOpen ? (
         <button
           type="button"
           className="mt-6 flex w-full flex-col gap-0 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
@@ -312,7 +315,7 @@ export function ProfileDashboard({
           </span>
           <StatusProgressStepper status={currentStatus} />
         </button>
-      ) : (
+      ) : !terminalStatus ? (
         <section className="mt-6 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
@@ -352,7 +355,7 @@ export function ProfileDashboard({
             </p>
           ) : null}
         </section>
-      )}
+      ) : null}
 
       {actionError ? (
         <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">

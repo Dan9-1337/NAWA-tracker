@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { StatisticsResult } from '../../shared/contracts';
-import { explainPositionChange, hasGrowthActivity, hasPositionChanged } from './position-change';
+import { fineBuckets, makeStatisticsResult } from '../../shared/test-statistics';
+import { explainPositionChange, hasGrowthActivity, hasPositionChanged, hasReturningVisitChanges } from './position-change';
 import type { StatsSnapshot } from './stats-snapshot';
 
 const previous: StatsSnapshot = {
@@ -12,7 +12,7 @@ const previous: StatsSnapshot = {
   fetchedAt: '2026-07-20T10:00:00.000Z',
 };
 
-const current: StatisticsResult = {
+const current = makeStatisticsResult({
   detailsAvailable: true,
   totalValidResponses: 30,
   sameTrackCount: 28,
@@ -21,9 +21,7 @@ const current: StatisticsResult = {
   medianScore: 78.1,
   lowerScorePercentage: 65,
   scoreBuckets: Array.from({ length: 16 }, () => 1),
-  growth7d: null,
-  history: [],
-};
+});
 
 describe('position-change', () => {
   it('detects percentile movement', () => {
@@ -48,5 +46,18 @@ describe('position-change', () => {
         percentileNow: 65,
       }),
     ).toBe(true);
+  });
+
+  it('detects returning visit changes from snapshot deltas', () => {
+    expect(hasReturningVisitChanges(previous, current)).toBe(true);
+    expect(
+      hasReturningVisitChanges(previous, {
+        ...current,
+        groupResponseCount: previous.groupResponseCount,
+        lowerScorePercentage: previous.lowerScorePercentage,
+        medianScore: previous.medianScore,
+        growth7d: null,
+      }),
+    ).toBe(false);
   });
 });

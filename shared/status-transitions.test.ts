@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { isBackdatedStatusChange, isSuspiciousStatusTransition, isTerminalApplicationStatus } from './status-transitions';
 
 describe('isTerminalApplicationStatus', () => {
-  it('flags exactly the three terminal statuses', () => {
+  it('flags exactly the two terminal statuses', () => {
     expect(isTerminalApplicationStatus('merit_review_negative')).toBe(true);
     expect(isTerminalApplicationStatus('scholarship_awarded')).toBe(true);
-    expect(isTerminalApplicationStatus('scholarship_not_awarded')).toBe(true);
     expect(isTerminalApplicationStatus('submitted')).toBe(false);
-    expect(isTerminalApplicationStatus('awaiting_decision')).toBe(false);
+    expect(isTerminalApplicationStatus('merit_review_positive')).toBe(false);
   });
 });
 
@@ -17,19 +16,20 @@ describe('isSuspiciousStatusTransition', () => {
   });
 
   it('flags leaving a terminal status for a non-terminal one', () => {
-    expect(isSuspiciousStatusTransition('scholarship_awarded', 'awaiting_decision')).toBe(true);
-    expect(isSuspiciousStatusTransition('merit_review_negative', 'merit_review_in_progress')).toBe(true);
+    expect(isSuspiciousStatusTransition('scholarship_awarded', 'merit_review_positive')).toBe(true);
+    expect(isSuspiciousStatusTransition('merit_review_negative', 'formal_review_positive')).toBe(true);
   });
 
-  it('flags a direct flip between opposing award outcomes', () => {
-    expect(isSuspiciousStatusTransition('scholarship_awarded', 'scholarship_not_awarded')).toBe(true);
-    expect(isSuspiciousStatusTransition('scholarship_not_awarded', 'scholarship_awarded')).toBe(true);
+  it('flags skipping allowed steps', () => {
+    expect(isSuspiciousStatusTransition('submitted', 'scholarship_awarded')).toBe(true);
+    expect(isSuspiciousStatusTransition('submitted', 'merit_review_negative')).toBe(true);
   });
 
   it('does not flag ordinary forward progress', () => {
-    expect(isSuspiciousStatusTransition('submitted', 'formal_review_in_progress')).toBe(false);
-    expect(isSuspiciousStatusTransition('merit_review_in_progress', 'merit_review_positive')).toBe(false);
-    expect(isSuspiciousStatusTransition('merit_review_in_progress', 'merit_review_negative')).toBe(false);
+    expect(isSuspiciousStatusTransition('submitted', 'formal_review_positive')).toBe(false);
+    expect(isSuspiciousStatusTransition('formal_review_positive', 'merit_review_positive')).toBe(false);
+    expect(isSuspiciousStatusTransition('formal_review_positive', 'merit_review_negative')).toBe(false);
+    expect(isSuspiciousStatusTransition('merit_review_positive', 'scholarship_awarded')).toBe(false);
   });
 });
 
