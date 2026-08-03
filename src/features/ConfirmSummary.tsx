@@ -60,11 +60,7 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         ) : null}
       </SummaryBlock>
 
-      <SummaryBlock
-        title={t.labels.currentStatus}
-        onEdit={onEditSection ? () => onEditSection('status') : undefined}
-        editLabel={t.wizard.editSection}
-      >
+      <SummaryBlock title={t.labels.currentStatus}>
         <Row label={t.labels.currentStatus} value={t.choices.currentStatus[draft.currentStatus]} />
         <Row label={t.labels.statusChangedAt} value={formatDate(draft.statusChangedAt, locale)} />
       </SummaryBlock>
@@ -81,7 +77,7 @@ function SummaryBlock({
   title: string;
   children: ReactNode;
   onEdit?: () => void;
-  editLabel: string;
+  editLabel?: string;
 }) {
   return (
     <div className="space-y-3">

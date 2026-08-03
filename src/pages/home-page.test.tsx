@@ -87,7 +87,8 @@ async function clickMain(user: ReturnType<typeof userEvent.setup>) {
   const buttons = await screen.findAllByRole('button', {
     name: /Zobacz mój wynik|Dalej|Zapisz odpowiedź/,
   });
-  const button = buttons.find((candidate) => !candidate.disabled) ?? buttons[buttons.length - 1];
+  const button =
+    buttons.find((candidate) => !(candidate as HTMLButtonElement).disabled) ?? buttons[buttons.length - 1];
   await waitFor(() => expect(button).toBeEnabled());
   await user.click(button);
 }

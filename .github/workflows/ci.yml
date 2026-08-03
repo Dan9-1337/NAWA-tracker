@@ -37,6 +37,11 @@ jobs:
       - name: University catalog validation
         run: node scripts/validate-university-catalog.mjs
 
+      - name: Regenerate university seed and check drift
+        run: |
+          node scripts/generate-university-seed.mjs
+          git diff --exit-code -- shared/data/university-alias-seed-2026.json
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -46,5 +51,52 @@ jobs:
       - name: Audit production dependencies
         run: npm run audit:prod
 
-      - name: Check for conflict markers / whitespace errors
-        run: git diff --check
+      - name: Check for conflict markers
+        run: |
+          if git grep -n '^<<<<<<< ' -- . ':!node_modules'; then
+            echo "Conflict markers found in tracked files."
+            exit 1
+          fi
+
+  database:
+    name: Database tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: supabase/postgres:15.8.1.085
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply schema migration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+        run: bash scripts/ci-prepare-database.sh
+
+      - name: Run database tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+        run: npm run test:db

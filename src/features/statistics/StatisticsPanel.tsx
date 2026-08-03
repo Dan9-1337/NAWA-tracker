@@ -176,7 +176,7 @@ function buildAllocationSection(
   if (displayMode === 'country_and_group_estimate') {
     const groupId = getIllustrativeGroupIdForCountry(profile.rankingCountry);
     const groupRecord = groupId ? getHistoricalSeatRecordByGroupId(groupId) : null;
-    if (groupRecord?.groupMembers) {
+    if (groupRecord?.groupMembers && groupId) {
       const groupApplicationCount = Math.max(
         applicationCountInScope,
         Math.round(totalApplicationCount * (groupRecord.groupMembers.length / 20)),

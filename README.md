@@ -99,10 +99,13 @@ Requires an isolated migrated Postgres with the `pgtap` extension. Never target 
 npm test
 node scripts/reconcile-university-aliases.mjs --check
 node scripts/validate-university-catalog.mjs
+node scripts/generate-university-seed.mjs && git diff --exit-code -- shared/data/university-alias-seed-2026.json
 npm run typecheck
 npm run build
 npm run audit:prod
 ```
+
+CI runs the same checks in `.github/workflows/ci.yml`, plus PostgreSQL pgTAP and concurrency tests in a separate job.
 
 After changing university search metadata ([`shared/universities-metadata.ts`](shared/universities-metadata.ts)):
 
