@@ -3,22 +3,20 @@ set -euo pipefail
 
 : "${DATABASE_URL:?DATABASE_URL is required}"
 
-mapfile -t db_parts < <(node -e "
+eval "$(node -e "
 const url = new URL(process.env.DATABASE_URL);
-console.log([
-  url.hostname,
-  url.port || '5432',
-  decodeURIComponent(url.username),
-  decodeURIComponent(url.password),
-  url.pathname.replace(/^\\//, ''),
-].join('\\n'));
-")
-
-PGHOST="${db_parts[0]}"
-PGPORT="${db_parts[1]}"
-PGUSER="${db_parts[2]}"
-PGPASSWORD="${db_parts[3]}"
-PGDATABASE="${db_parts[4]}"
+const quote = (value) => \"'\" + String(value).replace(/'/g, \"'\\\\''\") + \"'\";
+const parts = {
+  PGHOST: url.hostname,
+  PGPORT: url.port || '5432',
+  PGUSER: decodeURIComponent(url.username),
+  PGPASSWORD: decodeURIComponent(url.password),
+  PGDATABASE: url.pathname.replace(/^\\//, ''),
+};
+for (const [key, value] of Object.entries(parts)) {
+  console.log(\`\${key}=\${quote(value)}\`);
+}
+")"
 export PGPASSWORD
 
 echo "Waiting for PostgreSQL at ${PGHOST}:${PGPORT}..."

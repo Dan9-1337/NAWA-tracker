@@ -68,12 +68,10 @@ jobs:
         image: supabase/postgres:15.8.1.085
         env:
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-          POSTGRES_USER: postgres
         ports:
           - 54322:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-cmd "pg_isready -U supabase_admin -d postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -93,10 +91,10 @@ jobs:
 
       - name: Apply schema migration
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          DATABASE_URL: postgresql://supabase_admin:postgres@localhost:54322/postgres
         run: bash scripts/ci-prepare-database.sh
 
       - name: Run database tests
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres
+          DATABASE_URL: postgresql://supabase_admin:postgres@localhost:54322/postgres
         run: npm run test:db
