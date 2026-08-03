@@ -5,7 +5,7 @@ import { getUniversitySearchIndex } from '../../shared/university-search/index';
 import { searchUniversities } from '../../shared/university-search/search';
 import type { SearchResult } from '../../shared/university-search/types';
 import { universitiesForScholarshipTrack } from '../../shared/universities';
-import { trackUniversitySearchEvent } from '../lib/analytics';
+import { trackUniversitySearchEvent } from '../lib/product-events';
 import {
   formatUniversitySearchResult,
   highlightSearchMatch,

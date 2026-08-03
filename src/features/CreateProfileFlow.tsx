@@ -20,12 +20,11 @@ import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { ConfirmSummary } from './ConfirmSummary';
 import {
   canAdvanceWizardStep,
-  getWizardEffectiveSteps,
   ResponseWizardSteps,
   toResponseInput,
-  wizardStepIndex,
   type WizardStep,
 } from './ResponseWizardSteps';
+import { useWizardSteps } from './useWizardSteps';
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -63,7 +62,16 @@ export function CreateProfileFlow({
   const pendingResume = hasRestoredWizardSession(restoredSession.current);
   const [screen, setScreen] = useState<WizardScreen>('start');
   const [draft, setDraft] = useState<WizardDraft>(() => restoredSession.current?.draft ?? initialDraft);
-  const [stepIndex, setStepIndex] = useState(() => restoredSession.current?.stepIndex ?? 0);
+  const {
+    stepIndex,
+    setStepIndex,
+    currentStep,
+    goNext,
+    goBack,
+    jumpToSection,
+    goToLastStep,
+    resetToStart,
+  } = useWizardSteps(restoredSession.current?.stepIndex ?? 0);
   const [pending, setPending] = useState(false);
   const [dirty, setDirty] = useState(() => restoredSession.current != null);
   const [openFaq, setOpenFaq] = useState<'how' | 'what' | null>(null);
@@ -71,9 +79,6 @@ export function CreateProfileFlow({
   const [startCtaInView, setStartCtaInView] = useState(true);
   const startCtaRef = useRef<HTMLButtonElement>(null);
   const inFlight = useRef(false);
-
-  const effectiveSteps = getWizardEffectiveSteps();
-  const currentStep = effectiveSteps[Math.min(stepIndex, effectiveSteps.length - 1)];
 
   useEffect(() => {
     if (screen === 'wizard' || screen === 'confirm') {
@@ -97,31 +102,20 @@ export function CreateProfileFlow({
   }, [screen]);
 
   const goWizardNext = useCallback(() => {
-    if (!canAdvanceWizardStep(currentStep, draft)) return;
-    getTelegramWebApp()?.haptic.impact('light');
-    if (stepIndex >= effectiveSteps.length - 1) {
-      setScreen('confirm');
-      return;
-    }
-    setStepIndex((index) => Math.min(index + 1, effectiveSteps.length - 1));
-  }, [currentStep, draft, effectiveSteps.length, stepIndex]);
+    goNext(draft, () => setScreen('confirm'));
+  }, [draft, goNext]);
 
   const goWizardBack = useCallback(() => {
-    getTelegramWebApp()?.haptic.impact('light');
-    if (stepIndex <= 0) {
-      setScreen('start');
-      return;
-    }
-    setStepIndex((index) => Math.max(index - 1, 0));
-  }, [stepIndex]);
+    goBack(() => setScreen('start'));
+  }, [goBack]);
 
   const startWizard = useCallback(() => {
     getTelegramWebApp()?.haptic.selection();
     void trackProductEvent('wizard_started');
     setShowResumePrompt(false);
     setScreen('wizard');
-    setStepIndex(0);
-  }, []);
+    resetToStart();
+  }, [resetToStart]);
 
   const startWizardForTrack = useCallback(
     (track: ResponseFormInput['scholarshipTrack']) => {
@@ -144,11 +138,11 @@ export function CreateProfileFlow({
   const startOver = useCallback(() => {
     clearWizardDraft();
     setDraft(initialDraft);
-    setStepIndex(0);
-    setShowResumePrompt(false);
+    resetToStart();
+     setShowResumePrompt(false);
     setDirty(false);
     getTelegramWebApp()?.haptic.selection();
-  }, []);
+  }, [resetToStart]);
 
   const handleSubmit = useCallback(async () => {
     if (disabled || inFlight.current) return;
@@ -171,15 +165,18 @@ export function CreateProfileFlow({
     }
   }, [disabled, draft, onSubmit]);
 
-  const jumpToSection = useCallback((section: WizardStep) => {
-    setScreen('wizard');
-    setStepIndex(wizardStepIndex(section));
-  }, []);
+  const jumpToSectionFromConfirm = useCallback(
+    (section: WizardStep) => {
+      setScreen('wizard');
+      jumpToSection(section);
+    },
+    [jumpToSection],
+  );
 
   const backToLastWizardStep = useCallback(() => {
     setScreen('wizard');
-    setStepIndex(effectiveSteps.length - 1);
-  }, [effectiveSteps.length]);
+    goToLastStep();
+  }, [goToLastStep]);
 
   useMiniAppChrome(
     chromeSuspended
@@ -307,7 +304,7 @@ export function CreateProfileFlow({
   if (screen === 'confirm') {
     return (
       <>
-        <ConfirmSummary draft={toResponseInput(draft)} onEditSection={jumpToSection} />
+        <ConfirmSummary draft={toResponseInput(draft)} onEditSection={jumpToSectionFromConfirm} />
         {actionError ? (
           <div role="alert" className="space-y-1">
             <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">

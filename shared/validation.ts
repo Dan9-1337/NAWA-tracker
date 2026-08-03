@@ -309,6 +309,9 @@ export const productEventNames = [
   'position_or_fallback_viewed',
   'status_updated',
   'dashboard_revisit',
+  'university_search_no_results',
+  'university_search_selected',
+  'university_search_abandoned',
 ] as const;
 
 export const productEventRequestSchema = z

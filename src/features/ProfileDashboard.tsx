@@ -23,13 +23,12 @@ import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { ConfirmSummary } from './ConfirmSummary';
 import {
   canAdvanceWizardStep,
-  getWizardEffectiveSteps,
   ResponseWizardSteps,
   toResponseInput,
-  wizardStepIndex,
   type WizardStep,
 } from './ResponseWizardSteps';
 import { StatisticsPanel, type StatisticsState } from './statistics/StatisticsPanel';
+import { useWizardSteps } from './useWizardSteps';
 
 type View = 'dashboard' | 'edit-wizard' | 'edit-confirm';
 
@@ -59,7 +58,14 @@ export function ProfileDashboard({
   const [currentStatus, setCurrentStatus] = useState(current.currentStatus);
   const [statusChangedAt, setStatusChangedAt] = useState(current.statusChangedAt);
   const [editDraft, setEditDraft] = useState<WizardDraft>(() => responseToDraft(current));
-  const [editStepIndex, setEditStepIndex] = useState(0);
+  const {
+    stepIndex: editStepIndex,
+    currentStep: editCurrentStep,
+    goNext: goEditNext,
+    goBack: goEditBack,
+    jumpToSection: jumpToEditStep,
+    resetToStart: resetEditSteps,
+  } = useWizardSteps();
   const [pending, setPending] = useState(false);
   const [statusConfirmation, setStatusConfirmation] = useState(false);
   const [cohortWarning, setCohortWarning] = useState(false);
@@ -114,9 +120,6 @@ export function ProfileDashboard({
     );
   }, [current]);
 
-  const editEffectiveSteps = useMemo(() => getWizardEffectiveSteps(), []);
-  const editCurrentStep = editEffectiveSteps[Math.min(editStepIndex, editEffectiveSteps.length - 1)];
-
   const submitStatus = useCallback(async () => {
     if (disabled || inFlight.current || !statusDirty) return;
     inFlight.current = true;
@@ -160,17 +163,20 @@ export function ProfileDashboard({
     }
   }, [cohortWarning, current, disabled, editDraft, onSubmit]);
 
-  const jumpToEditSection = useCallback((section: WizardStep) => {
-    setView('edit-wizard');
-    setEditStepIndex(wizardStepIndex(section));
-  }, []);
+  const jumpToEditSection = useCallback(
+    (section: WizardStep) => {
+      setView('edit-wizard');
+      jumpToEditStep(section);
+    },
+    [jumpToEditStep],
+  );
 
   const startEdit = useCallback(() => {
     setEditDraft(responseToDraft(current));
-    setEditStepIndex(0);
+    resetEditSteps();
     setCohortWarning(false);
     setView('edit-wizard');
-  }, [current]);
+  }, [current, resetEditSteps]);
 
   useEffect(() => {
     if (editRequestNonce > 0) startEdit();
@@ -200,23 +206,11 @@ export function ProfileDashboard({
               text: t.wizard.next,
               visible: true,
               enabled: !disabled && canAdvanceWizardStep(editCurrentStep, editDraft),
-              onClick: () => {
-                if (editStepIndex >= editEffectiveSteps.length - 1) {
-                  setView('edit-confirm');
-                  return;
-                }
-                setEditStepIndex((index) => Math.min(index + 1, editEffectiveSteps.length - 1));
-              },
+              onClick: () => goEditNext(editDraft, () => setView('edit-confirm')),
             },
             back: {
               visible: true,
-              onClick: () => {
-                if (editStepIndex <= 0) {
-                  setView('dashboard');
-                  return;
-                }
-                setEditStepIndex((index) => Math.max(index - 1, 0));
-              },
+              onClick: () => goEditBack(() => setView('dashboard')),
             },
             closingConfirmation: true,
           }

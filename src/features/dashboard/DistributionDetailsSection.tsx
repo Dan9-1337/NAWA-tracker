@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ScholarshipTrack } from '../../../shared/contracts';
-import { ScoreDensityStrip } from '../../components/ScoreDensityStrip';
+import { DensityStrip } from '../../components/DensityStrip';
 import { ChevronIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 
@@ -40,7 +40,8 @@ export function DistributionDetailsSection({
 
       {expanded ? (
         <div className="mt-3">
-          <ScoreDensityStrip
+          <DensityStrip
+            variant="detailed"
             buckets={buckets}
             track={track}
             userScore={userScore}

@@ -1,7 +1,7 @@
 import type { ScholarshipTrack, StatisticsResult } from '../../../shared/contracts';
 import { CountryFlag } from '../../components/CountryFlag';
 import { DataSourceBadge } from '../../components/DataSourceBadge';
-import { MiniDensityStrip } from '../../components/MiniDensityStrip';
+import { DensityStrip } from '../../components/DensityStrip';
 import { useI18n } from '../../i18n/context';
 import { formatCountryLabel } from '../../lib/country-label';
 import { formatScore } from '../../lib/format';
@@ -150,7 +150,8 @@ export function ResultHeroCard({
           ) : null}
 
           {showStrip && data.scoreBuckets ? (
-            <MiniDensityStrip
+            <DensityStrip
+              variant="mini"
               buckets={data.scoreBuckets}
               track={track}
               userScore={userScore}

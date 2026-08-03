@@ -2,8 +2,6 @@ import { nawaOrientationThreshold } from '../../shared/nawa-score';
 import type { ScholarshipTrack } from '../../shared/contracts';
 
 export const FINE_BUCKET_COUNT = 16;
-/** @deprecated Use FINE_BUCKET_COUNT — storage always uses sixteen fine buckets. */
-export const SCORE_BUCKET_COUNT = FINE_BUCKET_COUNT;
 
 export type ScoreBucketRange = {
   from: number;
