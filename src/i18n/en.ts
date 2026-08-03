@@ -150,7 +150,7 @@ export const en = {
     targetUniversity: 'Target university',
     averageGrade: 'Average grade',
     maximumGrade: 'Maximum grade on your scale',
-    polishSchoolLevel: 'Polish, Polish-diaspora, or Polish-language school',
+    polishSchoolLevel: 'Did you graduate from a Polish school?',
     currentStatus: 'Application status',
     statusChangedAt: 'Date of last status change',
     averageGradePlaceholder: 'e.g. 4.82',
@@ -189,6 +189,13 @@ export const en = {
   universities: {
     placeholder: 'Select a university',
     searchPlaceholder: 'Search university…',
+    emptyTitle: 'No results for this search.',
+    emptyTipAbbreviation: 'Try an abbreviation (e.g. PWr, UWr, AGH).',
+    emptyTipCity: 'Try a city name (e.g. Wrocław, Kraków).',
+    emptyTipFormerName: 'Try a former university name.',
+    emptySupportHint: 'If your university is not listed, contact support.',
+    formerNameHint: (name: string) => `formerly ${name}`,
+    fuzzySuggestions: 'suggestion',
   },
   countries: {
     placeholder: 'Select a country',

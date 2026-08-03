@@ -149,7 +149,7 @@ export const pl = {
     targetUniversity: 'Uczelnia docelowa',
     averageGrade: 'Średnia ocen',
     maximumGrade: 'Maksymalna ocena w Twojej skali',
-    polishSchoolLevel: 'Szkoła polska, polonijna lub z polskim językiem nauczania',
+    polishSchoolLevel: 'Czy ukończyłeś/aś polską szkołę?',
     currentStatus: 'Status wniosku',
     statusChangedAt: 'Data ostatniej zmiany statusu',
     averageGradePlaceholder: 'np. 4,82',
@@ -188,6 +188,13 @@ export const pl = {
   universities: {
     placeholder: 'Wybierz uczelnię',
     searchPlaceholder: 'Szukaj uczelni…',
+    emptyTitle: 'Brak wyników dla tego wyszukiwania.',
+    emptyTipAbbreviation: 'Spróbuj skrótu uczelni (np. PWr, UWr, AGH).',
+    emptyTipCity: 'Spróbuj miasta (np. Wrocław, Kraków).',
+    emptyTipFormerName: 'Spróbuj dawnej nazwy uczelni.',
+    emptySupportHint: 'Jeśli nie ma Twojej uczelni na liście, skontaktuj się z pomocą.',
+    formerNameHint: (name: string) => `dawniej ${name}`,
+    fuzzySuggestions: 'sugestia',
   },
   countries: {
     placeholder: 'Wybierz kraj',

@@ -5,6 +5,9 @@ export type SearchableSelectOption = {
   label: string;
   group?: string;
   leading?: ReactNode;
+  subtitle?: string;
+  meta?: unknown;
+  labelContent?: ReactNode;
 };
 
 type SearchableSelectProps = {
@@ -15,6 +18,15 @@ type SearchableSelectProps = {
   placeholder: string;
   searchPlaceholder: string;
   options: SearchableSelectOption[];
+  matchesQuery?: (option: SearchableSelectOption, query: string) => boolean;
+  filterOptions?: (
+    options: readonly SearchableSelectOption[],
+    query: string,
+  ) => readonly SearchableSelectOption[];
+  emptyState?: ReactNode;
+  onSearchAbandoned?: (query: string, resultCount: number) => void;
+  onSearchSelected?: (query: string, value: string, resultCount: number) => void;
+  onSearchNoResults?: (query: string) => void;
   onChange: (value: string) => void;
   error?: string | null;
 };
@@ -27,6 +39,12 @@ export function SearchableSelect({
   placeholder,
   searchPlaceholder,
   options,
+  matchesQuery,
+  filterOptions,
+  emptyState,
+  onSearchAbandoned,
+  onSearchSelected,
+  onSearchNoResults,
   onChange,
   error,
 }: SearchableSelectProps) {
@@ -37,15 +55,20 @@ export function SearchableSelect({
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const lastNoResultsQueryRef = useRef<string | null>(null);
 
   const selected = options.find((option) => option.value === value);
   const selectedLabel = selected?.label ?? '';
 
   const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = query.trim();
     if (!normalized) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(normalized));
-  }, [options, query]);
+    if (filterOptions) return filterOptions(options, normalized);
+    const match =
+      matchesQuery ??
+      ((option, q) => option.label.toLowerCase().includes(q.trim().toLowerCase()));
+    return options.filter((option) => match(option, normalized));
+  }, [options, query, matchesQuery, filterOptions]);
 
   const grouped = useMemo(() => {
     const groups = new Map<string, SearchableSelectOption[]>();
@@ -61,22 +84,51 @@ export function SearchableSelect({
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        const trimmed = query.trim();
+        if (trimmed.length > 0) {
+          onSearchAbandoned?.(trimmed, filtered.length);
+        }
+        setOpen(false);
+      }
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  }, [open, query, filtered.length, onSearchAbandoned]);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!open || trimmed.length < 2 || filtered.length > 0) {
+      lastNoResultsQueryRef.current = null;
+      return;
+    }
+    if (lastNoResultsQueryRef.current === trimmed) return;
+    lastNoResultsQueryRef.current = trimmed;
+    onSearchNoResults?.(trimmed);
+  }, [open, query, filtered.length, onSearchNoResults]);
 
   function openList() {
     setOpen(true);
     window.requestAnimationFrame(() => searchRef.current?.focus());
   }
 
+  function closeList() {
+    const trimmed = query.trim();
+    if (trimmed.length > 0) {
+      onSearchAbandoned?.(trimmed, filtered.length);
+    }
+    setOpen(false);
+  }
+
   function selectOption(next: string) {
+    const trimmed = query.trim();
+    onSearchSelected?.(trimmed, next, filtered.length);
     onChange(next);
     setQuery('');
     setOpen(false);
   }
+
+  const showEmptyState = query.trim().length >= 2 && filtered.length === 0;
 
   return (
     <div ref={rootRef} className="space-y-2 text-sm font-medium">
@@ -94,7 +146,7 @@ export function SearchableSelect({
             ? 'border-[var(--tg-theme-destructive-text-color)]'
             : 'border-[var(--tg-theme-hint-color)]'
         }`}
-        onClick={() => (open ? setOpen(false) : openList())}
+        onClick={() => (open ? closeList() : openList())}
       >
         <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
           {selected?.leading ? <span className="shrink-0">{selected.leading}</span> : null}
@@ -131,8 +183,10 @@ export function SearchableSelect({
             />
           </div>
           <ul id={listId} role="listbox" aria-label={label} className="max-h-56 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <li className="px-4 py-3 text-sm text-[var(--tg-theme-subtitle-text-color)]">{placeholder}</li>
+            {showEmptyState ? (
+              <li className="px-4 py-3 text-sm text-[var(--tg-theme-subtitle-text-color)]">
+                {emptyState ?? placeholder}
+              </li>
             ) : (
               [...grouped.entries()].map(([groupName, groupOptions]) => (
                 <li key={groupName || 'default'}>
@@ -150,7 +204,7 @@ export function SearchableSelect({
                             type="button"
                             role="option"
                             aria-selected={active}
-                            className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm transition ${
+                            className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition ${
                               active
                                 ? 'bg-[var(--tg-theme-secondary-bg-color)] font-semibold text-[var(--tg-theme-text-color)]'
                                 : 'text-[var(--tg-theme-text-color)] hover:bg-[color-mix(in_srgb,var(--tg-theme-hint-color)_12%,transparent)]'
@@ -158,7 +212,18 @@ export function SearchableSelect({
                             onClick={() => selectOption(option.value)}
                           >
                             {option.leading ? <span className="shrink-0">{option.leading}</span> : null}
-                            <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm">
+                                {option.labelContent ?? option.label}
+                              </span>
+                              {option.subtitle ? (
+                                <span
+                                  className="mt-0.5 block truncate text-xs text-[var(--tg-theme-subtitle-text-color)]"
+                                >
+                                  {option.subtitle}
+                                </span>
+                              ) : null}
+                            </span>
                             {active ? (
                               <span className="shrink-0 text-[var(--color-accent)]" aria-hidden="true">
                                 ✓

@@ -31,6 +31,12 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: University alias reconcile
+        run: node scripts/reconcile-university-aliases.mjs --check
+
+      - name: University catalog validation
+        run: node scripts/validate-university-catalog.mjs
+
       - name: Typecheck
         run: npm run typecheck
 

@@ -1,0 +1,997 @@
+[
+  {
+    "key": "science-001",
+    "canonicalName": "Akademia Bialska im. Jana Pawła II Biała Podlaska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-002",
+    "canonicalName": "Akademia Finansów i Biznesu VISTULA w Warszawie",
+    "confidence": "medium",
+    "city": "i Biznesu VISTULA w Warszawie"
+  },
+  {
+    "key": "science-003",
+    "canonicalName": "Akademia Górniczo-Hutnicza im. Stanisława Staszica w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "AGH"
+    ],
+    "aliases": [
+      "Akademia Górniczo-Hutnicza"
+    ]
+  },
+  {
+    "key": "science-004",
+    "canonicalName": "Akademia im. Jakuba z Paradyża w Gorzowie Wielkopolskim",
+    "confidence": "medium",
+    "city": "Gorzowie Wielkopolskim"
+  },
+  {
+    "key": "science-005",
+    "canonicalName": "Akademia Kultury Fizycznej im. Bronisława Czecha w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-006",
+    "canonicalName": "Akademia Kultury Społecznej i Medialnej w Toruniu",
+    "confidence": "medium",
+    "city": "Toruniu"
+  },
+  {
+    "key": "science-007",
+    "canonicalName": "Akademia Leona Koźmińskiego w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-008",
+    "canonicalName": "Akademia Łomżyńska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-009",
+    "canonicalName": "Akademia Nauk Stosowanych w Bielsku Białej",
+    "confidence": "medium",
+    "city": "Bielsku Białej"
+  },
+  {
+    "key": "science-010",
+    "canonicalName": "Akademia Nauk Stosowanych w Elblągu",
+    "confidence": "medium",
+    "city": "Elblągu"
+  },
+  {
+    "key": "science-011",
+    "canonicalName": "Akademia Nauk Stosowanych w Nowym Targu",
+    "confidence": "medium",
+    "city": "Nowym Targu"
+  },
+  {
+    "key": "science-012",
+    "canonicalName": "Akademia Nauk Stosowanych Wincentego Pola",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-013",
+    "canonicalName": "Akademia Nauk Stosowanych WSZiA w Opolu",
+    "confidence": "medium",
+    "city": "Opolu"
+  },
+  {
+    "key": "science-014",
+    "canonicalName": "Akademia Pedagogiki Specjalnej im. Marii Grzegorzewskiej w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-015",
+    "canonicalName": "Akademia Tarnowska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-016",
+    "canonicalName": "Akademia Techniczno-Artystyczna Nauk Stosowanych w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-017",
+    "canonicalName": "Akademia WIT w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-018",
+    "canonicalName": "Akademia WSB z siedzibą w Dąbrowie Górniczej",
+    "confidence": "medium",
+    "city": "Dąbrowie Górniczej"
+  },
+  {
+    "key": "science-019",
+    "canonicalName": "Akademia Wychowania Fizycznego i Sportu im. Jędrzeja Śniadeckiego w Gdańsku",
+    "confidence": "medium",
+    "city": "Gdańsku"
+  },
+  {
+    "key": "science-020",
+    "canonicalName": "Akademia Wychowania Fizycznego im. Eugeniusza Piaseckiego w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "science-021",
+    "canonicalName": "Akademia Wychowania Fizycznego im. J. Kukuczki w Katowicach",
+    "confidence": "medium",
+    "city": "Katowicach"
+  },
+  {
+    "key": "science-022",
+    "canonicalName": "Akademia Wychowania Fizycznego im. Polskich Olimpijczyków we Wrocławiu",
+    "confidence": "medium",
+    "city": "we Wrocławiu"
+  },
+  {
+    "key": "science-023",
+    "canonicalName": "Akademia Wychowania Fizycznego Józefa Piłsudskiego w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-024",
+    "canonicalName": "Akademia Zamojska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-025",
+    "canonicalName": "Chrześcijańska Akademia Teologiczna w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-026",
+    "canonicalName": "Collegium Da Vinci z siedzibą w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "science-027",
+    "canonicalName": "Europejska Uczelnia Nauk Medycznych i Społecznych Warszawa",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-028",
+    "canonicalName": "Katolicki Uniwersytet Lubelski Jana Pawła II w Lublinie",
+    "confidence": "medium",
+    "city": "Lublinie"
+  },
+  {
+    "key": "science-029",
+    "canonicalName": "Międzynarodowa Wyższa Szkoła Logistyki i Transportu we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "science-030",
+    "canonicalName": "Państwowa Akademia Nauk Stosowanych im. ks. Bronisława Markiewicza w Jarosławiu",
+    "confidence": "medium",
+    "city": "Jarosławiu"
+  },
+  {
+    "key": "science-031",
+    "canonicalName": "Państwowa Akademia Nauk Stosowanych w Chełmie",
+    "confidence": "medium",
+    "city": "Chełmie"
+  },
+  {
+    "key": "science-032",
+    "canonicalName": "Państwowa Akademia Nauk Stosowanych w Przemyślu",
+    "confidence": "medium",
+    "city": "Przemyślu"
+  },
+  {
+    "key": "science-033",
+    "canonicalName": "Państwowa Uczelnia Zawodowa im. prof. Edwarda F. Szczepanika w Suwałkach",
+    "confidence": "medium",
+    "city": "Suwałkach"
+  },
+  {
+    "key": "science-034",
+    "canonicalName": "Papieski Wydział Teologiczny we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "science-035",
+    "canonicalName": "Politechnika Białostocka",
+    "confidence": "high",
+    "city": "Białystok",
+    "shortNames": [
+      "PB"
+    ]
+  },
+  {
+    "key": "science-036",
+    "canonicalName": "Politechnika Bydgoska im. Jana i Jędrzeja Śniadeckich",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-037",
+    "canonicalName": "Politechnika Częstochowska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-038",
+    "canonicalName": "Politechnika Gdańska",
+    "confidence": "high",
+    "city": "Gdańsk",
+    "shortNames": [
+      "PG"
+    ]
+  },
+  {
+    "key": "science-039",
+    "canonicalName": "Politechnika Koszalińska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-040",
+    "canonicalName": "Politechnika Krakowska im. Tadeusza Kościuszki",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "PK"
+    ]
+  },
+  {
+    "key": "science-041",
+    "canonicalName": "Politechnika Lubelska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-042",
+    "canonicalName": "Politechnika Łódzka",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-043",
+    "canonicalName": "Politechnika Opolska",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-044",
+    "canonicalName": "Politechnika Poznańska",
+    "confidence": "high",
+    "city": "Poznań",
+    "shortNames": [
+      "PP"
+    ]
+  },
+  {
+    "key": "science-045",
+    "canonicalName": "Politechnika Rzeszowska im. Ignacego Łukasiewicza",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-046",
+    "canonicalName": "Politechnika Śląska",
+    "confidence": "high",
+    "city": "Katowice",
+    "shortNames": [
+      "PŚ"
+    ]
+  },
+  {
+    "key": "science-047",
+    "canonicalName": "Politechnika Świętokrzyska w Kielcach",
+    "confidence": "medium",
+    "city": "Kielcach"
+  },
+  {
+    "key": "science-048",
+    "canonicalName": "Politechnika Warszawska",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "PW"
+    ]
+  },
+  {
+    "key": "science-049",
+    "canonicalName": "Politechnika Wrocławska",
+    "confidence": "high",
+    "city": "Wrocław",
+    "shortNames": [
+      "PWr"
+    ],
+    "aliases": [
+      "Wroclaw Tech",
+      "Wrocław Tech"
+    ]
+  },
+  {
+    "key": "science-050",
+    "canonicalName": "Polsko-Japońska Akademia Technik Komputerowych w Warszawie",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "PJWSTK"
+    ],
+    "formerNames": [
+      "Polsko-Japońska Akademia Technik Komputerowych"
+    ]
+  },
+  {
+    "key": "science-051",
+    "canonicalName": "Sopocka Akademia Nauk Stosowanych",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-052",
+    "canonicalName": "Społeczna Akademia Nauk z siedzibą w Łodzi",
+    "confidence": "medium",
+    "city": "Łódź"
+  },
+  {
+    "key": "science-053",
+    "canonicalName": "Szkoła Główna Gospodarstwa Wiejskiego w Warszawie",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "SGGW"
+    ],
+    "aliases": [
+      "Warsaw University of Life Sciences",
+      "Szkoła Główna Gospodarstwa Wiejskiego"
+    ]
+  },
+  {
+    "key": "science-054",
+    "canonicalName": "Szkoła Główna Handlowa w Warszawie",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "SGH"
+    ]
+  },
+  {
+    "key": "science-055",
+    "canonicalName": "Szkoła Główna Turystyki i Hotelarstwa VISTULA w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-056",
+    "canonicalName": "Uczelnia Łazarskiego w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-057",
+    "canonicalName": "Uczelnia Państwowa im. Jana Grodka w Sanoku",
+    "confidence": "medium",
+    "city": "Sanoku"
+  },
+  {
+    "key": "science-058",
+    "canonicalName": "Uczelnia Społeczno-Medyczna w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-059",
+    "canonicalName": "Uczelnia Techniczno-Handlowa im. Heleny Chodkowskiej w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-060",
+    "canonicalName": "Uniwersytet Andrzeja Frycza Modrzewskiego w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-061",
+    "canonicalName": "Uniwersytet Bielsko-Bialski",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-062",
+    "canonicalName": "Uniwersytet Civitas Warszawa",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-063",
+    "canonicalName": "Uniwersytet Dolnośląski DSW we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "science-064",
+    "canonicalName": "Uniwersytet Ekonomiczny w Katowicach",
+    "confidence": "high",
+    "city": "Katowice",
+    "shortNames": [
+      "UEKat"
+    ],
+    "aliases": [
+      "PUEB"
+    ],
+    "formerNames": [
+      "Politechnika Ekonomiczna w Katowicach"
+    ]
+  },
+  {
+    "key": "science-065",
+    "canonicalName": "Uniwersytet Ekonomiczny w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "UEK"
+    ]
+  },
+  {
+    "key": "science-066",
+    "canonicalName": "Uniwersytet Ekonomiczny w Poznaniu",
+    "confidence": "high",
+    "city": "Poznań",
+    "shortNames": [
+      "UEP"
+    ]
+  },
+  {
+    "key": "science-067",
+    "canonicalName": "Uniwersytet Ekonomiczny we Wrocławiu",
+    "confidence": "high",
+    "city": "Wrocław",
+    "shortNames": [
+      "UEW"
+    ]
+  },
+  {
+    "key": "science-068",
+    "canonicalName": "Uniwersytet Gdański",
+    "confidence": "high",
+    "city": "Gdańsk",
+    "shortNames": [
+      "UG"
+    ]
+  },
+  {
+    "key": "science-069",
+    "canonicalName": "Uniwersytet Ignatianum w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-070",
+    "canonicalName": "Uniwersytet im. Adama Mickiewicza w Poznaniu",
+    "confidence": "high",
+    "city": "Poznań",
+    "shortNames": [
+      "UAM"
+    ]
+  },
+  {
+    "key": "science-071",
+    "canonicalName": "Uniwersytet Jagielloński w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "UJ"
+    ]
+  },
+  {
+    "key": "science-072",
+    "canonicalName": "Uniwersytet Jana Długosza w Częstochowie",
+    "confidence": "medium",
+    "city": "Częstochowie"
+  },
+  {
+    "key": "science-073",
+    "canonicalName": "Uniwersytet Jana Kochanowskiego w Kielcach",
+    "confidence": "medium",
+    "city": "Kielcach"
+  },
+  {
+    "key": "science-074",
+    "canonicalName": "Uniwersytet Kardynała Stefana Wyszyńskiego w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-075",
+    "canonicalName": "Uniwersytet Kazimierza Wielkiego w Bydgoszczy",
+    "confidence": "medium",
+    "city": "Bydgoszczy"
+  },
+  {
+    "key": "science-076",
+    "canonicalName": "Uniwersytet Komisji Edukacji Narodowej w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "UKEN"
+    ],
+    "formerNames": [
+      "Uniwersytet Pedagogiczny w Krakowie",
+      "UP Kraków"
+    ]
+  },
+  {
+    "key": "science-077",
+    "canonicalName": "Uniwersytet Łódzki",
+    "confidence": "high",
+    "city": "Łódź",
+    "shortNames": [
+      "UŁ"
+    ]
+  },
+  {
+    "key": "science-078",
+    "canonicalName": "Uniwersytet Marii Curie-Skłodowskiej w Lublinie",
+    "confidence": "medium",
+    "city": "Lublinie"
+  },
+  {
+    "key": "science-079",
+    "canonicalName": "Uniwersytet Mikołaja Kopernika w Toruniu",
+    "confidence": "medium",
+    "city": "Toruniu"
+  },
+  {
+    "key": "science-080",
+    "canonicalName": "Uniwersytet Opolski",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-081",
+    "canonicalName": "Uniwersytet Papieski Jana Pawła II w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-082",
+    "canonicalName": "Uniwersytet Pomorski w Słupsku",
+    "confidence": "medium",
+    "city": "Słupsku"
+  },
+  {
+    "key": "science-083",
+    "canonicalName": "Uniwersytet Przyrodniczy w Lublinie",
+    "confidence": "medium",
+    "city": "Lublinie"
+  },
+  {
+    "key": "science-084",
+    "canonicalName": "Uniwersytet Przyrodniczy w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "science-085",
+    "canonicalName": "Uniwersytet Przyrodniczy we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "science-086",
+    "canonicalName": "Uniwersytet Radomski im. Kazimierza Pułaskiego",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-087",
+    "canonicalName": "Uniwersytet Rolniczy im. Hugona Kołłątaja w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-088",
+    "canonicalName": "Uniwersytet Rzeszowski",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-089",
+    "canonicalName": "Uniwersytet SWPS w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-090",
+    "canonicalName": "Uniwersytet Szczeciński",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-091",
+    "canonicalName": "Uniwersytet Śląski w Katowicach",
+    "confidence": "high",
+    "city": "Katowice",
+    "shortNames": [
+      "UŚ"
+    ]
+  },
+  {
+    "key": "science-092",
+    "canonicalName": "Uniwersytet Vizja w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-093",
+    "canonicalName": "Uniwersytet w Białymstoku",
+    "confidence": "medium",
+    "city": "Białymstoku"
+  },
+  {
+    "key": "science-094",
+    "canonicalName": "Uniwersytet w Siedlcach",
+    "confidence": "medium",
+    "city": "Siedlcach"
+  },
+  {
+    "key": "science-095",
+    "canonicalName": "Uniwersytet Warmińsko-Mazurski w Olsztynie",
+    "confidence": "medium",
+    "city": "Olsztynie"
+  },
+  {
+    "key": "science-096",
+    "canonicalName": "Uniwersytet Warszawski",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "UW"
+    ]
+  },
+  {
+    "key": "science-097",
+    "canonicalName": "Uniwersytet Wrocławski",
+    "confidence": "high",
+    "city": "Wrocław",
+    "shortNames": [
+      "UWr"
+    ]
+  },
+  {
+    "key": "science-098",
+    "canonicalName": "Uniwersytet WSB Merito w Gdańsku",
+    "confidence": "medium",
+    "city": "Gdańsku"
+  },
+  {
+    "key": "science-099",
+    "canonicalName": "Uniwersytet WSB Merito w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "science-100",
+    "canonicalName": "Uniwersytet WSB Merito we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "science-101",
+    "canonicalName": "Uniwersytet Zielonogórski",
+    "confidence": "medium"
+  },
+  {
+    "key": "science-102",
+    "canonicalName": "Wyższa Szkoła Biznesu i Nauk o Zdrowiu w Łodzi",
+    "confidence": "medium",
+    "city": "Łodzi"
+  },
+  {
+    "key": "science-103",
+    "canonicalName": "Wyższa Szkoła Gospodarki w Bydgoszczy",
+    "confidence": "medium",
+    "city": "Bydgoszczy"
+  },
+  {
+    "key": "science-104",
+    "canonicalName": "Wyższa Szkoła Informatyki i Zarządzania z siedzibą w Rzeszowie",
+    "confidence": "medium",
+    "city": "Rzeszowie"
+  },
+  {
+    "key": "science-105",
+    "canonicalName": "Wyższa Szkoła Inżynierii i Zdrowia w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "science-106",
+    "canonicalName": "Wyższa Szkoła Logistyki z siedzibą w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "science-107",
+    "canonicalName": "Wyższa Szkoła Przedsiębiorczości i Administracji w Lublinie",
+    "confidence": "medium",
+    "city": "Lublinie"
+  },
+  {
+    "key": "science-108",
+    "canonicalName": "Wyższa Szkoła Sztuki i Projektowania w Łodzi",
+    "confidence": "medium",
+    "city": "Łodzi"
+  },
+  {
+    "key": "science-109",
+    "canonicalName": "Wyższa Szkoła Technologii Informatycznych w Katowicach",
+    "confidence": "medium",
+    "city": "Katowicach"
+  },
+  {
+    "key": "science-110",
+    "canonicalName": "Wyższa Szkoła Turystyki i Ekologii w Suchej Beskidzkiej",
+    "confidence": "medium",
+    "city": "Suchej Beskidzkiej"
+  },
+  {
+    "key": "science-111",
+    "canonicalName": "Wyższa Szkoła Zarządzania i Bankowości w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "science-112",
+    "canonicalName": "Wyższa Szkoła Zdrowia w Gdańsku",
+    "confidence": "medium",
+    "city": "Gdańsku"
+  },
+  {
+    "key": "science-113",
+    "canonicalName": "Zachodniopomorski Uniwersytet Technologiczny w Szczecinie",
+    "confidence": "high",
+    "city": "Szczecin",
+    "shortNames": [
+      "ZUT"
+    ]
+  },
+  {
+    "key": "culture-001",
+    "canonicalName": "Akademia Muzyczna im. Feliksa Nowowiejskiego w Bydgoszczy",
+    "confidence": "medium",
+    "city": "Bydgoszczy"
+  },
+  {
+    "key": "culture-002",
+    "canonicalName": "Akademia Muzyczna im. Grażyny i Kiejstuta Bacewiczów w Łodzi",
+    "confidence": "medium",
+    "city": "w Łodzi"
+  },
+  {
+    "key": "culture-003",
+    "canonicalName": "Akademia Muzyczna im. Ignacego Jana Paderewskiego w Poznaniu",
+    "confidence": "medium",
+    "city": "Poznaniu"
+  },
+  {
+    "key": "culture-004",
+    "canonicalName": "Akademia Muzyczna im. Karola Lipińskiego we Wrocławiu",
+    "confidence": "medium",
+    "city": "Wrocławiu"
+  },
+  {
+    "key": "culture-005",
+    "canonicalName": "Akademia Muzyczna im. Karola Szymanowskiego w Katowicach",
+    "confidence": "medium",
+    "city": "Katowicach"
+  },
+  {
+    "key": "culture-006",
+    "canonicalName": "Akademia Muzyczna im. Krzysztofa Pendereckiego w Krakowie",
+    "confidence": "medium",
+    "city": "Krakowie"
+  },
+  {
+    "key": "culture-007",
+    "canonicalName": "Akademia Muzyczna im. Stanisława Moniuszki w Gdańsku",
+    "confidence": "medium",
+    "city": "Gdańsku"
+  },
+  {
+    "key": "culture-008",
+    "canonicalName": "Akademia Sztuk Pięknych im. Eugeniusza Gepperta we Wrocławiu",
+    "confidence": "high",
+    "city": "Wrocław",
+    "shortNames": [
+      "ASP Wrocław"
+    ],
+    "aliases": [
+      "ASP we Wrocławiu"
+    ]
+  },
+  {
+    "key": "culture-009",
+    "canonicalName": "Akademia Sztuk Pięknych im. Jana Matejki w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "ASP Kraków"
+    ]
+  },
+  {
+    "key": "culture-010",
+    "canonicalName": "Akademia Sztuk Pięknych im. Władysława Strzemińskiego w Łodzi",
+    "confidence": "high",
+    "city": "Łódź",
+    "shortNames": [
+      "ASP Łódź"
+    ]
+  },
+  {
+    "key": "culture-011",
+    "canonicalName": "Akademia Sztuk Pięknych w Gdańsku",
+    "confidence": "high",
+    "city": "Gdańsk",
+    "shortNames": [
+      "ASP Gdańsk"
+    ]
+  },
+  {
+    "key": "culture-012",
+    "canonicalName": "Akademia Sztuk Pięknych w Katowicach",
+    "confidence": "high",
+    "city": "Katowice",
+    "shortNames": [
+      "ASP Katowice"
+    ]
+  },
+  {
+    "key": "culture-013",
+    "canonicalName": "Akademia Sztuk Pięknych w Warszawie",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "ASP Warszawa"
+    ]
+  },
+  {
+    "key": "culture-014",
+    "canonicalName": "Akademia Sztuk Teatralnych im. Stanisława Wyspiańskiego w Krakowie",
+    "confidence": "high",
+    "city": "Kraków",
+    "shortNames": [
+      "AST"
+    ],
+    "aliases": [
+      "ATH"
+    ],
+    "formerNames": [
+      "Akademia Teatralna w Krakowie"
+    ]
+  },
+  {
+    "key": "culture-015",
+    "canonicalName": "Akademia Sztuki w Szczecinie",
+    "confidence": "medium",
+    "city": "Szczecinie"
+  },
+  {
+    "key": "culture-016",
+    "canonicalName": "Akademia Teatralna im. Aleksandra Zelwerowicza w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "culture-017",
+    "canonicalName": "Państwowa Wyższa Szkoła Filmowa, Telewizyjna i Teatralna im. Leona Schillera w Łodzi",
+    "confidence": "high",
+    "city": "Łódź",
+    "shortNames": [
+      "PWSFTviT",
+      "PWSZ"
+    ],
+    "formerNames": [
+      "Państwowa Wyższa Szkoła Filmowa w Łodzi"
+    ]
+  },
+  {
+    "key": "culture-018",
+    "canonicalName": "Uniwersytet Artystyczny im. Magdaleny Abakanowicz w Poznaniu",
+    "confidence": "high",
+    "city": "Poznań",
+    "shortNames": [
+      "UAP"
+    ],
+    "formerNames": [
+      "Akademia Sztuk Pięknych w Poznaniu"
+    ]
+  },
+  {
+    "key": "culture-019",
+    "canonicalName": "Uniwersytet Muzyczny Fryderyka Chopina w Warszawie",
+    "confidence": "medium",
+    "city": "Warszawie"
+  },
+  {
+    "key": "health-001",
+    "canonicalName": "Gdański Uniwersytet Medyczny",
+    "confidence": "high",
+    "city": "Gdańsk",
+    "shortNames": [
+      "GUMed"
+    ],
+    "aliases": [
+      "PUMS",
+      "Medical University of Gdańsk"
+    ]
+  },
+  {
+    "key": "health-002",
+    "canonicalName": "Pomorski Uniwersytet Medyczny w Szczecinie",
+    "confidence": "high",
+    "city": "Szczecin",
+    "shortNames": [
+      "PUM"
+    ]
+  },
+  {
+    "key": "health-003",
+    "canonicalName": "Śląski Uniwersytet Medyczny w Katowicach",
+    "confidence": "high",
+    "city": "Katowice",
+    "shortNames": [
+      "SUM"
+    ]
+  },
+  {
+    "key": "health-004",
+    "canonicalName": "Uniwersytet Medyczny im. Karola Marcinkowskiego w Poznaniu",
+    "confidence": "high",
+    "city": "Poznań",
+    "shortNames": [
+      "UMP"
+    ]
+  },
+  {
+    "key": "health-005",
+    "canonicalName": "Uniwersytet Medyczny im. Piastów Śląskich we Wrocławiu",
+    "confidence": "high",
+    "city": "Wrocław",
+    "shortNames": [
+      "UMW"
+    ]
+  },
+  {
+    "key": "health-006",
+    "canonicalName": "Uniwersytet Medyczny w Białymstoku",
+    "confidence": "high",
+    "city": "Białystok",
+    "shortNames": [
+      "UMB"
+    ]
+  },
+  {
+    "key": "health-007",
+    "canonicalName": "Uniwersytet Medyczny w Lublinie",
+    "confidence": "high",
+    "city": "Lublin",
+    "shortNames": [
+      "UM Lublin"
+    ]
+  },
+  {
+    "key": "health-008",
+    "canonicalName": "Uniwersytet Medyczny w Łodzi",
+    "confidence": "high",
+    "city": "Łódź",
+    "shortNames": [
+      "UM Łódź"
+    ]
+  },
+  {
+    "key": "health-009",
+    "canonicalName": "Warszawski Uniwersytet Medyczny",
+    "confidence": "high",
+    "city": "Warszawa",
+    "shortNames": [
+      "WUM"
+    ]
+  }
+]

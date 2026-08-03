@@ -151,7 +151,7 @@ export const ru = {
     targetUniversity: 'Целевой вуз',
     averageGrade: 'Средний балл',
     maximumGrade: 'Максимальный балл по вашей шкале',
-    polishSchoolLevel: 'Польская, диаспорная или польскоязычная школа',
+    polishSchoolLevel: 'Окончили ли вы польскую школу?',
     currentStatus: 'Статус заявки',
     statusChangedAt: 'Дата последнего изменения статуса',
     averageGradePlaceholder: 'напр. 4,82',
@@ -190,6 +190,13 @@ export const ru = {
   universities: {
     placeholder: 'Выберите вуз',
     searchPlaceholder: 'Поиск вуза…',
+    emptyTitle: 'Нет результатов для этого поиска.',
+    emptyTipAbbreviation: 'Попробуйте сокращение (напр. PWr, UWr, AGH).',
+    emptyTipCity: 'Попробуйте город (напр. Вроцлав, Краков).',
+    emptyTipFormerName: 'Попробуйте прежнее название вуза.',
+    emptySupportHint: 'Если вашего вуза нет в списке, обратитесь в поддержку.',
+    formerNameHint: (name: string) => `ранее ${name}`,
+    fuzzySuggestions: 'подсказка',
   },
   countries: {
     placeholder: 'Выберите страну',

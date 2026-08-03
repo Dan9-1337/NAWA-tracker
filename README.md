@@ -1,6 +1,6 @@
 # NAWA Tracker
 
-Polish-first scholarship questionnaire and privacy-safe community statistics by passport country, delivered as a **Telegram Mini App**. One Telegram account maps to one applicant profile. The browser talks only to same-origin Vercel Functions; Supabase is accessed server-side with a service-role credential.
+Polish-first scholarship questionnaire and community statistics by country, delivered as a **Telegram Mini App**. One Telegram account maps to one applicant profile. The browser talks only to same-origin Vercel Functions; Supabase is accessed server-side with a service-role credential.
 
 Architecture details live in [`docs/architecture.md`](docs/architecture.md).
 

@@ -7,7 +7,7 @@ import {
   universitiesForScholarshipTrack,
 } from './universities';
 
-describe('universities', () => {
+describe('universities catalog', () => {
   it('has unique ids and the expected list sizes', () => {
     const ids = universities.map((university) => university.id);
     expect(new Set(ids).size).toBe(ids.length);

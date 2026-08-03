@@ -1,4 +1,5 @@
 import type { ScholarshipTrack } from './contracts';
+import { universitySearchMetadata } from './universities-metadata';
 
 export const universityMinistries = ['science', 'culture', 'health'] as const;
 export type UniversityMinistry = (typeof universityMinistries)[number];
@@ -7,7 +8,28 @@ export type University = {
   id: string;
   name: string;
   ministry: UniversityMinistry;
+  city?: string;
+  shortNames?: readonly string[];
+  aliases?: readonly string[];
+  formerNames?: readonly string[];
 };
+
+export function mergeUniversityMetadata(university: University): University {
+  const meta = universitySearchMetadata[university.id];
+  if (!meta) return university;
+  return {
+    ...university,
+    ...meta,
+    shortNames: meta.shortNames ?? university.shortNames,
+    aliases: meta.aliases ?? university.aliases,
+    formerNames: meta.formerNames ?? university.formerNames,
+    city: meta.city ?? university.city,
+  };
+}
+
+export function enrichUniversities(list: readonly University[]): University[] {
+  return list.map(mergeUniversityMetadata);
+}
 
 /** Partner universities with a NAWA framework agreement, grouped by supervising ministry. */
 export const universities: readonly University[] = [
@@ -159,7 +181,9 @@ export const universities: readonly University[] = [
   { id: 'health-009', ministry: 'health', name: 'Warszawski Uniwersytet Medyczny' },
 ] as const;
 
-const universityByIdMap = new Map(universities.map((university) => [university.id, university]));
+const enrichedUniversities = enrichUniversities(universities);
+
+const universityByIdMap = new Map(enrichedUniversities.map((university) => [university.id, university]));
 
 const trackMinistry: Record<ScholarshipTrack, UniversityMinistry> = {
   nawa_director: 'science',
@@ -181,10 +205,20 @@ export function ministryForScholarshipTrack(track: ScholarshipTrack): University
 
 export function universitiesForScholarshipTrack(track: ScholarshipTrack): readonly University[] {
   const ministry = ministryForScholarshipTrack(track);
-  return universities.filter((university) => university.ministry === ministry);
+  return enrichedUniversities.filter((university) => university.ministry === ministry);
 }
 
 export function isUniversityAllowedForTrack(id: string, track: ScholarshipTrack): boolean {
   const university = getUniversityById(id);
   return university != null && university.ministry === ministryForScholarshipTrack(track);
+}
+
+/** Raw catalog entries without search metadata merge (for reconcile scripts). */
+export function getRawUniversities(): readonly University[] {
+  return universities;
+}
+
+export function getEnrichedUniversityById(id: string): University | undefined {
+  const base = universities.find((u) => u.id === id);
+  return base ? mergeUniversityMetadata(base) : undefined;
 }
