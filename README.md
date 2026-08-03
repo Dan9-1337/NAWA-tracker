@@ -8,6 +8,15 @@ The active questionnaire scope is fixed to three programme tracks (`nawa_directo
 
 Statistics compare declared grades (or the NAWA orientation score for `nawa_director`) within the same scholarship track and ranking citizenship country, with a track-wide fallback when a country cohort is too small. Aggregates are never an official ranking or seat-limit forecast.
 
+### Target university (`direct_studies`)
+
+Applicants choose one of about 141 NAWA partner universities, filtered by scholarship track (science / culture / health ministries).
+
+- **Search** is client-side: ranked matching by Polish name, abbreviation, city, English brand, former name, and diacritic-free spelling, with fuzzy suggestions when nothing exact matches.
+- **Persistence** is server-side only as a stable ID (`targetUniversity`). Free text and aliases are never stored in questionnaire responses.
+
+To add or review aliases after production feedback, see [`docs/university-search-maintenance.md`](docs/university-search-maintenance.md).
+
 ## Requirements
 
 - Node.js 20.19 or newer (or 22.12 or newer) and npm
@@ -50,7 +59,7 @@ npx supabase@latest link --project-ref YOUR_PROJECT_REF
 npx supabase@latest db push
 ```
 
-`db push` applies `supabase/migrations/202607130001_initial_schema.sql`. Do not edit production tables manually outside migration history.
+`db push` applies all migrations in `supabase/migrations/`. Do not edit production tables manually outside migration history.
 
 Verify RLS in the SQL Editor — `responses` and `submission_limits` should have RLS enabled, zero policies, and no `anon`/`authenticated` table access.
 
@@ -88,9 +97,18 @@ Requires an isolated migrated Postgres with the `pgtap` extension. Never target 
 
 ```bash
 npm test
+node scripts/reconcile-university-aliases.mjs --check
+node scripts/validate-university-catalog.mjs
 npm run typecheck
 npm run build
 npm run audit:prod
+```
+
+After changing university search metadata ([`shared/universities-metadata.ts`](shared/universities-metadata.ts)):
+
+```bash
+node scripts/generate-university-seed.mjs
+node scripts/reconcile-university-aliases.mjs --check
 ```
 
 ## Vercel Deployment

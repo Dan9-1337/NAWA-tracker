@@ -9,9 +9,10 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const suffix = randomUUID().replace(/-/g, '').slice(0, 12);
-const telegramUserId = Number(`8${suffix.slice(0, 8)}`);
-const publicStatsIpHash = `public-stats-ip-${suffix}`;
+const rawSuffix = randomUUID().replace(/-/g, '').slice(0, 12);
+const suffix = rawSuffix.replace(/\D/g, '').slice(0, 8);
+const telegramUserId = 800_000_000 + Number(suffix || '0');
+const publicStatsIpHash = `public-stats-ip-${rawSuffix}`;
 
 const { Pool } = pg;
 const pool = new Pool({ connectionString: databaseUrl, max: 4 });

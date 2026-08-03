@@ -4,7 +4,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateResponseResult, ResponseFormInput, StatisticsResult } from '../../shared/contracts';
 import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { ApiClientError } from '../lib/api-client';
+import type { TelegramWebAppBridge } from '../lib/telegram';
 import { HomePage } from './HomePage';
+
+const telegramTestState = vi.hoisted(() => ({
+  webApp: null as TelegramWebAppBridge | null,
+  initData: 'user=%7B%22id%22%3A900000001%7D',
+}));
+
+vi.mock('../lib/telegram', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/telegram')>();
+  telegramTestState.webApp = actual.createDevTelegramWebApp(telegramTestState.initData);
+  return {
+    ...actual,
+    initializeTelegramWebApp: vi.fn(),
+    getTelegramInitData: vi.fn(() => 'signed-init-data'),
+    getTelegramWebApp: vi.fn(() => telegramTestState.webApp),
+  };
+});
 
 const api = vi.hoisted(() => ({
   createResponse: vi.fn(),
@@ -18,16 +35,6 @@ vi.mock('../lib/api-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api-client')>()),
   ...api,
 }));
-
-vi.mock('../lib/telegram', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../lib/telegram')>();
-  return {
-    ...actual,
-    initializeTelegramWebApp: vi.fn(),
-    getTelegramInitData: vi.fn(() => 'signed-init-data'),
-    getTelegramWebApp: vi.fn(() => actual.getTelegramWebApp()),
-  };
-});
 
 const currentResponse: ResponseFormInput = {
   hasPolishCitizenship: false,
@@ -72,9 +79,8 @@ beforeEach(async () => {
   localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
   setActiveLocale('pl');
 
-  const actual = await vi.importActual<typeof import('../lib/telegram')>('../lib/telegram');
   const telegram = await import('../lib/telegram');
-  vi.mocked(telegram.getTelegramWebApp).mockImplementation(() => actual.getTelegramWebApp());
+  vi.mocked(telegram.getTelegramWebApp).mockReturnValue(telegramTestState.webApp);
 });
 
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {

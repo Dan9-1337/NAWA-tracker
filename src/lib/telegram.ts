@@ -267,6 +267,10 @@ function resolveBridge(): TelegramWebAppBridge | null {
 
 const bridge = resolveBridge();
 
+export function createDevTelegramWebApp(initData: string): TelegramWebAppBridge {
+  return createDevBridge(initData);
+}
+
 export function getTelegramWebApp(): TelegramWebAppBridge | null {
   return bridge;
 }

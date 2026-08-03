@@ -4,7 +4,7 @@ create extension if not exists pgtap with schema extensions;
 
 truncate table public.user_statistics_snapshots, public.responses restart identity cascade;
 
-select plan(32);
+select plan(31);
 
 do $$
 begin
@@ -31,8 +31,8 @@ select
   value, 100, value, 'none', round(value * 0.9, 2),
   case
     when value <= 20 then 'submitted'
-    when value <= 40 then 'formal_review_in_progress'
-    when value <= 60 then 'awaiting_decision'
+    when value <= 40 then 'formal_review_positive'
+    when value <= 60 then 'merit_review_positive'
     else 'merit_review_positive'
   end,
   current_date,
@@ -108,13 +108,24 @@ select is(
   'country count is suppressed independently after fallback'
 );
 
+select lives_ok(
+  $$select public.update_current_response(
+      820000001, 'stats_target',
+      false, 'UA', 'UA',
+      'nawa_director', 'direct_studies', 'science-096',
+      50, 100, 'none',
+      'formal_review_positive', current_date
+    )$$,
+  'formal review transition succeeds'
+);
+
 with mutation as (
   select public.update_current_response(
     820000001, 'stats_target',
     false, 'UA', 'UA',
     'nawa_director', 'direct_studies', 'science-096',
     50, 100, 'none',
-    'scholarship_awarded', current_date
+    'merit_review_positive', current_date - 1
   ) as result
 )
 select ok(
@@ -124,31 +135,16 @@ select ok(
 from mutation;
 select is(
   (select is_suspicious from public.responses where telegram_user_id = 820000001),
-  false,
-  'the first scholarship award does not mark a response suspicious'
-);
-select lives_ok(
-  $$select public.update_current_response(
-      820000001, 'stats_target',
-      false, 'UA', 'UA',
-      'nawa_director', 'direct_studies', 'science-096',
-      50, 100, 'none',
-      'scholarship_not_awarded', current_date
-    )$$,
-  'opposing scholarship awards update succeeds'
-);
-select is(
-  (select is_suspicious from public.responses where telegram_user_id = 820000001),
   true,
-  'opposing scholarship awards mark a response suspicious and keep the flag sticky'
+  'backdated status changes mark a response suspicious'
 );
 select lives_ok(
   $$select public.update_current_response(
       820000001, 'stats_target',
       false, 'UA', 'UA',
       'nawa_director', 'direct_studies', 'science-096',
-      50, 100, 'none',
-      'submitted', current_date
+      51, 100, 'none',
+      'merit_review_positive', current_date
     )$$,
   'ordinary update after suspicious flag still succeeds'
 );
@@ -168,9 +164,17 @@ insert into valid_statistics values (
     "groupResponseCount": 10,
     "medianScore": 50,
     "lowerScorePercentage": 40,
-    "scoreBuckets": [1, 2, 3, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "rankPosition": 5,
+    "rankTotal": 10,
+    "gradesScore": null,
+    "polishSchoolBonus": null,
+    "trackWideMedian": null,
+    "scoreBuckets": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+    "cohortScores": null,
     "growth7d": null,
-    "history": []
+    "history": [],
+    "groupProgress": null,
+    "reportedMeritOutcomes": null
   }'::jsonb
 );
 select is(
@@ -187,9 +191,17 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
+    "rankPosition": null,
+    "rankTotal": null,
+    "gradesScore": null,
+    "polishSchoolBonus": null,
+    "trackWideMedian": null,
     "scoreBuckets": null,
+    "cohortScores": null,
     "growth7d": null,
-    "history": []
+    "history": [],
+    "groupProgress": null,
+    "reportedMeritOutcomes": null
   }'::jsonb),
   '{
     "detailsAvailable": false,
@@ -199,9 +211,17 @@ select is(
     "groupResponseCount": 0,
     "medianScore": null,
     "lowerScorePercentage": null,
+    "rankPosition": null,
+    "rankTotal": null,
+    "gradesScore": null,
+    "polishSchoolBonus": null,
+    "trackWideMedian": null,
     "scoreBuckets": null,
+    "cohortScores": null,
     "growth7d": null,
-    "history": []
+    "history": [],
+    "groupProgress": null,
+    "reportedMeritOutcomes": null
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );
@@ -242,9 +262,9 @@ $$;
 select throws_ok(
   $$select public.update_current_response(
       820000001, 'stats_target',
-      false, 'Niemcy', 'Niemcy',
-      'culture_minister', 'preparatory_course', null,
-      9, 10, null,
+      false, 'DE', 'DE',
+      'nawa_director', 'direct_studies', 'science-096',
+      9, 10, 'none',
       'merit_review_positive', current_date
     )$$,
   'P0001',

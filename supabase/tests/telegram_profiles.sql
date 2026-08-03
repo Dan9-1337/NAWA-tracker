@@ -38,9 +38,9 @@ with mutation as (
   select public.update_current_response(
     810001, 'first_user',
     false, 'DE', 'DE',
-    'culture_minister', 'preparatory_course', null,
-    4.0, 5, null,
-    'awaiting_decision', current_date
+    'nawa_director', 'direct_studies', 'science-096',
+    4.0, 5, 'secondary',
+    'formal_review_positive', current_date
   ) as result
 )
 select ok(
@@ -51,7 +51,7 @@ from mutation;
 
 select is(
   (select current_status from public.responses where telegram_user_id = 810001),
-  'awaiting_decision',
+  'formal_review_positive',
   'profile updates persist questionnaire changes'
 );
 

@@ -1,6 +1,12 @@
 import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TelegramWebAppBridge } from './lib/telegram';
 import { ApiClientError } from './lib/api-client';
+
+const telegramTestState = vi.hoisted(() => ({
+  webApp: null as TelegramWebAppBridge | null,
+  initData: 'user=%7B%22id%22%3A900000001%7D',
+}));
 
 const api = vi.hoisted(() => ({
   getCurrentResponse: vi.fn(),
@@ -13,10 +19,12 @@ vi.mock('./lib/api-client', async (importOriginal) => ({
 
 vi.mock('./lib/telegram', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./lib/telegram')>();
+  telegramTestState.webApp = actual.createDevTelegramWebApp(telegramTestState.initData);
   return {
     ...actual,
     initializeTelegramWebApp: vi.fn(),
     getTelegramInitData: vi.fn(() => 'signed-init-data'),
+    getTelegramWebApp: vi.fn(() => telegramTestState.webApp),
   };
 });
 
