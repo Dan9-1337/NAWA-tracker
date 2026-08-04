@@ -17,6 +17,7 @@ import {
   snapshotFromStatistics,
   type StatsSnapshot,
 } from '../lib/stats-snapshot';
+import { touchUserEngagement } from '../lib/user-engagement';
 import { trackProductEvent } from '../lib/product-events';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
@@ -68,6 +69,7 @@ export function ProfileDashboard({
   } = useWizardSteps();
   const [pending, setPending] = useState(false);
   const [statusConfirmation, setStatusConfirmation] = useState(false);
+  const [recentlyUpdatedStatus, setRecentlyUpdatedStatus] = useState(false);
   const [cohortWarning, setCohortWarning] = useState(false);
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [previousSnapshot, setPreviousSnapshot] = useState<StatsSnapshot | null>(() => loadStatsSnapshot());
@@ -127,7 +129,14 @@ export function ProfileDashboard({
     try {
       await onSubmit({ ...current, currentStatus, statusChangedAt });
       void trackProductEvent('status_updated', { from: current.currentStatus, to: currentStatus });
+      touchUserEngagement({
+        countrySampleSize: null,
+        statusUpdated: true,
+      });
       setStatusConfirmation(true);
+      setRecentlyUpdatedStatus(
+        currentStatus === 'formal_review_positive' || currentStatus === 'merit_review_positive',
+      );
       setStatusEditorOpen(false);
       getTelegramWebApp()?.haptic.notification('success');
     } catch {
@@ -151,6 +160,10 @@ export function ProfileDashboard({
     setPending(true);
     try {
       await onSubmit(next);
+      touchUserEngagement({
+        countrySampleSize: null,
+        profileUpdated: true,
+      });
       setView('dashboard');
       setCohortWarning(false);
       setStatusConfirmation(true);
@@ -285,6 +298,7 @@ export function ProfileDashboard({
         profile={current}
         userScore={userOrientationScore}
         previousSnapshot={previousSnapshot}
+        recentlyUpdatedStatus={recentlyUpdatedStatus}
       />
 
       {!terminalStatus && !statusEditorOpen ? (

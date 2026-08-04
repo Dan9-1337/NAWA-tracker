@@ -41,3 +41,6 @@ export function getScoreBreakdown(
     total,
   };
 }
+
+/** Bump when the published orientation formula changes. */
+export const NAWA_SCORE_FORMULA_VERSION = '2026.1';

@@ -311,7 +311,7 @@ begin
   end if;
 
   if jsonb_typeof(p_statistics) <> 'object'
-    or (select count(*) from jsonb_object_keys(p_statistics)) <> 18
+    or (select count(*) from jsonb_object_keys(p_statistics)) <> 20
     or not p_statistics ?& array[
       'detailsAvailable',
       'totalValidResponses',
@@ -330,7 +330,9 @@ begin
       'growth7d',
       'history',
       'groupProgress',
-      'reportedMeritOutcomes'
+      'reportedMeritOutcomes',
+      'globalBenchmark',
+      'countryContext'
     ]
   then
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
@@ -422,6 +424,33 @@ begin
     raise exception using errcode = 'P0001', message = 'statistics_invalid';
   end if;
 
+  if jsonb_typeof(p_statistics->'globalBenchmark') <> 'object'
+    or not p_statistics->'globalBenchmark' ?& array[
+      'sampleSize',
+      'representedCountryCount',
+      'median',
+      'scoreDelta',
+      'lowerScorePercentage',
+      'scoreBuckets',
+      'detailedCountriesCount'
+    ]
+  then
+    raise exception using errcode = 'P0001', message = 'statistics_invalid';
+  end if;
+
+  if jsonb_typeof(p_statistics->'countryContext') <> 'object'
+    or not p_statistics->'countryContext' ?& array[
+      'countryMedian',
+      'countrySampleSize',
+      'countryShareOfTrack',
+      'medianDeltaVsGlobal',
+      'distributionStable',
+      'nearbyScoreCount'
+    ]
+  then
+    raise exception using errcode = 'P0001', message = 'statistics_invalid';
+  end if;
+
   if jsonb_typeof(p_statistics->'growth7d') <> 'null' then
     if jsonb_typeof(p_statistics->'growth7d') <> 'object' then
       raise exception using errcode = 'P0001', message = 'statistics_invalid';
@@ -433,7 +462,11 @@ begin
       'medianThen',
       'medianNow',
       'percentileThen',
-      'percentileNow'
+      'percentileNow',
+      'trackNewResponses',
+      'trackMedianThen',
+      'trackMedianNow',
+      'statusUpdatesInGroup'
     ]
     loop
       if not p_statistics->'growth7d' ? v_growth_key then
@@ -749,6 +782,228 @@ end;
 $$;
 
 --
+-- Name: compute_track_benchmark(text, numeric, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.compute_track_benchmark(p_scholarship_track text, p_metric_value numeric, p_as_of timestamp with time zone DEFAULT NULL::timestamp with time zone) RETURNS jsonb
+    LANGUAGE plpgsql
+    SET search_path TO 'pg_catalog'
+    AS $$
+declare
+  v_same_track_count bigint;
+  v_median numeric;
+  v_lower_percentage numeric;
+  v_score_buckets jsonb;
+  v_represented_count bigint;
+  v_detailed_countries bigint;
+  v_bucket_origin numeric;
+  v_bucket_step numeric;
+  v_bucket_index integer;
+  v_bucket_counts numeric[] := array[]::numeric[];
+  v_bucket_count numeric;
+begin
+  select count(*) into v_same_track_count
+  from public.responses
+  where not is_suspicious
+    and scholarship_track = p_scholarship_track
+    and (p_as_of is null or created_at <= p_as_of);
+
+  if v_same_track_count < 10 then
+    return jsonb_build_object(
+      'sampleSize', null,
+      'representedCountryCount', null,
+      'median', null,
+      'scoreDelta', null,
+      'lowerScorePercentage', null,
+      'scoreBuckets', null,
+      'detailedCountriesCount', null
+    );
+  end if;
+
+  if p_scholarship_track = 'nawa_director' then
+    v_bucket_origin := 60;
+    v_bucket_step := 2.5;
+  else
+    v_bucket_origin := 0;
+    v_bucket_step := 6.25;
+  end if;
+
+  select
+    percentile_cont(0.5) within group (
+      order by case
+        when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+        else grade_percentage
+      end
+    ),
+    count(*) filter (
+      where (
+        case
+          when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+          else grade_percentage
+        end
+      ) < p_metric_value
+    )::numeric / count(*) * 100
+  into v_median, v_lower_percentage
+  from public.responses
+  where not is_suspicious
+    and scholarship_track = p_scholarship_track
+    and (p_as_of is null or created_at <= p_as_of)
+    and (
+      case
+        when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+        else grade_percentage
+      end
+    ) is not null;
+
+  select count(distinct ranking_country) into v_represented_count
+  from public.responses
+  where not is_suspicious
+    and scholarship_track = p_scholarship_track
+    and (p_as_of is null or created_at <= p_as_of);
+
+  select count(*) into v_detailed_countries
+  from (
+    select ranking_country
+    from public.responses
+    where not is_suspicious
+      and scholarship_track = p_scholarship_track
+      and (p_as_of is null or created_at <= p_as_of)
+    group by ranking_country
+    having count(*) >= 10
+  ) detailed;
+
+  for v_bucket_index in 0..15 loop
+    select count(*) into v_bucket_count
+    from public.responses
+    where not is_suspicious
+      and scholarship_track = p_scholarship_track
+      and (p_as_of is null or created_at <= p_as_of)
+      and (
+        case
+          when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+          else grade_percentage
+        end
+      ) is not null
+      and (
+        (
+          v_bucket_index = 0
+          and (
+            case
+              when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+              else grade_percentage
+            end
+          ) < v_bucket_origin + v_bucket_step
+        )
+        or (
+          v_bucket_index > 0
+          and (
+            case
+              when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+              else grade_percentage
+            end
+          ) >= v_bucket_origin + v_bucket_step * v_bucket_index
+          and (
+            v_bucket_index = 15
+            or (
+              case
+                when p_scholarship_track = 'nawa_director' then nawa_orientation_score
+                else grade_percentage
+              end
+            ) < v_bucket_origin + v_bucket_step * (v_bucket_index + 1)
+          )
+        )
+      );
+
+    v_bucket_counts := array_append(v_bucket_counts, v_bucket_count);
+  end loop;
+
+  select jsonb_agg(value order by ordinality)
+  into v_score_buckets
+  from unnest(v_bucket_counts) with ordinality as bucket(value, ordinality);
+
+  return jsonb_build_object(
+    'sampleSize', v_same_track_count,
+    'representedCountryCount', v_represented_count,
+    'median', v_median,
+    'scoreDelta', round(p_metric_value - v_median, 2),
+    'lowerScorePercentage', v_lower_percentage,
+    'scoreBuckets', v_score_buckets,
+    'detailedCountriesCount', v_detailed_countries
+  );
+end;
+$$;
+
+--
+-- Name: compute_country_context(jsonb, text, text, numeric); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.compute_country_context(p_statistics jsonb, p_scholarship_track text, p_ranking_country text, p_metric_value numeric) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    SET search_path TO 'pg_catalog'
+    AS $$
+declare
+  v_country_count bigint;
+  v_same_track bigint;
+  v_country_median numeric;
+  v_global_median numeric;
+  v_share numeric;
+  v_delta numeric;
+  v_stable boolean;
+  v_nearby integer;
+begin
+  select count(*) into v_country_count
+  from public.responses
+  where not is_suspicious
+    and scholarship_track = p_scholarship_track
+    and ranking_country = p_ranking_country;
+
+  v_same_track := (p_statistics->>'sameTrackCount')::bigint;
+  v_global_median := (p_statistics->>'trackWideMedian')::numeric;
+
+  if (p_statistics->>'sameCountryCount') is not null then
+    v_country_median := (p_statistics->>'medianScore')::numeric;
+  else
+    v_country_median := null;
+  end if;
+
+  if v_same_track >= 10 and v_country_count > 0 then
+    v_share := round(v_country_count::numeric / v_same_track, 4);
+  else
+    v_share := null;
+  end if;
+
+  if v_country_median is not null and v_global_median is not null then
+    v_delta := round(v_country_median - v_global_median, 2);
+  else
+    v_delta := null;
+  end if;
+
+  if v_country_count >= 10 then
+    v_stable := v_country_count >= 20;
+    if jsonb_typeof(p_statistics->'cohortScores') = 'array' then
+      select count(*)::int into v_nearby
+      from jsonb_array_elements(p_statistics->'cohortScores') elem
+      where abs((elem #>> '{}')::numeric - p_metric_value) <= 1;
+    else
+      v_nearby := null;
+    end if;
+  else
+    v_stable := null;
+    v_nearby := null;
+  end if;
+
+  return jsonb_build_object(
+    'countryMedian', v_country_median,
+    'countrySampleSize', v_country_count,
+    'countryShareOfTrack', v_share,
+    'medianDeltaVsGlobal', v_delta,
+    'distributionStable', v_stable,
+    'nearbyScoreCount', v_nearby
+  );
+end;
+$$;
+
+--
 -- Name: compute_statistics_growth7d(text, text, numeric); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -761,11 +1016,17 @@ declare
   v_as_of timestamptz := now() - interval '7 days';
   v_current jsonb;
   v_then jsonb;
+  v_track_now jsonb;
+  v_track_then jsonb;
   v_new_total bigint;
   v_new_in_group bigint;
+  v_new_in_track bigint;
+  v_status_updates bigint;
 begin
   v_current := public.compute_country_statistics(p_scholarship_track, p_ranking_country, p_metric_value);
   v_then := public.compute_country_statistics(p_scholarship_track, p_ranking_country, p_metric_value, v_as_of);
+  v_track_now := public.compute_track_benchmark(p_scholarship_track, p_metric_value);
+  v_track_then := public.compute_track_benchmark(p_scholarship_track, p_metric_value, v_as_of);
 
   if (v_current->>'sameCountryCount') is not null then
     v_group := 'track-country';
@@ -780,8 +1041,15 @@ begin
   where not is_suspicious
     and created_at > v_as_of;
 
+  select count(*) into v_new_in_track
+  from public.responses
+  where not is_suspicious
+    and created_at > v_as_of
+    and scholarship_track = p_scholarship_track;
+
   if v_group is null then
     v_new_in_group := 0;
+    v_status_updates := 0;
   else
     select count(*) into v_new_in_group
     from public.responses
@@ -789,6 +1057,13 @@ begin
       and created_at > v_as_of
       and scholarship_track = p_scholarship_track
       and (v_group = 'track' or ranking_country = p_ranking_country);
+
+    select count(*) into v_status_updates
+    from public.responses
+    where not is_suspicious
+      and scholarship_track = p_scholarship_track
+      and ranking_country = p_ranking_country
+      and status_changed_at >= (timezone('utc', now()) - interval '7 days')::date;
   end if;
 
   return jsonb_build_object(
@@ -797,7 +1072,11 @@ begin
     'medianThen', v_then->'medianScore',
     'medianNow', v_current->'medianScore',
     'percentileThen', v_then->'lowerScorePercentage',
-    'percentileNow', v_current->'lowerScorePercentage'
+    'percentileNow', v_current->'lowerScorePercentage',
+    'trackNewResponses', v_new_in_track,
+    'trackMedianThen', v_track_then->'median',
+    'trackMedianNow', v_track_now->'median',
+    'statusUpdatesInGroup', v_status_updates
   );
 end;
 $$;
@@ -921,7 +1200,16 @@ begin
           p_ranking_country
         )
         else null
-      end
+      end,
+      'globalBenchmark',
+      public.compute_track_benchmark(p_scholarship_track, p_metric_value),
+      'countryContext',
+      public.compute_country_context(
+        p_statistics,
+        p_scholarship_track,
+        p_ranking_country,
+        p_metric_value
+      )
     );
 
   if p_include_growth and p_telegram_user_id is not null then
@@ -1307,6 +1595,8 @@ revoke all on table public.responses, public.submission_limits, public.user_stat
 revoke all on all sequences in schema public from public, anon, authenticated;
 
 revoke all on function public.compute_statistics_growth7d(text, text, numeric) from public, anon, authenticated, service_role;
+revoke all on function public.compute_track_benchmark(text, numeric, timestamptz) from public, anon, authenticated, service_role;
+revoke all on function public.compute_country_context(jsonb, text, text, numeric) from public, anon, authenticated, service_role;
 revoke all on function public.upsert_user_statistics_snapshot(bigint, jsonb) from public, anon, authenticated, service_role;
 revoke all on function public.get_user_statistics_history(bigint, integer) from public, anon, authenticated, service_role;
 revoke all on function public.enrich_statistics_result(bigint, jsonb, text, text, numeric, boolean) from public, anon, authenticated, service_role;

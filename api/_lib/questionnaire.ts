@@ -59,6 +59,8 @@ const statisticsFields = [
   'history',
   'groupProgress',
   'reportedMeritOutcomes',
+  'globalBenchmark',
+  'countryContext',
 ] as const;
 
 function projectFields(value: unknown, fields: readonly string[]): Record<string, unknown> {

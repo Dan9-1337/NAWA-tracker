@@ -4,6 +4,7 @@ import {
   calculateCountryGroupAllocation,
   getAllocationDisplayMode,
   getConfidenceExplanation,
+  type AllocationConfidenceExplanation,
   type SeatAllocationEstimate,
 } from '../../../shared/allocation-calculator';
 import { getIllustrativeGroupIdForCountry } from '../../../shared/country-allocation-profiles';
@@ -90,7 +91,7 @@ export function buildAllocationSection(
   showEstimate: boolean;
   countryEstimate: SeatAllocationEstimateView | null;
   groupEstimate: SeatAllocationEstimateView | null;
-  unavailableExplanation: string | null;
+  unavailableExplanation: AllocationConfidenceExplanation | null;
 } {
   const applicationCountInScope = data.sameCountryCount ?? data.groupResponseCount;
   const totalApplicationCount = data.sameTrackCount;

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { StatisticsResult } from '../../../shared/contracts';
-import { fineBuckets, makeStatisticsResult } from '../../../shared/test-statistics';
+import { fineBuckets, makeStatisticsResult, emptyCountryContext, emptyGlobalBenchmark } from '../../../shared/test-statistics';
 import { StatisticsPanel } from './StatisticsPanel';
 
 const profile = {
@@ -52,7 +52,9 @@ describe('StatisticsPanel', () => {
     expect(screen.getByText(/6\. z 30/)).toBeInTheDocument();
     expect(screen.getByText('Wyżej niż 65% grupy')).toBeInTheDocument();
     expect(screen.getByText('Pokaż pełny rozkład wyników')).toBeInTheDocument();
-    expect(screen.getByText('Rozkład wyników w Twojej grupie')).toBeInTheDocument();
+    expect(screen.getByText('Ogólny benchmark Dyrektora NAWA')).toBeInTheDocument();
+    expect(screen.getByText('Jak wygląda Twoja grupa')).toBeInTheDocument();
+    expect(screen.getAllByText('Rozkład wyników w Twojej grupie').length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows what changed before hero on returning visits with changes', () => {
@@ -65,8 +67,10 @@ describe('StatisticsPanel', () => {
           groupResponseCount: 14,
           lowerScorePercentage: 65,
           medianScore: 76,
+          rankPosition: 6,
           sameTrackCount: 14,
           sameCountryCount: 14,
+          cohortScores: null,
           fetchedAt: '2026-07-20T10:00:00.000Z',
         }}
       />,
@@ -122,6 +126,25 @@ const detailedStatistics: StatisticsResult = {
   rankTotal: 30,
   trackWideMedian: 80,
   scoreBuckets: fineBuckets([2, 4, 8, 10, 6]),
+  globalBenchmark: {
+    ...emptyGlobalBenchmark,
+    sampleSize: 36,
+    representedCountryCount: 4,
+    median: 80,
+    scoreDelta: 2.5,
+    lowerScorePercentage: 58,
+    scoreBuckets: fineBuckets([2, 3, 4, 5, 4, 3, 3, 3, 3, 2, 2, 1, 1, 0, 0, 0]),
+    detailedCountriesCount: 2,
+  },
+  countryContext: {
+    ...emptyCountryContext,
+    countryMedian: 82.5,
+    countrySampleSize: 30,
+    countryShareOfTrack: 30 / 36,
+    medianDeltaVsGlobal: 2.5,
+    distributionStable: true,
+    nearbyScoreCount: 5,
+  },
 };
 
 const statisticsWithGrowth: StatisticsResult = {
@@ -134,5 +157,9 @@ const statisticsWithGrowth: StatisticsResult = {
     medianNow: 76.05,
     percentileThen: 65,
     percentileNow: 65,
+    trackNewResponses: 20,
+    trackMedianThen: 79,
+    trackMedianNow: 80,
+    statusUpdatesInGroup: 3,
   },
 };

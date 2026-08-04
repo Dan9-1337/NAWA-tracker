@@ -570,6 +570,25 @@ body {
   color: var(--color-accent);
 }
 
+@keyframes passport-stamp-pop {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.passport-stamp {
+  animation: passport-stamp-pop 420ms ease-out;
+}
+
 .history-sparkline {
   display: block;
   overflow: visible;

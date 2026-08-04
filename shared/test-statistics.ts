@@ -1,4 +1,4 @@
-import type { StatisticsResult } from './contracts';
+import type { CountryContextStats, GlobalBenchmark, StatisticsResult } from './contracts';
 
 /** Pads leading bucket counts to sixteen elements for contract tests. */
 export function fineBuckets(counts: number[]): number[] {
@@ -11,6 +11,25 @@ export const emptyStatisticsExtensions = {
   growth7d: null,
   history: [],
 } as const;
+
+export const emptyGlobalBenchmark: GlobalBenchmark = {
+  sampleSize: null,
+  representedCountryCount: null,
+  median: null,
+  scoreDelta: null,
+  lowerScorePercentage: null,
+  scoreBuckets: null,
+  detailedCountriesCount: null,
+};
+
+export const emptyCountryContext: CountryContextStats = {
+  countryMedian: null,
+  countrySampleSize: 0,
+  countryShareOfTrack: null,
+  medianDeltaVsGlobal: null,
+  distributionStable: null,
+  nearbyScoreCount: null,
+};
 
 export function makeStatisticsResult(overrides: Partial<StatisticsResult> & Pick<StatisticsResult, 'detailsAvailable'>): StatisticsResult {
   const base: StatisticsResult = {
@@ -32,6 +51,8 @@ export function makeStatisticsResult(overrides: Partial<StatisticsResult> & Pick
     history: [],
     groupProgress: null,
     reportedMeritOutcomes: null,
+    globalBenchmark: emptyGlobalBenchmark,
+    countryContext: emptyCountryContext,
   };
 
   return { ...base, ...overrides };

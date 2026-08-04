@@ -1,5 +1,7 @@
 import { DataSourceBadge } from '../../../components/DataSourceBadge';
 import { useI18n } from '../../../i18n/context';
+import type { AllocationConfidenceExplanation } from '../../../../shared/allocation-calculator';
+import { formatAllocationConfidenceExplanation } from '../../../lib/allocation-confidence-explanation';
 
 export type SeatAllocationEstimateView = {
   scope: 'country' | 'country_group';
@@ -10,7 +12,7 @@ export type SeatAllocationEstimateView = {
   userRankInScope: number | null;
   sampleSize: number;
   dataBasis: 'submitted_proxy' | 'reported_formal_positive';
-  confidenceExplanation: string;
+  confidenceExplanation: AllocationConfidenceExplanation;
   groupScenarioLabel?: string;
 };
 
@@ -70,7 +72,13 @@ function EstimateBlock({ estimate }: { estimate: SeatAllocationEstimateView }) {
           ? t.dashboard.allocation.basisFormalPositive
           : t.dashboard.allocation.basisSubmittedProxy}
       </p>
-      <p className="text-sm leading-6 text-[var(--text-secondary)]">{estimate.confidenceExplanation}</p>
+      <p className="text-sm leading-6 text-[var(--text-secondary)]">
+        {formatAllocationConfidenceExplanation(
+          t.dashboard.allocation.confidence,
+          locale,
+          estimate.confidenceExplanation,
+        )}
+      </p>
     </div>
   );
 }

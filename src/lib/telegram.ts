@@ -71,6 +71,7 @@ export type TelegramWebAppBridge = {
   offThemeChanged: (handler: () => void) => void;
   applyChromeColors: () => void;
   shareToStory: (mediaUrl: string, params?: StoryShareParams) => void;
+  openTelegramLink: (url: string) => void;
 };
 
 type ClickHandler = () => void;
@@ -185,6 +186,9 @@ function createDevBridge(initData: string): TelegramWebAppBridge {
         console.info('[dev] shareToStory', mediaUrl, params);
       }
     },
+    openTelegramLink: (url) => {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    },
   };
 }
 
@@ -251,6 +255,13 @@ function createTelegramBridge(initData: string): TelegramWebAppBridge {
           ? { url: params.widgetLink.url, name: params.widgetLink.name }
           : undefined,
       });
+    },
+    openTelegramLink: (url) => {
+      if (typeof WebApp.openTelegramLink === 'function') {
+        WebApp.openTelegramLink(url);
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
     },
   };
 }

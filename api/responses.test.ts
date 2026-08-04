@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { fineBuckets } from '../shared/test-statistics';
+import { emptyCountryContext, emptyGlobalBenchmark, fineBuckets } from '../shared/test-statistics';
 import { HttpError } from './_lib/errors';
 import { signTelegramInitData } from './_lib/telegram-auth';
 import {
@@ -47,6 +47,8 @@ const statistics = {
   history: [],
   groupProgress: null,
   reportedMeritOutcomes: null,
+  globalBenchmark: emptyGlobalBenchmark,
+  countryContext: emptyCountryContext,
 } as const;
 
 type Request = {

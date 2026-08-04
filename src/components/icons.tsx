@@ -202,3 +202,72 @@ export function PaletteIcon({ className, size = 18 }: IconProps) {
     </svg>
   );
 }
+
+export function ChatIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3V11.5A8.5 8.5 0 1 1 21 11.5Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function InfoIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M12 10.5v6M12 7.5h.01"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function RadarIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+      <path
+        d="M12 12l6-4"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

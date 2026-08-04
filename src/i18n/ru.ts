@@ -347,7 +347,7 @@ export const ru = {
     positionGrew: (from: string, to: string) => `Позиция изменилась с ${from}% до ${to}%`,
     groupSizeChange: (from: string, to: string) => `Размер группы: ${from} → ${to}`,
     percentileChange: (from: string, to: string) => `Ваш перцентиль: ${from}% → ${to}%`,
-    positionWhyTitle: 'Ваша позиция изменилась, потому что',
+    positionWhyTitle: 'Почему изменилась позиция',
     medianIncreased: (delta: string) => `Медиана выросла на ${delta} балла`,
     medianDecreased: (delta: string) => `Медиана снизилась на ${delta} балла`,
     sinceLastVisit: 'с прошлого посещения',
@@ -359,6 +359,15 @@ export const ru = {
     updatedQuiet: (when: string) => `Обновлено ${when}`,
     updatedToday: (time: string) => `Обновлено сегодня в ${time}`,
     updatedYesterday: (time: string) => `Обновлено вчера в ${time}`,
+    reasons: {
+      newHigherScores: (count: string) => `${count} результата(ов) оказались выше вашего.`,
+      newLowerScores: (count: string) => `${count} результата(ов) оказались ниже вашего.`,
+      existingScoresUpdated: 'Часть существующих баллов в группе обновилась.',
+      cohortSizeChanged: (count: string) => `В группе появилось ${count} новых анкет.`,
+      tieChanged: 'Изменилось число одинаковых баллов рядом с вами.',
+      statusDataChanged: (count: string) =>
+        `В вашей группе сообщили о ${count} обновлениях статуса.`,
+    },
   },
   privacyNotice: {
     title: 'Какие данные сохраняются?',
@@ -382,6 +391,7 @@ export const ru = {
     privacyPolicy: 'Политика конфиденциальности',
     appearance: 'Оформление',
     language: 'Язык',
+    help: 'Помощь',
     deleteConfirmTitle: 'Удалить анкету?',
     deleteConfirmBody: 'Это действие необратимо. Все сохранённые данные будут удалены.',
     deleteConfirm: 'Удалить',
@@ -389,6 +399,128 @@ export const ru = {
     deleteSuccess: 'Анкета удалена',
     deleteError: 'Не удалось удалить анкету. Попробуйте ещё раз.',
     close: 'Закрыть',
+  },
+  support: {
+    general: 'Поддержка',
+    calculationError: 'Ошибка в расчёте',
+    reportBug: 'Сообщить о баге',
+    hint: 'Открывает чат в Telegram с базовым контекстом. Лишние персональные данные не передаются.',
+  },
+  about: {
+    title: 'О NAWAmeter',
+    intro: 'NAWAmeter — неофициальный трекер кандидатов Anders NAWA.',
+    capabilitiesTitle: 'Что умеет сервис',
+    capabilitiesBody:
+      'Показывает вашу позицию в выборке по стране, ориентир по всей программе, активность когорты и ход заявки на основе данных, которые сообщают пользователи.',
+    dataTitle: 'Откуда берутся данные',
+    dataBody:
+      'Статистика считается по анонимным профилям NAWAmeter. Статусы и результаты содержательной оценки сообщаются пользователями, если не указано иное.',
+    officialTitle: 'Что считается официальным',
+    officialBody:
+      'Официальны только решения NAWA и опубликованные правила программы. Оценки NAWAmeter и ранги в выборке — не официальный результат конкурса.',
+    privacyTitle: 'Как защищается анонимность',
+    privacyBody:
+      'Другие пользователи не видят ваш профиль. Детальные агрегаты требуют минимального размера когорты. В сообщениях в поддержку используется короткий ID, а не полная личность.',
+    metricsTitle: 'Как рассчитываются показатели',
+    metricsBody:
+      'Позиция и перцентиль внутри страны используют выборку по стране. Глобальная медиана и распределение — только ориентир и никогда не официальный общий рейтинг.',
+    authorTitle: 'Об авторе',
+    authorBody: 'Независимый проект, чтобы помочь кандидатам понять конкурсный контекст.',
+    version: (version: string) => `Версия приложения: ${version}`,
+  },
+  passport: {
+    title: 'NAWA Passport',
+    daysSincePrevious: (days: string) => `${days} дн. с предыдущего этапа`,
+    stages: {
+      profile_created: 'Анкета создана',
+      submitted: 'Wniosek złożony',
+      formal_positive: 'Ocena formalna pozytywna',
+      merit_review: 'Ocena merytoryczna',
+      decision: 'Decyzja',
+    },
+    notes: {
+      profile_created: 'Ваш анонимный профиль NAWAmeter готов.',
+      submitted: 'Ваша заявка в конкурсной очереди.',
+      formal_positive: 'Документы прошли формальную проверку.',
+      merit_review: 'Комиссия рассматривает заявку по существу.',
+      meritNegative: 'Комиссия не рекомендовала стипендию. Ваши данные остаются в выборке.',
+      decision: 'Зафиксировано финальное решение по стипендии.',
+    },
+  },
+  badges: {
+    title: 'Значки вклада',
+    disclaimer: 'Значки за участие и свежесть данных — никогда не за балл.',
+    labels: {
+      day_one: 'Day One',
+      cohort_og: 'Cohort OG',
+      fresh_data: 'Fresh Data',
+      status_scout: 'Status Scout',
+      comeback: 'Comeback',
+      data_contributor: 'Data Contributor',
+      final_form: 'Final Form',
+    },
+    descriptions: {
+      day_one: 'Присоединились в начале сезона.',
+      cohort_og: 'Участвовали до открытия подробной статистики по стране.',
+      fresh_data: 'Недавно подтвердили актуальность данных.',
+      status_scout: 'Обновляли ход заявки больше одного раза.',
+      comeback: 'Вернулись после длительного перерыва.',
+      data_contributor: 'Несколько раз подтвердили или обновили профиль.',
+      final_form: 'Прошли весь путь заявки.',
+    },
+  },
+  milestones: {
+    title: (season: string) => `NAWAmeter ${season}`,
+    apps: (count: string) => `${count} анкет`,
+    countries: (count: string) => `${count} стран`,
+    detailed: (count: string) => `${count} когорт с подробной статистикой`,
+    unlockedTitle: 'Вехи',
+    disclaimer: 'Прогресс сообщества по активному треку — не официальный рейтинг NAWA.',
+    items: {
+      apps_100: '100 анкет',
+      apps_500: '500 анкет',
+      apps_1000: '1000 анкет',
+      countries_10: '10 представленных стран',
+      countries_20: '20 представленных стран',
+      first_merit_outcomes: 'Первые сообщённые результаты содержательной оценки',
+      detailed_cohorts_7: '7 стран с подробной статистикой',
+    },
+    celebration: {
+      apps_100: 'Сообщество NAWAmeter собрало 100 анкет.',
+      apps_500: 'Сообщество NAWAmeter собрало 500 анкет.',
+      apps_1000: 'Сообщество NAWAmeter достигло 1000 анкет.',
+      countries_10: 'В NAWAmeter уже 10 стран.',
+      countries_20: 'В NAWAmeter уже 20 стран.',
+      first_merit_outcomes: 'Появились первые сообщённые результаты содержательной оценки.',
+      detailed_cohorts_7: '7 страновых когорт достигли подробной статистики.',
+    },
+  },
+  radar: {
+    title: 'NAWA Radar',
+    open: 'Radar',
+    close: 'Закрыть',
+    today: 'Сегодня',
+    empty: 'Пока нет событий для этого фильтра.',
+    privacy:
+      'Только community-обновления — без имён, без точных новых score и без единичных outcome в маленьких когортах.',
+    filters: {
+      my_country: 'Моя страна',
+      all: 'Все страны',
+      statuses: 'Статусы',
+      official: 'Официальные',
+      product: 'Продукт',
+    },
+    events: {
+      countryDetailed: (country: string) => `${country} открыл подробное распределение`,
+      countryGrowth: (country: string, count: string) =>
+        `${country}: +${count} анкет в выборке по стране`,
+      globalGrowth: (count: string) => `Общая выборка выросла на ${count} анкет`,
+      statusPulse: (country: string, count: string) =>
+        `${country}: ${count} обновлений статуса`,
+      meritPulse: (country: string, count: string) =>
+        `${country}: ${count} сообщённых результатов содержательной оценки`,
+      productUpdate: 'NAWAmeter добавил многоуровневые ориентиры по стране и программе.',
+    },
   },
   telegram: {
     gateTitle: 'Откройте в Telegram',
@@ -426,8 +558,12 @@ export const ru = {
   dataSource: {
     official: 'Официальные',
     historical: 'Исторические данные',
-    estimate: 'Оценка NAWAmeter',
     reported: 'Сообщено пользователями',
+    estimate: 'Оценка NAWAmeter',
+    calculated: 'Рассчитано NAWAmeter',
+    country_sample: 'Выборка NAWAmeter по стране',
+    global_sample: 'Общая выборка NAWAmeter',
+    nawa_estimate: 'Оценка NAWAmeter',
   },
   scholarshipEntry: {
     cta: 'Посмотреть мою позицию',
@@ -459,6 +595,18 @@ export const ru = {
       cohortSizeOnly: (count: string) => `${count} в выборке`,
       expandDistribution: 'Показать полное распределение',
       collapseDistribution: 'Скрыть полное распределение',
+      scoreBreakdown: 'Разбор балла',
+      rankDelta: (from: string, to: string) => `Позиция изменилась: ${from} → ${to}`,
+    },
+    competitionNeighbourhood: {
+      title: 'Вокруг вашего результата',
+      distanceHigher: (delta: string) => `До ближайшего результата выше: ${delta}`,
+      distanceLower: (delta: string) => `До ближайшего результата ниже: ${delta}`,
+      withinOnePoint: (count: string) => `В диапазоне ±1 балл: ${count} участников`,
+      tied: (count: string) => `Совпадающих результатов: ${count}`,
+      dense: 'Вы находитесь в плотной части группы.',
+      moderate: 'Вы находитесь в умеренно плотной части группы.',
+      sparse: 'Вы находитесь в менее плотной части группы.',
     },
     smallCountry: {
       title: 'Малая группа в вашей стране',
@@ -471,6 +619,52 @@ export const ru = {
       belowTrackMedian: 'Ваш балл ниже медианы всей программы директора NAWA.',
       benchmarkMedian: (median: string) => `Медиана по программе: ${median} б.`,
       benchmarkDisclaimer: 'Общий ориентир — не официальный рейтинг конкурса.',
+    },
+    globalBenchmark: {
+      title: 'Общий ориентир Dyrektora NAWA',
+      yourScore: (score: string) => `Ваш балл: ${score}`,
+      trackMedian: (median: string) => `Медиана всей выборки: ${median}`,
+      delta: (value: string) => `Разница: ${value}`,
+      sampleMeta: (applications: string, countries: string) =>
+        `${applications} анкет из ${countries} стран`,
+      secondaryPercentile: (percentage: string) =>
+        `Ваш результат выше ${percentage}% всей выборки NAWAmeter.`,
+      insufficient: 'Общая выборка NAWAmeter пока слишком мала для ориентира по всей программе.',
+      disclaimer:
+        'Это общий ориентир NAWAmeter, а не официальный общий рейтинг кандидатов.',
+    },
+    countryContext: {
+      title: 'Как выглядит ваша группа',
+      countryMedian: (country: string, median: string) => `Медиана ${country}: ${median}`,
+      globalMedian: (median: string) => `Медиана всех стран: ${median}`,
+      medianDelta: (delta: string) => `Разница: ${delta}`,
+      sampleMeta: (country: string, countryCount: string, totalCount: string) =>
+        `${country}: ${countryCount} анкет · Вся выборка: ${totalCount}`,
+      countryCountOnly: (country: string, count: string) =>
+        `В ${country} пока ${count} анкет`,
+      unstableDistribution: 'Распределение страны пока нестабильно.',
+      stableDistribution: 'Распределение страны выглядит стабильнее.',
+      detailedCohortReached: 'Когорта страны достигла подробной статистики.',
+      nearbyCount: (count: string) =>
+        `В диапазоне ±1 балл от вас находится ${count} участников.`,
+      disclaimer:
+        'Контекст страны носит описательный характер. Решения NAWA принимаются внутри страны или группы стран.',
+    },
+    cohortPulse: {
+      title: 'Пульс когорты',
+      countryTitle: (country: string) => `За последние 7 дней · ${country}`,
+      programTitle: 'NAWAmeter сейчас',
+      newApps: (count: string) => `+${count} новых анкет`,
+      statusUpdates: (count: string) => `${count} обновлений статуса`,
+      medianDelta: (delta: string) => `Медиана: ${delta}`,
+      medianStable: 'Медиана почти не изменилась',
+      firstMeritOutcomes: 'Появились первые сообщённые результаты содержательной оценки',
+      programApps: (count: string) => `${count} анкет`,
+      programCountries: (count: string) => `${count} стран`,
+      detailedCountries: (count: string) => `${count} стран с подробной статистикой`,
+      weekNewApps: (count: string) => `+${count} анкет за неделю`,
+      disclaimer:
+        'Недельная сводка активности — отдельно от личных изменений с прошлого визита.',
     },
     whatChanged: {
       title: 'С прошлого визита',
@@ -527,6 +721,20 @@ export const ru = {
       disclaimer:
         'Это ориентировочный сценарий, а не официальная квота NAWA или прогноз стипендии.',
       unavailableTitle: 'Распределение мест пока не рассчитывается',
+      confidence: {
+        smallSample: (applications: string, countries: string) =>
+          `Общая выборка NAWAmeter пока невелика (${applications} анкет из ${countries} стран).`,
+        insufficientData:
+          'Пока недостаточно данных, чтобы надёжно объяснить эту оценку распределения мест.',
+        lowVolatile: (applications: string, countries: string) =>
+          `Предварительная оценка: ${applications} анкет из ${countries} стран, но доли стран ещё быстро меняются.`,
+        lowPreliminary: (applications: string, countries: string) =>
+          `Предварительная оценка на основе ${applications} анкет из ${countries} стран.`,
+        medium: (applications: string, countries: string) =>
+          `Оценка на основе ${applications} анкет из ${countries} стран при умеренном покрытии выборки.`,
+        high: (applications: string, countries: string) =>
+          `Оценка на основе широкой выборки: ${applications} анкет из ${countries} стран.`,
+      },
       historicalTitle: 'Исторические данные',
       historicalCountryLine: (country: string, year: string, seats: string) =>
         `${country}, ${year}: ${seats} мест`,

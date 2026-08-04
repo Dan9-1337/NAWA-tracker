@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
+import { getScoreBreakdown, NAWA_SCORE_FORMULA_VERSION } from '../../shared/nawa-score';
 import { ConfirmSummary } from '../features/ConfirmSummary';
 import { useI18n } from '../i18n/context';
+import { getAppVersion } from '../lib/app-version';
+import { buildSupportMessage, openSupportChat } from '../lib/support-context';
 import { getStoredThemePreference, type ThemePreference } from '../lib/theme';
 import { getTelegramWebApp } from '../lib/telegram';
 import {
+  ChatIcon,
   ChevronIcon,
   DocumentIcon,
   GlobeIcon,
+  InfoIcon,
   PaletteIcon,
   ShieldIcon,
   UserEditIcon,
@@ -16,7 +21,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { DeleteProfileZone } from './DeleteProfileZone';
 
-type SettingsView = 'menu' | 'data' | 'privacy' | 'language' | 'appearance';
+type SettingsView = 'menu' | 'data' | 'privacy' | 'language' | 'appearance' | 'help' | 'about';
 
 type SettingsSheetProps = {
   open: boolean;
@@ -80,6 +85,7 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
   const [view, setView] = useState<SettingsView>('menu');
   const closeRef = useRef<HTMLButtonElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
+  const appVersion = getAppVersion();
 
   useEffect(() => {
     if (!open) {
@@ -113,7 +119,34 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
           ? t.settings.language
           : view === 'appearance'
             ? t.settings.appearance
-            : t.settings.title;
+            : view === 'help'
+              ? t.settings.help
+              : view === 'about'
+                ? t.about.title
+                : t.settings.title;
+
+  const openSupport = (kind: 'help' | 'calculation_error' | 'bug') => {
+    const scoreBreakdown =
+      current?.scholarshipTrack === 'nawa_director'
+        ? getScoreBreakdown(
+            current.averageGrade,
+            current.maximumGrade,
+            current.polishSchoolLevel ?? 'none',
+          )
+        : null;
+
+    openSupportChat(
+      buildSupportMessage({
+        screen: current ? 'Dashboard' : 'Settings',
+        locale,
+        rankingCountry: current?.rankingCountry ?? null,
+        kind,
+        scoreBreakdown: kind === 'calculation_error' ? scoreBreakdown : null,
+        polishSchoolLevel: current?.polishSchoolLevel,
+        formulaVersion: NAWA_SCORE_FORMULA_VERSION,
+      }),
+    );
+  };
 
   return (
     <div className="fixed inset-0 z-[100]" role="presentation">
@@ -195,6 +228,19 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
                   onClick={() => setView('appearance')}
                 />
               </SettingsMenuGroup>
+
+              <SettingsMenuGroup>
+                <SettingsMenuRow
+                  label={t.settings.help}
+                  icon={<ChatIcon size={17} />}
+                  onClick={() => setView('help')}
+                />
+                <SettingsMenuRow
+                  label={t.about.title}
+                  icon={<InfoIcon size={17} />}
+                  onClick={() => setView('about')}
+                />
+              </SettingsMenuGroup>
             </div>
           ) : null}
 
@@ -233,6 +279,64 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
             </div>
           ) : null}
 
+          {view === 'help' ? (
+            <div className="mt-5 space-y-3">
+              <SettingsMenuGroup>
+                <SettingsMenuRow
+                  label={t.support.general}
+                  icon={<ChatIcon size={17} />}
+                  onClick={() => openSupport('help')}
+                />
+                <SettingsMenuRow
+                  label={t.support.calculationError}
+                  icon={<DocumentIcon size={17} />}
+                  onClick={() => openSupport('calculation_error')}
+                />
+                <SettingsMenuRow
+                  label={t.support.reportBug}
+                  icon={<ShieldIcon size={17} />}
+                  onClick={() => openSupport('bug')}
+                />
+              </SettingsMenuGroup>
+              <p className="px-1 text-xs leading-5 text-[var(--text-helper)]">{t.support.hint}</p>
+            </div>
+          ) : null}
+
+          {view === 'about' ? (
+            <div className="mt-5 space-y-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.title}</h3>
+                <p>{t.about.intro}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.capabilitiesTitle}</h3>
+                <p>{t.about.capabilitiesBody}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.dataTitle}</h3>
+                <p>{t.about.dataBody}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.officialTitle}</h3>
+                <p>{t.about.officialBody}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.privacyTitle}</h3>
+                <p>{t.about.privacyBody}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.metricsTitle}</h3>
+                <p>{t.about.metricsBody}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.authorTitle}</h3>
+                <p>{t.about.authorBody}</p>
+              </section>
+              <p className="text-xs text-[var(--text-helper)]">
+                {t.about.version(appVersion)}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div

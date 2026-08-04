@@ -345,7 +345,7 @@ export const pl = {
     positionGrew: (from: string, to: string) => `Pozycja zmieniła się z ${from}% na ${to}%`,
     groupSizeChange: (from: string, to: string) => `Rozmiar grupy: ${from} → ${to}`,
     percentileChange: (from: string, to: string) => `Twój percentyl: ${from}% → ${to}%`,
-    positionWhyTitle: 'Twoja pozycja zmieniła się, ponieważ',
+    positionWhyTitle: 'Dlaczego zmieniła się pozycja',
     medianIncreased: (delta: string) => `Mediana wzrosła o ${delta} pkt`,
     medianDecreased: (delta: string) => `Mediana spadła o ${delta} pkt`,
     sinceLastVisit: 'od ostatniej wizyty',
@@ -357,6 +357,15 @@ export const pl = {
     updatedQuiet: (when: string) => `Zaktualizowano ${when}`,
     updatedToday: (time: string) => `Zaktualizowano dzisiaj o ${time}`,
     updatedYesterday: (time: string) => `Zaktualizowano wczoraj o ${time}`,
+    reasons: {
+      newHigherScores: (count: string) => `${count} wyników znalazło się powyżej Twojego.`,
+      newLowerScores: (count: string) => `${count} wyników znalazło się poniżej Twojego.`,
+      existingScoresUpdated: 'Część istniejących wyników w grupie została zaktualizowana.',
+      cohortSizeChanged: (count: string) => `Do grupy dołączyło ${count} nowych ankiet.`,
+      tieChanged: 'Zmieniła się liczba wyników równych Twojemu.',
+      statusDataChanged: (count: string) =>
+        `W Twojej grupie zgłoszono ${count} aktualizacji statusu.`,
+    },
   },
   privacyNotice: {
     title: 'Jakie dane są zapisywane?',
@@ -380,6 +389,7 @@ export const pl = {
     privacyPolicy: 'Polityka prywatności',
     appearance: 'Wygląd',
     language: 'Język',
+    help: 'Pomoc',
     deleteConfirmTitle: 'Usunąć ankietę?',
     deleteConfirmBody: 'Ta operacja jest nieodwracalna. Wszystkie zapisane dane zostaną usunięte.',
     deleteConfirm: 'Usuń',
@@ -387,6 +397,128 @@ export const pl = {
     deleteSuccess: 'Ankieta została usunięta',
     deleteError: 'Nie udało się usunąć ankiety. Spróbuj ponownie.',
     close: 'Zamknij',
+  },
+  support: {
+    general: 'Wsparcie',
+    calculationError: 'Błąd w obliczeniach',
+    reportBug: 'Zgłoś błąd',
+    hint: 'Otwiera czat Telegram z podstawowym kontekstem. Nie wysyłamy dodatkowych danych osobowych.',
+  },
+  about: {
+    title: 'O NAWAmeter',
+    intro: 'NAWAmeter to nieoficjalny tracker kandydatów Anders NAWA.',
+    capabilitiesTitle: 'Co robi usługa',
+    capabilitiesBody:
+      'Pokazuje Twoje miejsce w próbie krajowej, benchmark całego toru, aktywność kohorty oraz przebieg wniosku na podstawie danych zgłoszonych przez użytkowników.',
+    dataTitle: 'Skąd pochodzą dane',
+    dataBody:
+      'Statystyki liczymy z anonimowych profili NAWAmeter. Statusy i wyniki merytoryczne pochodzą od użytkowników, o ile nie oznaczono inaczej.',
+    officialTitle: 'Co jest oficjalne',
+    officialBody:
+      'Oficjalne są tylko decyzje NAWA i opublikowane zasady programu. Szacunki NAWAmeter i rangi w próbie nie są oficjalnym wynikiem konkursu.',
+    privacyTitle: 'Jak chronimy anonimowość',
+    privacyBody:
+      'Inni użytkownicy nie widzą Twojego profilu. Szczegółowe agregaty wymagają minimalnej wielkości kohorty. Wiadomości do supportu używają krótkiego ID, nie pełnej tożsamości.',
+    metricsTitle: 'Jak liczymy wskaźniki',
+    metricsBody:
+      'Pozycja i percentyl w kraju używają próby krajowej. Globalna mediana i rozkład służą tylko jako orientacja i nigdy nie są oficjalnym rankingiem ogólnym.',
+    authorTitle: 'O autorze',
+    authorBody: 'Projekt niezależny, żeby pomóc kandydatom zrozumieć kontekst konkursu.',
+    version: (version: string) => `Wersja aplikacji: ${version}`,
+  },
+  passport: {
+    title: 'Paszport NAWA',
+    daysSincePrevious: (days: string) => `${days} dni od poprzedniego etapu`,
+    stages: {
+      profile_created: 'Utworzono ankietę',
+      submitted: 'Wniosek złożony',
+      formal_positive: 'Ocena formalna pozytywna',
+      merit_review: 'Ocena merytoryczna',
+      decision: 'Decyzja',
+    },
+    notes: {
+      profile_created: 'Twój anonimowy profil NAWAmeter jest gotowy.',
+      submitted: 'Twój wniosek jest w kolejce konkursowej.',
+      formal_positive: 'Dokumenty przeszły ocenę formalną.',
+      merit_review: 'Komisja ocenia Twój wniosek merytorycznie.',
+      meritNegative: 'Komisja nie rekomendowała stypendium. Twoje dane pozostają w próbie.',
+      decision: 'Zapisano ostateczną decyzję stypendialną.',
+    },
+  },
+  badges: {
+    title: 'Odznaki wkładu',
+    disclaimer: 'Odznaki nagradzają udział i świeżość danych — nigdy Twój wynik punktowy.',
+    labels: {
+      day_one: 'Day One',
+      cohort_og: 'Cohort OG',
+      fresh_data: 'Fresh Data',
+      status_scout: 'Status Scout',
+      comeback: 'Comeback',
+      data_contributor: 'Data Contributor',
+      final_form: 'Final Form',
+    },
+    descriptions: {
+      day_one: 'Dołączyłeś na początku sezonu.',
+      cohort_og: 'Brałeś udział przed otwarciem szczegółowych statystyk kraju.',
+      fresh_data: 'Niedawno potwierdziłeś aktualność danych.',
+      status_scout: 'Aktualizowałeś przebieg wniosku więcej niż raz.',
+      comeback: 'Wróciłeś po dłuższej przerwie.',
+      data_contributor: 'Kilka razy potwierdziłeś lub zaktualizowałeś profil.',
+      final_form: 'Ukończyłeś całą ścieżkę wniosku.',
+    },
+  },
+  milestones: {
+    title: (season: string) => `NAWAmeter ${season}`,
+    apps: (count: string) => `${count} ankiet`,
+    countries: (count: string) => `${count} krajów`,
+    detailed: (count: string) => `${count} kohort ze szczegółowymi statystykami`,
+    unlockedTitle: 'Kamienie milowe',
+    disclaimer: 'Postęp społeczności w aktywnym torze — nie oficjalny ranking NAWA.',
+    items: {
+      apps_100: '100 ankiet',
+      apps_500: '500 ankiet',
+      apps_1000: '1000 ankiet',
+      countries_10: '10 reprezentowanych krajów',
+      countries_20: '20 reprezentowanych krajów',
+      first_merit_outcomes: 'Pierwsze zgłoszone wyniki merytoryczne',
+      detailed_cohorts_7: '7 krajów ze szczegółowymi statystykami',
+    },
+    celebration: {
+      apps_100: 'Społeczność NAWAmeter zebrała 100 ankiet.',
+      apps_500: 'Społeczność NAWAmeter zebrała 500 ankiet.',
+      apps_1000: 'Społeczność NAWAmeter osiągnęła 1000 ankiet.',
+      countries_10: 'W NAWAmeter jest już 10 krajów.',
+      countries_20: 'W NAWAmeter jest już 20 krajów.',
+      first_merit_outcomes: 'Pojawiły się pierwsze wyniki merytoryczne.',
+      detailed_cohorts_7: '7 kohort krajowych ma już szczegółowe statystyki.',
+    },
+  },
+  radar: {
+    title: 'NAWA Radar',
+    open: 'Radar',
+    close: 'Zamknij',
+    today: 'Dziś',
+    empty: 'Brak wydarzeń dla tego filtra.',
+    privacy:
+      'Tylko aktualizacje społeczności — bez imion, bez dokładnych nowych wyników i bez pojedynczych outcome w małych grupach.',
+    filters: {
+      my_country: 'Mój kraj',
+      all: 'Wszystkie kraje',
+      statuses: 'Statusy',
+      official: 'Oficjalne',
+      product: 'Produkt',
+    },
+    events: {
+      countryDetailed: (country: string) => `${country} otworzył szczegółowy rozkład`,
+      countryGrowth: (country: string, count: string) =>
+        `${country}: +${count} ankiet w próbie krajowej`,
+      globalGrowth: (count: string) => `Ogólna próba wzrosła o ${count} ankiet`,
+      statusPulse: (country: string, count: string) =>
+        `${country}: zgłoszono ${count} aktualizacji statusu`,
+      meritPulse: (country: string, count: string) =>
+        `${country}: zgłoszono ${count} wyników merytorycznych`,
+      productUpdate: 'NAWAmeter dodał wielopoziomowe benchmarki kraju i toru.',
+    },
   },
   telegram: {
     gateTitle: 'Otwórz w Telegramie',
@@ -424,8 +556,12 @@ export const pl = {
   dataSource: {
     official: 'Oficjalne',
     historical: 'Dane historyczne',
-    estimate: 'Szacunek NAWAmeter',
     reported: 'Zgłoszone przez użytkowników',
+    estimate: 'Szacunek NAWAmeter',
+    calculated: 'Obliczone przez NAWAmeter',
+    country_sample: 'Próba krajowa NAWAmeter',
+    global_sample: 'Próba globalna NAWAmeter',
+    nawa_estimate: 'Szacunek NAWAmeter',
   },
   scholarshipEntry: {
     cta: 'Sprawdź swoją pozycję',
@@ -457,6 +593,18 @@ export const pl = {
       cohortSizeOnly: (count: string) => `${count} w wyborce`,
       expandDistribution: 'Pokaż pełny rozkład wyników',
       collapseDistribution: 'Ukryj pełny rozkład wyników',
+      scoreBreakdown: 'Rozbicie wyniku',
+      rankDelta: (from: string, to: string) => `Pozycja zmieniła się: ${from} → ${to}`,
+    },
+    competitionNeighbourhood: {
+      title: 'Wokół Twojego wyniku',
+      distanceHigher: (delta: string) => `Do najbliższego wyniku powyżej: ${delta}`,
+      distanceLower: (delta: string) => `Do najbliższego wyniku poniżej: ${delta}`,
+      withinOnePoint: (count: string) => `W przedziale ±1 punkt: ${count} uczestników`,
+      tied: (count: string) => `Remisów wyników: ${count}`,
+      dense: 'Jesteś w gęstej części grupy.',
+      moderate: 'Jesteś w umiarkowanie gęstej części grupy.',
+      sparse: 'Jesteś w mniej gęstej części grupy.',
     },
     smallCountry: {
       title: 'Mała grupa w Twoim kraju',
@@ -470,6 +618,52 @@ export const pl = {
       benchmarkMedian: (median: string) => `Mediana całej ścieżki: ${median} pkt`,
       benchmarkDisclaimer:
         'Ogólny benchmark — nie jest to oficjalny ranking konkursu.',
+    },
+    globalBenchmark: {
+      title: 'Ogólny benchmark Dyrektora NAWA',
+      yourScore: (score: string) => `Twój wynik: ${score}`,
+      trackMedian: (median: string) => `Mediana całej próby: ${median}`,
+      delta: (value: string) => `Różnica: ${value}`,
+      sampleMeta: (applications: string, countries: string) =>
+        `${applications} ankiet z ${countries} krajów`,
+      secondaryPercentile: (percentage: string) =>
+        `Twój wynik jest powyżej ${percentage}% całej próby NAWAmeter.`,
+      insufficient: 'Ogólna próba NAWAmeter jest jeszcze zbyt mała dla benchmarku całej ścieżki.',
+      disclaimer:
+        'To ogólny benchmark NAWAmeter, a nie oficjalny ranking wszystkich kandydatów.',
+    },
+    countryContext: {
+      title: 'Jak wygląda Twoja grupa',
+      countryMedian: (country: string, median: string) => `Mediana ${country}: ${median}`,
+      globalMedian: (median: string) => `Mediana wszystkich krajów: ${median}`,
+      medianDelta: (delta: string) => `Różnica: ${delta}`,
+      sampleMeta: (country: string, countryCount: string, totalCount: string) =>
+        `${country}: ${countryCount} ankiet · Cała próba: ${totalCount}`,
+      countryCountOnly: (country: string, count: string) =>
+        `W ${country} jest obecnie ${count} ankiet`,
+      unstableDistribution: 'Rozkład w kraju jest jeszcze niestabilny.',
+      stableDistribution: 'Rozkład w kraju wygląda stabilniej.',
+      detailedCohortReached: 'Kohorta kraju osiągnęła szczegółowe statystyki.',
+      nearbyCount: (count: string) =>
+        `W przedziale ±1 punkt od Ciebie jest ${count} uczestników.`,
+      disclaimer:
+        'Kontekst kraju ma charakter opisowy. Decyzje NAWA zapadają wewnątrz kraju lub grupy krajów.',
+    },
+    cohortPulse: {
+      title: 'Puls kohorty',
+      countryTitle: (country: string) => `Ostatnie 7 dni · ${country}`,
+      programTitle: 'NAWAmeter teraz',
+      newApps: (count: string) => `+${count} nowych ankiet`,
+      statusUpdates: (count: string) => `${count} aktualizacji statusu`,
+      medianDelta: (delta: string) => `Mediana: ${delta}`,
+      medianStable: 'Mediana bez większych zmian',
+      firstMeritOutcomes: 'Pojawiły się pierwsze wyniki merytoryczne',
+      programApps: (count: string) => `${count} ankiet`,
+      programCountries: (count: string) => `${count} krajów`,
+      detailedCountries: (count: string) => `${count} krajów ze szczegółowymi statystykami`,
+      weekNewApps: (count: string) => `+${count} ankiet w tym tygodniu`,
+      disclaimer:
+        'Podsumowanie tygodniowej aktywności — osobno od osobistych zmian od ostatniej wizyty.',
     },
     whatChanged: {
       title: 'Od ostatniej wizyty',
@@ -527,6 +721,20 @@ export const pl = {
       disclaimer:
         'To orientacyjny scenariusz, a nie oficjalny limit NAWA ani prognoza przyznania stypendium.',
       unavailableTitle: 'Rozłożenie miejsc nie jest jeszcze liczone',
+      confidence: {
+        smallSample: (applications: string, countries: string) =>
+          `Ogólna próba NAWAmeter jest jeszcze mała (${applications} ankiet z ${countries} krajów).`,
+        insufficientData:
+          'Nie ma jeszcze wystarczających danych, by wiarygodnie wyjaśnić tę estymację rozkładu miejsc.',
+        lowVolatile: (applications: string, countries: string) =>
+          `Wstępna estymacja: ${applications} ankiet z ${countries} krajów, ale udziały krajów wciąż szybko się zmieniają.`,
+        lowPreliminary: (applications: string, countries: string) =>
+          `Wstępna estymacja na podstawie ${applications} ankiet z ${countries} krajów.`,
+        medium: (applications: string, countries: string) =>
+          `Estymacja na podstawie ${applications} ankiet z ${countries} krajów przy umiarkowanym pokryciu próby.`,
+        high: (applications: string, countries: string) =>
+          `Estymacja na podstawie szerokiej próby: ${applications} ankiet z ${countries} krajów.`,
+      },
       historicalTitle: 'Dane historyczne',
       historicalCountryLine: (country: string, year: string, seats: string) =>
         `${country}, ${year}: ${seats} miejsc`,

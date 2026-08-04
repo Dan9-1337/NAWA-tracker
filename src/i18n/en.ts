@@ -346,7 +346,7 @@ export const en = {
     positionGrew: (from: string, to: string) => `Position moved from ${from}% to ${to}%`,
     groupSizeChange: (from: string, to: string) => `Group size: ${from} → ${to}`,
     percentileChange: (from: string, to: string) => `Your percentile: ${from}% → ${to}%`,
-    positionWhyTitle: 'Your position changed because',
+    positionWhyTitle: 'Why your position changed',
     medianIncreased: (delta: string) => `Median increased by ${delta} points`,
     medianDecreased: (delta: string) => `Median decreased by ${delta} points`,
     sinceLastVisit: 'since your last visit',
@@ -358,6 +358,14 @@ export const en = {
     updatedQuiet: (when: string) => `Updated ${when}`,
     updatedToday: (time: string) => `Updated today at ${time}`,
     updatedYesterday: (time: string) => `Updated yesterday at ${time}`,
+    reasons: {
+      newHigherScores: (count: string) => `${count} results came in above yours.`,
+      newLowerScores: (count: string) => `${count} results came in below yours.`,
+      existingScoresUpdated: 'Some existing scores in the group were updated.',
+      cohortSizeChanged: (count: string) => `${count} new applications joined the group.`,
+      tieChanged: 'The number of tied scores around yours changed.',
+      statusDataChanged: (count: string) => `${count} status updates were reported in your group.`,
+    },
   },
   privacyNotice: {
     title: 'What data is stored?',
@@ -381,6 +389,7 @@ export const en = {
     privacyPolicy: 'Privacy policy',
     appearance: 'Appearance',
     language: 'Language',
+    help: 'Help',
     deleteConfirmTitle: 'Delete survey?',
     deleteConfirmBody: 'This cannot be undone. All saved data will be removed.',
     deleteConfirm: 'Delete',
@@ -388,6 +397,128 @@ export const en = {
     deleteSuccess: 'Survey deleted',
     deleteError: 'Failed to delete survey. Please try again.',
     close: 'Close',
+  },
+  support: {
+    general: 'Support',
+    calculationError: 'Calculation error',
+    reportBug: 'Report a bug',
+    hint: 'Opens a Telegram chat with basic context. No extra personal data is sent.',
+  },
+  about: {
+    title: 'About NAWAmeter',
+    intro: 'NAWAmeter is an unofficial tracker for Anders NAWA candidates.',
+    capabilitiesTitle: 'What the service does',
+    capabilitiesBody:
+      'It shows your place in the country sample, a track-wide benchmark, cohort activity, and your application journey based on self-reported data.',
+    dataTitle: 'Where the data comes from',
+    dataBody:
+      'Statistics are calculated from anonymous NAWAmeter profiles. Statuses and merit outcomes are reported by users unless marked otherwise.',
+    officialTitle: 'What counts as official',
+    officialBody:
+      'Only NAWA decisions and published programme rules are official. NAWAmeter estimates and sample ranks are not official competition results.',
+    privacyTitle: 'How anonymity is protected',
+    privacyBody:
+      'Other users cannot see your profile. Detailed aggregates require a minimum cohort size. Support messages use a short reference id, not your full identity.',
+    metricsTitle: 'How indicators are calculated',
+    metricsBody:
+      'Country position and percentile use the country sample. Global median and distribution are orientation-only and never used as an official overall ranking.',
+    authorTitle: 'About the author',
+    authorBody: 'Built independently to help candidates understand competition context.',
+    version: (version: string) => `App version: ${version}`,
+  },
+  passport: {
+    title: 'NAWA Passport',
+    daysSincePrevious: (days: string) => `${days} days since the previous stage`,
+    stages: {
+      profile_created: 'Profile created',
+      submitted: 'Application submitted',
+      formal_positive: 'Positive formal review',
+      merit_review: 'Merit review',
+      decision: 'Decision',
+    },
+    notes: {
+      profile_created: 'Your anonymous NAWAmeter profile is ready.',
+      submitted: 'Your application is in the competition queue.',
+      formal_positive: 'Documents passed the formal check.',
+      merit_review: 'The commission is reviewing your application on the merits.',
+      meritNegative: 'The commission did not recommend a scholarship. Your data stays in the sample.',
+      decision: 'A final scholarship decision was recorded.',
+    },
+  },
+  badges: {
+    title: 'Contribution badges',
+    disclaimer: 'Badges reward participation and data freshness — never your score.',
+    labels: {
+      day_one: 'Day One',
+      cohort_og: 'Cohort OG',
+      fresh_data: 'Fresh Data',
+      status_scout: 'Status Scout',
+      comeback: 'Comeback',
+      data_contributor: 'Data Contributor',
+      final_form: 'Final Form',
+    },
+    descriptions: {
+      day_one: 'Joined early in the season.',
+      cohort_og: 'Participated before detailed country statistics opened.',
+      fresh_data: 'Confirmed your data recently.',
+      status_scout: 'Updated your application journey more than once.',
+      comeback: 'Returned after a longer break.',
+      data_contributor: 'Confirmed or updated your profile several times.',
+      final_form: 'Reached the end of the application journey.',
+    },
+  },
+  milestones: {
+    title: (season: string) => `NAWAmeter ${season}`,
+    apps: (count: string) => `${count} applications`,
+    countries: (count: string) => `${count} countries`,
+    detailed: (count: string) => `${count} detailed cohorts`,
+    unlockedTitle: 'Milestones',
+    disclaimer: 'Community progress for the active track — not an official NAWA ranking.',
+    items: {
+      apps_100: '100 applications',
+      apps_500: '500 applications',
+      apps_1000: '1000 applications',
+      countries_10: '10 countries represented',
+      countries_20: '20 countries represented',
+      first_merit_outcomes: 'First reported merit outcomes',
+      detailed_cohorts_7: '7 countries with detailed statistics',
+    },
+    celebration: {
+      apps_100: 'The NAWAmeter community reached 100 applications.',
+      apps_500: 'The NAWAmeter community gathered 500 applications.',
+      apps_1000: 'The NAWAmeter community reached 1000 applications.',
+      countries_10: '10 countries are now represented in NAWAmeter.',
+      countries_20: '20 countries are now represented in NAWAmeter.',
+      first_merit_outcomes: 'The first merit outcomes were reported.',
+      detailed_cohorts_7: '7 country cohorts now have detailed statistics.',
+    },
+  },
+  radar: {
+    title: 'NAWA Radar',
+    open: 'Radar',
+    close: 'Close',
+    today: 'Today',
+    empty: 'No events for this filter yet.',
+    privacy:
+      'Community updates only — no names, no exact new scores, and no single outcomes in small groups.',
+    filters: {
+      my_country: 'My country',
+      all: 'All countries',
+      statuses: 'Statuses',
+      official: 'Official',
+      product: 'Product',
+    },
+    events: {
+      countryDetailed: (country: string) => `${country} opened detailed distribution`,
+      countryGrowth: (country: string, count: string) =>
+        `${country}: +${count} applications in the country sample`,
+      globalGrowth: (count: string) => `Overall sample grew by ${count} applications`,
+      statusPulse: (country: string, count: string) =>
+        `${country}: ${count} status updates reported`,
+      meritPulse: (country: string, count: string) =>
+        `${country}: ${count} merit outcomes reported`,
+      productUpdate: 'NAWAmeter added multi-level country and track benchmarks.',
+    },
   },
   telegram: {
     gateTitle: 'Open in Telegram',
@@ -425,8 +556,12 @@ export const en = {
   dataSource: {
     official: 'Official',
     historical: 'Historical data',
-    estimate: 'NAWAmeter estimate',
     reported: 'Reported by users',
+    estimate: 'NAWAmeter estimate',
+    calculated: 'Calculated by NAWAmeter',
+    country_sample: 'NAWAmeter country sample',
+    global_sample: 'NAWAmeter global sample',
+    nawa_estimate: 'NAWAmeter estimate',
   },
   scholarshipEntry: {
     cta: 'See my position',
@@ -458,6 +593,18 @@ export const en = {
       cohortSizeOnly: (count: string) => `${count} in sample`,
       expandDistribution: 'Show full score distribution',
       collapseDistribution: 'Hide full score distribution',
+      scoreBreakdown: 'Score breakdown',
+      rankDelta: (from: string, to: string) => `Position changed: ${from} → ${to}`,
+    },
+    competitionNeighbourhood: {
+      title: 'Around your result',
+      distanceHigher: (delta: string) => `Distance to the nearest score above: ${delta}`,
+      distanceLower: (delta: string) => `Distance to the nearest score below: ${delta}`,
+      withinOnePoint: (count: string) => `Within ±1 point: ${count} participants`,
+      tied: (count: string) => `Tied scores: ${count}`,
+      dense: 'You are in a dense part of the group.',
+      moderate: 'You are in a moderately dense part of the group.',
+      sparse: 'You are in a less dense part of the group.',
     },
     smallCountry: {
       title: 'Small group in your country',
@@ -470,6 +617,50 @@ export const en = {
       belowTrackMedian: 'Your score is below the NAWA Director track-wide median.',
       benchmarkMedian: (median: string) => `Track-wide median: ${median} pts`,
       benchmarkDisclaimer: 'General benchmark — not an official competition ranking.',
+    },
+    globalBenchmark: {
+      title: 'Overall Dyrektora NAWA benchmark',
+      yourScore: (score: string) => `Your score: ${score}`,
+      trackMedian: (median: string) => `Track-wide median: ${median}`,
+      delta: (value: string) => `Difference: ${value}`,
+      sampleMeta: (applications: string, countries: string) =>
+        `${applications} applications from ${countries} countries`,
+      secondaryPercentile: (percentage: string) =>
+        `Your result is above ${percentage}% of the full NAWAmeter sample.`,
+      insufficient: 'The overall NAWAmeter sample is still too small for a track-wide benchmark.',
+      disclaimer:
+        'This is a NAWAmeter benchmark only, not an official overall candidate ranking.',
+    },
+    countryContext: {
+      title: 'How your group looks',
+      countryMedian: (country: string, median: string) => `${country} median: ${median}`,
+      globalMedian: (median: string) => `All countries median: ${median}`,
+      medianDelta: (delta: string) => `Difference: ${delta}`,
+      sampleMeta: (country: string, countryCount: string, totalCount: string) =>
+        `${country}: ${countryCount} applications · Full sample: ${totalCount}`,
+      countryCountOnly: (country: string, count: string) =>
+        `${country}: ${count} applications so far`,
+      unstableDistribution: 'The country distribution is still unstable.',
+      stableDistribution: 'The country cohort has reached detailed statistics.',
+      detailedCohortReached: 'Your country cohort now supports detailed statistics.',
+      nearbyCount: (count: string) => `${count} participants are within ±1 point of your score.`,
+      disclaimer:
+        'Country context is descriptive only. NAWA decisions are made within each country or country group.',
+    },
+    cohortPulse: {
+      title: 'Cohort pulse',
+      countryTitle: (country: string) => `Last 7 days · ${country}`,
+      programTitle: 'NAWAmeter now',
+      newApps: (count: string) => `+${count} new applications`,
+      statusUpdates: (count: string) => `${count} status updates`,
+      medianDelta: (delta: string) => `Median: ${delta}`,
+      medianStable: 'Median held steady',
+      firstMeritOutcomes: 'First merit outcomes appeared',
+      programApps: (count: string) => `${count} applications`,
+      programCountries: (count: string) => `${count} countries`,
+      detailedCountries: (count: string) => `${count} countries with detailed statistics`,
+      weekNewApps: (count: string) => `+${count} applications this week`,
+      disclaimer: 'Weekly activity summary — separate from personal changes since your last visit.',
     },
     whatChanged: {
       title: 'Since your last visit',
@@ -526,6 +717,20 @@ export const en = {
       disclaimer:
         'This is an indicative scenario, not an official NAWA quota or scholarship forecast.',
       unavailableTitle: 'Seat allocation is not calculated yet',
+      confidence: {
+        smallSample: (applications: string, countries: string) =>
+          `The overall NAWAmeter sample is still small (${applications} applications from ${countries} countries).`,
+        insufficientData:
+          'There is not yet enough data to explain this allocation estimate reliably.',
+        lowVolatile: (applications: string, countries: string) =>
+          `Preliminary estimate: ${applications} applications from ${countries} countries, but country shares are still shifting quickly.`,
+        lowPreliminary: (applications: string, countries: string) =>
+          `Preliminary estimate based on ${applications} applications across ${countries} countries.`,
+        medium: (applications: string, countries: string) =>
+          `Estimate based on ${applications} applications from ${countries} countries with moderate sample coverage.`,
+        high: (applications: string, countries: string) =>
+          `Estimate based on a broad sample of ${applications} applications from ${countries} countries.`,
+      },
       historicalTitle: 'Historical data',
       historicalCountryLine: (country: string, year: string, seats: string) =>
         `${country}, ${year}: ${seats} seats`,

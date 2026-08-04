@@ -174,7 +174,24 @@ insert into valid_statistics values (
     "growth7d": null,
     "history": [],
     "groupProgress": null,
-    "reportedMeritOutcomes": null
+    "reportedMeritOutcomes": null,
+    "globalBenchmark": {
+      "sampleSize": null,
+      "representedCountryCount": null,
+      "median": null,
+      "scoreDelta": null,
+      "lowerScorePercentage": null,
+      "scoreBuckets": null,
+      "detailedCountriesCount": null
+    },
+    "countryContext": {
+      "countryMedian": null,
+      "countrySampleSize": 0,
+      "countryShareOfTrack": null,
+      "medianDeltaVsGlobal": null,
+      "distributionStable": null,
+      "nearbyScoreCount": null
+    }
   }'::jsonb
 );
 select is(
@@ -201,7 +218,24 @@ select is(
     "growth7d": null,
     "history": [],
     "groupProgress": null,
-    "reportedMeritOutcomes": null
+    "reportedMeritOutcomes": null,
+    "globalBenchmark": {
+      "sampleSize": null,
+      "representedCountryCount": null,
+      "median": null,
+      "scoreDelta": null,
+      "lowerScorePercentage": null,
+      "scoreBuckets": null,
+      "detailedCountriesCount": null
+    },
+    "countryContext": {
+      "countryMedian": null,
+      "countrySampleSize": 0,
+      "countryShareOfTrack": null,
+      "medianDeltaVsGlobal": null,
+      "distributionStable": null,
+      "nearbyScoreCount": null
+    }
   }'::jsonb),
   '{
     "detailsAvailable": false,
@@ -221,7 +255,24 @@ select is(
     "growth7d": null,
     "history": [],
     "groupProgress": null,
-    "reportedMeritOutcomes": null
+    "reportedMeritOutcomes": null,
+    "globalBenchmark": {
+      "sampleSize": null,
+      "representedCountryCount": null,
+      "median": null,
+      "scoreDelta": null,
+      "lowerScorePercentage": null,
+      "scoreBuckets": null,
+      "detailedCountriesCount": null
+    },
+    "countryContext": {
+      "countryMedian": null,
+      "countrySampleSize": 0,
+      "countryShareOfTrack": null,
+      "medianDeltaVsGlobal": null,
+      "distributionStable": null,
+      "nearbyScoreCount": null
+    }
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );

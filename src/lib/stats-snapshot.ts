@@ -12,8 +12,11 @@ export type StatsSnapshot = {
   groupResponseCount: number;
   lowerScorePercentage: number | null;
   medianScore: number | null;
+  rankPosition: number | null;
   sameTrackCount: number;
   sameCountryCount: number | null;
+  /** Capped cohort score list for position-change reason detection. */
+  cohortScores: number[] | null;
   fetchedAt: string;
 };
 
@@ -22,8 +25,10 @@ export function snapshotFromStatistics(data: StatisticsResult): StatsSnapshot {
     groupResponseCount: data.groupResponseCount,
     lowerScorePercentage: data.lowerScorePercentage,
     medianScore: data.medianScore,
+    rankPosition: data.rankPosition,
     sameTrackCount: data.sameTrackCount,
     sameCountryCount: data.sameCountryCount,
+    cohortScores: data.cohortScores,
     fetchedAt: new Date().toISOString(),
   };
 }

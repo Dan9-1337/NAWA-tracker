@@ -177,29 +177,40 @@ export function getAllocationDisplayMode(input: {
   return 'country_estimate';
 }
 
+export type AllocationConfidenceExplanation =
+  | { kind: 'small_sample'; applications: number; countries: number }
+  | { kind: 'insufficient_data' }
+  | { kind: 'low_volatile'; applications: number; countries: number }
+  | { kind: 'low_preliminary'; applications: number; countries: number }
+  | { kind: 'medium'; applications: number; countries: number }
+  | { kind: 'high'; applications: number; countries: number };
+
 export function getConfidenceExplanation(
   estimate: SeatAllocationEstimate,
   sampleComposition: SampleCompositionQuality,
-): string {
+): AllocationConfidenceExplanation {
+  const applications = sampleComposition.totalApplicationCount;
+  const countries = sampleComposition.representedCountryCount;
+
   if (estimate.confidence === 'insufficient') {
-    if (sampleComposition.totalApplicationCount < MIN_TOTAL_APPLICATION_COUNT) {
-      return `The overall NAWAmeter sample is still small (${sampleComposition.totalApplicationCount} applications from ${sampleComposition.representedCountryCount} countries).`;
+    if (applications < MIN_TOTAL_APPLICATION_COUNT) {
+      return { kind: 'small_sample', applications, countries };
     }
-    return 'There is not yet enough data to explain this allocation estimate reliably.';
+    return { kind: 'insufficient_data' };
   }
 
   if (estimate.confidence === 'low') {
     if (sampleComposition.shareStability === 'volatile') {
-      return `Preliminary estimate: ${sampleComposition.totalApplicationCount} applications from ${sampleComposition.representedCountryCount} countries, but country shares are still shifting quickly.`;
+      return { kind: 'low_volatile', applications, countries };
     }
-    return `Preliminary estimate based on ${sampleComposition.totalApplicationCount} applications across ${sampleComposition.representedCountryCount} countries.`;
+    return { kind: 'low_preliminary', applications, countries };
   }
 
   if (estimate.confidence === 'medium') {
-    return `Estimate based on ${sampleComposition.totalApplicationCount} applications from ${sampleComposition.representedCountryCount} countries with moderate sample coverage.`;
+    return { kind: 'medium', applications, countries };
   }
 
-  return `Estimate based on a broad sample of ${sampleComposition.totalApplicationCount} applications from ${sampleComposition.representedCountryCount} countries.`;
+  return { kind: 'high', applications, countries };
 }
 
 function resolveConfidence(input: {

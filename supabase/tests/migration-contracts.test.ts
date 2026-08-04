@@ -70,6 +70,8 @@ describe('mutation statistics migration contract', () => {
     expect(definition).toContain('history');
     expect(definition).toContain('groupProgress');
     expect(definition).toContain('reportedMeritOutcomes');
+    expect(definition).toContain('globalBenchmark');
+    expect(definition).toContain('countryContext');
     expect(definition).not.toContain('statusCounts');
     expect(definition).toContain('trunc(');
     expect(definition).toContain("v_number > 100");

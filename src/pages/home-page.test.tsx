@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateResponseResult, ResponseFormInput, StatisticsResult } from '../../shared/contracts';
+import { emptyCountryContext, emptyGlobalBenchmark } from '../../shared/test-statistics';
 import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { ApiClientError } from '../lib/api-client';
 import type { TelegramWebAppBridge } from '../lib/telegram';
@@ -70,6 +71,8 @@ function statistics(totalValidResponses: number): StatisticsResult {
     history: [],
     groupProgress: null,
     reportedMeritOutcomes: null,
+    globalBenchmark: emptyGlobalBenchmark,
+    countryContext: emptyCountryContext,
   };
 }
 
@@ -123,7 +126,7 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Status wniosku')).toBeInTheDocument();
-      expect(screen.getByText('Wniosek złożony')).toBeInTheDocument();
+      expect(screen.getAllByText('Wniosek złożony').length).toBeGreaterThanOrEqual(1);
     });
     expect(api.getStatistics).toHaveBeenCalled();
   });
@@ -169,7 +172,7 @@ describe('HomePage', () => {
     await waitFor(() => {
       expect(api.createResponse).toHaveBeenCalled();
       expect(screen.getByText('Status wniosku')).toBeInTheDocument();
-      expect(screen.getByText('Wniosek złożony')).toBeInTheDocument();
+      expect(screen.getAllByText('Wniosek złożony').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

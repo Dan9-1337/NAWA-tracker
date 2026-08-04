@@ -265,25 +265,50 @@ export function WhatChangedContent({
       ) : null}
 
       {positionChanged && reasons.length > 0 ? (
-        <ul className="weekly-activity__reasons">
-          {reasons.map((reason) => {
-            if (reason.kind === 'new_responses') {
-              return <li key="new">{t.delta.newResponses(String(reason.count))}</li>;
-            }
-            if (reason.kind === 'median_shift') {
-              const delta = formatScore(reason.delta, locale);
-              return (
-                <li key="median">
-                  {reason.direction === 'up' ? t.delta.medianIncreased(delta) : t.delta.medianDecreased(delta)}
-                </li>
-              );
-            }
-            if (reason.kind === 'median_stable') {
-              return <li key="stable">{t.delta.medianStable}</li>;
-            }
-            return null;
-          })}
-        </ul>
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-[var(--text-helper)]">{t.delta.positionWhyTitle}</p>
+          <ul className="weekly-activity__reasons space-y-0.5 text-xs leading-5 text-[var(--text-secondary)]">
+            {reasons.map((reason) => {
+              if (reason.kind === 'new_higher_scores') {
+                return (
+                  <li key="higher">{t.delta.reasons.newHigherScores(String(reason.count))}</li>
+                );
+              }
+              if (reason.kind === 'new_lower_scores') {
+                return (
+                  <li key="lower">{t.delta.reasons.newLowerScores(String(reason.count))}</li>
+                );
+              }
+              if (reason.kind === 'existing_scores_updated') {
+                return <li key="updated">{t.delta.reasons.existingScoresUpdated}</li>;
+              }
+              if (reason.kind === 'cohort_size_changed') {
+                return (
+                  <li key="size">{t.delta.reasons.cohortSizeChanged(String(reason.count))}</li>
+                );
+              }
+              if (reason.kind === 'median_changed') {
+                const delta = formatScore(reason.delta, locale);
+                return (
+                  <li key="median">
+                    {reason.direction === 'up'
+                      ? t.delta.medianIncreased(delta)
+                      : t.delta.medianDecreased(delta)}
+                  </li>
+                );
+              }
+              if (reason.kind === 'tie_changed') {
+                return <li key="tie">{t.delta.reasons.tieChanged}</li>;
+              }
+              if (reason.kind === 'status_data_changed') {
+                return (
+                  <li key="status">{t.delta.reasons.statusDataChanged(String(reason.count))}</li>
+                );
+              }
+              return null;
+            })}
+          </ul>
+        </div>
       ) : null}
     </div>
   );

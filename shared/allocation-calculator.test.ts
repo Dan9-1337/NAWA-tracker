@@ -199,7 +199,7 @@ describe('getAllocationDisplayMode', () => {
 });
 
 describe('getConfidenceExplanation', () => {
-  it('returns a full sentence instead of a bare confidence label', () => {
+  it('returns a structured explanation instead of a bare confidence label', () => {
     const sampleComposition = matureComposition();
     const estimate = calculateCountryAllocation({
       country: 'KZ',
@@ -210,8 +210,31 @@ describe('getConfidenceExplanation', () => {
 
     const explanation = getConfidenceExplanation(estimate, sampleComposition);
 
-    expect(explanation.length).toBeGreaterThan(20);
-    expect(explanation.toLowerCase()).not.toBe(estimate.confidence);
-    expect(['low', 'medium', 'higher', 'insufficient']).not.toContain(explanation);
+    expect(explanation.kind).toBe('high');
+    if (explanation.kind === 'high') {
+      expect(explanation.applications).toBe(sampleComposition.totalApplicationCount);
+      expect(explanation.countries).toBe(sampleComposition.representedCountryCount);
+    }
+    expect(explanation.kind).not.toBe(estimate.confidence);
+  });
+
+  it('returns small_sample when the track-wide sample is below the minimum', () => {
+    const sampleComposition = {
+      ...matureComposition(),
+      totalApplicationCount: 18,
+      representedCountryCount: 5,
+    };
+    const estimate = calculateCountryAllocation({
+      country: 'UA',
+      applicationCountInScope: 14,
+      totalApplicationCount: 18,
+      totalSeatScenario: 500,
+    });
+
+    expect(getConfidenceExplanation(estimate, sampleComposition)).toEqual({
+      kind: 'small_sample',
+      applications: 18,
+      countries: 5,
+    });
   });
 });

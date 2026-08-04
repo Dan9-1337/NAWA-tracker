@@ -63,6 +63,7 @@ type MiniAppShellProps = {
   children: ReactNode;
   subtitle?: string | null;
   onOpenSettings?: () => void;
+  onOpenRadar?: () => void;
   suspendActionBar?: boolean;
 };
 
@@ -71,6 +72,7 @@ export function MiniAppShell({
   children,
   subtitle,
   onOpenSettings,
+  onOpenRadar,
   suspendActionBar = false,
 }: MiniAppShellProps) {
   const { t } = useI18n();
@@ -92,6 +94,29 @@ export function MiniAppShell({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
+            {onOpenRadar ? (
+              <button
+                type="button"
+                aria-label={t.radar.open}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-section-bg-color)] text-[var(--text-primary)] transition-colors hover:bg-[var(--tg-theme-secondary-bg-color)] active:bg-[var(--tg-theme-secondary-bg-color)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+                onClick={onOpenRadar}
+              >
+                <svg
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="5" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+                  <path d="M12 12l6-4" strokeLinecap="round" />
+                </svg>
+              </button>
+            ) : null}
             {onOpenSettings ? (
               <button
                 type="button"

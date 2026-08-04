@@ -145,6 +145,45 @@ export const statisticsGrowth7dSchema = z
     medianNow: z.number().min(0).nullable(),
     percentileThen: z.number().min(0).max(100).nullable(),
     percentileNow: z.number().min(0).max(100).nullable(),
+    trackNewResponses: z.number().int().nonnegative(),
+    trackMedianThen: z.number().min(0).nullable(),
+    trackMedianNow: z.number().min(0).nullable(),
+    statusUpdatesInGroup: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const globalBenchmarkSchema = z
+  .object({
+    sampleSize: z.number().int().min(10).nullable(),
+    representedCountryCount: z.number().int().positive().nullable(),
+    median: z.number().min(0).nullable(),
+    scoreDelta: z.number().nullable(),
+    lowerScorePercentage: z.number().min(0).max(100).nullable(),
+    scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
+    detailedCountriesCount: z.number().int().nonnegative().nullable(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.sampleSize != null && value.scoreBuckets != null) {
+      const bucketTotal = value.scoreBuckets.reduce((sum, count) => sum + count, 0);
+      if (bucketTotal !== value.sampleSize) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['scoreBuckets'],
+          message: 'global scoreBuckets must sum to sampleSize',
+        });
+      }
+    }
+  });
+
+export const countryContextStatsSchema = z
+  .object({
+    countryMedian: z.number().min(0).nullable(),
+    countrySampleSize: z.number().int().nonnegative(),
+    countryShareOfTrack: z.number().min(0).max(1).nullable(),
+    medianDeltaVsGlobal: z.number().nullable(),
+    distributionStable: z.boolean().nullable(),
+    nearbyScoreCount: z.number().int().nonnegative().nullable(),
   })
   .strict();
 
@@ -196,6 +235,8 @@ export const statisticsResultSchema = z
     history: z.array(statisticsHistoryPointSchema),
     groupProgress: groupProgressSchema.nullable(),
     reportedMeritOutcomes: reportedMeritOutcomeStatsSchema.nullable(),
+    globalBenchmark: globalBenchmarkSchema,
+    countryContext: countryContextStatsSchema,
   })
   .strict()
   .superRefine((value, ctx) => {

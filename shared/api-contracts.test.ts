@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fineBuckets } from './test-statistics';
+import { fineBuckets, emptyCountryContext, emptyGlobalBenchmark } from './test-statistics';
 import {
   apiErrorSchema,
   createResponseRequestSchema,
@@ -47,6 +47,25 @@ const validStatistics = {
   history: [],
   groupProgress: null,
   reportedMeritOutcomes: null,
+  globalBenchmark: {
+    ...emptyGlobalBenchmark,
+    sampleSize: 18,
+    representedCountryCount: 3,
+    median: 80,
+    scoreDelta: 2.5,
+    lowerScorePercentage: 55,
+    scoreBuckets: fineBuckets([1, 2, 3, 2, 2, 1, 1, 1, 1, 1, 1, 2]),
+    detailedCountriesCount: 1,
+  },
+  countryContext: {
+    ...emptyCountryContext,
+    countryMedian: 82.5,
+    countrySampleSize: 10,
+    countryShareOfTrack: 10 / 18,
+    medianDeltaVsGlobal: 2.5,
+    distributionStable: false,
+    nearbyScoreCount: 3,
+  },
 } as const;
 
 describe('API request contracts', () => {

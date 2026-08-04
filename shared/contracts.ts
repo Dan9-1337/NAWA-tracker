@@ -46,6 +46,29 @@ export type StatisticsGrowth7d = {
   medianNow: number | null;
   percentileThen: number | null;
   percentileNow: number | null;
+  trackNewResponses: number;
+  trackMedianThen: number | null;
+  trackMedianNow: number | null;
+  statusUpdatesInGroup: number;
+};
+
+export type GlobalBenchmark = {
+  sampleSize: number | null;
+  representedCountryCount: number | null;
+  median: number | null;
+  scoreDelta: number | null;
+  lowerScorePercentage: number | null;
+  scoreBuckets: number[] | null;
+  detailedCountriesCount: number | null;
+};
+
+export type CountryContextStats = {
+  countryMedian: number | null;
+  countrySampleSize: number;
+  countryShareOfTrack: number | null;
+  medianDeltaVsGlobal: number | null;
+  distributionStable: boolean | null;
+  nearbyScoreCount: number | null;
 };
 
 export type StatisticsHistoryPoint = {
@@ -90,6 +113,8 @@ export type StatisticsResult = {
   history: StatisticsHistoryPoint[];
   groupProgress: GroupProgress | null;
   reportedMeritOutcomes: ReportedMeritOutcomeStats | null;
+  globalBenchmark: GlobalBenchmark;
+  countryContext: CountryContextStats;
 };
 
 export type PublicStatisticsRequest = {

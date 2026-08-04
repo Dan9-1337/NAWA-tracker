@@ -3,10 +3,13 @@ import { CountryFlag } from '../../components/CountryFlag';
 import { DataSourceBadge } from '../../components/DataSourceBadge';
 import { DensityStrip } from '../../components/DensityStrip';
 import { useI18n } from '../../i18n/context';
+import { computeCompetitionNeighbourhood } from '../../lib/competition-neighbourhood';
 import { formatCountryLabel } from '../../lib/country-label';
 import { formatScore } from '../../lib/format';
 import { canShowScoreDistribution } from '../../lib/score-buckets';
+import type { StatsSnapshot } from '../../lib/stats-snapshot';
 import { getMedianBand, MIN_DETAILED_COHORT, formatPercentileValue } from '../../lib/stats-verdict';
+import { CompetitionNeighbourhoodDetails } from './CompetitionNeighbourhoodDetails';
 
 export type ResultHeroVariant = 'detailed' | 'small_country';
 
@@ -21,6 +24,7 @@ type ResultHeroCardProps = {
   track?: ScholarshipTrack;
   countryCount?: number;
   trackWideMedian?: number | null;
+  previousSnapshot?: StatsSnapshot | null;
 };
 
 const cardClass =
@@ -63,6 +67,7 @@ export function ResultHeroCard({
   track = 'nawa_director',
   countryCount = 0,
   trackWideMedian = null,
+  previousSnapshot = null,
 }: ResultHeroCardProps) {
   const { t, locale } = useI18n();
   const countryLabel = formatCountryLabel(rankingCountry, locale);
@@ -73,6 +78,10 @@ export function ResultHeroCard({
     variant === 'detailed' &&
     data != null &&
     canShowScoreDistribution(groupSize, data.scoreBuckets);
+  const neighbourhood =
+    variant === 'detailed' && data
+      ? computeCompetitionNeighbourhood(userScore, data.cohortScores, data.sameCountryCount)
+      : null;
 
   const percentileValue =
     variant === 'detailed' &&
@@ -84,6 +93,17 @@ export function ResultHeroCard({
   const medianLine =
     variant === 'detailed' ? medianPositionLine(t, locale, userScore, data?.medianScore) : null;
 
+  const rankDeltaLine =
+    variant === 'detailed' &&
+    data?.rankPosition != null &&
+    previousSnapshot?.rankPosition != null &&
+    previousSnapshot.rankPosition !== data.rankPosition
+      ? t.dashboard.hero.rankDelta(
+          String(previousSnapshot.rankPosition),
+          String(data.rankPosition),
+        )
+      : null;
+
   return (
     <section className={cardClass} aria-labelledby="dashboard-result-hero-title">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -93,7 +113,10 @@ export function ResultHeroCard({
         >
           {t.dashboard.hero.title}
         </h2>
-        <DataSourceBadge source="estimate" />
+        <div className="flex flex-wrap gap-1.5">
+          <DataSourceBadge source="calculated" />
+          {variant === 'detailed' ? <DataSourceBadge source="country_sample" /> : null}
+        </div>
       </div>
 
       <div className="flex items-baseline gap-1.5">
@@ -104,24 +127,29 @@ export function ResultHeroCard({
       </div>
 
       {showBreakdown ? (
-        <dl className="space-y-1 text-sm">
-          {gradesScore != null ? (
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-[var(--text-secondary)]">{t.dashboard.score.gradesLabel}</dt>
-              <dd className="font-medium tabular-nums text-[var(--text-primary)]">
-                {formatScore(gradesScore, locale)}
-              </dd>
-            </div>
-          ) : null}
-          {polishSchoolBonus != null && polishSchoolBonus > 0 ? (
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-[var(--text-secondary)]">{t.dashboard.score.polishSchoolLabel}</dt>
-              <dd className="font-medium tabular-nums text-[var(--text-primary)]">
-                +{formatScore(polishSchoolBonus, locale)}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
+        <details className="rounded-xl bg-[var(--tg-theme-secondary-bg-color)] px-3 py-2.5">
+          <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+            {t.dashboard.hero.scoreBreakdown}
+          </summary>
+          <dl className="mt-2 space-y-1 text-sm">
+            {gradesScore != null ? (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-[var(--text-secondary)]">{t.dashboard.score.gradesLabel}</dt>
+                <dd className="font-medium tabular-nums text-[var(--text-primary)]">
+                  {formatScore(gradesScore, locale)}
+                </dd>
+              </div>
+            ) : null}
+            {polishSchoolBonus != null && polishSchoolBonus > 0 ? (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-[var(--text-secondary)]">{t.dashboard.score.polishSchoolLabel}</dt>
+                <dd className="font-medium tabular-nums text-[var(--text-primary)]">
+                  +{formatScore(polishSchoolBonus, locale)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </details>
       ) : null}
 
       {variant === 'detailed' && data ? (
@@ -141,6 +169,10 @@ export function ResultHeroCard({
                 )}
               </span>
             </p>
+          ) : null}
+
+          {rankDeltaLine ? (
+            <p className="text-xs font-medium text-[var(--text-secondary)]">{rankDeltaLine}</p>
           ) : null}
 
           {percentileValue != null ? (
@@ -172,6 +204,17 @@ export function ResultHeroCard({
               {t.dashboard.hero.cohortSizeOnly(String(groupSize))}
             </p>
           )}
+
+          {neighbourhood ? (
+            <details className="rounded-xl bg-[var(--tg-theme-secondary-bg-color)] px-3 py-2.5">
+              <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+                {t.dashboard.competitionNeighbourhood.title}
+              </summary>
+              <div className="mt-2">
+                <CompetitionNeighbourhoodDetails neighbourhood={neighbourhood} />
+              </div>
+            </details>
+          ) : null}
         </>
       ) : (
         <>
@@ -195,6 +238,7 @@ export function ResultHeroCard({
               <p className="text-xs text-[var(--text-helper)]">
                 {t.dashboard.smallCountry.benchmarkMedian(formatScore(trackWideMedian, locale))}
               </p>
+              <DataSourceBadge source="global_sample" />
             </div>
           ) : null}
         </>

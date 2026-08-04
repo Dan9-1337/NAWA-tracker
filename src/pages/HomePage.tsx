@@ -4,6 +4,7 @@ import { MiniAppShell } from '../components/MiniAppShell';
 import { SettingsSheet } from '../components/SettingsSheet';
 import { TelegramGate } from '../components/TelegramGate';
 import { CreateProfileFlow } from '../features/CreateProfileFlow';
+import { NawaRadarSheet } from '../features/dashboard/NawaRadarSheet';
 import { ProfileDashboard } from '../features/ProfileDashboard';
 import {
   statisticsStateFromResult,
@@ -19,6 +20,8 @@ import {
   updateResponse,
 } from '../lib/api-client';
 import { clearStatsSnapshot } from '../lib/stats-snapshot';
+import { clearUserEngagement } from '../lib/user-engagement';
+import { clearPassportDates } from '../lib/passport-stages';
 import { clearWizardDraft } from '../lib/draft';
 import { formatClockTime, formatShortDayTime, updatedStampKind } from '../lib/format';
 import { getTelegramWebApp } from '../lib/telegram';
@@ -47,6 +50,7 @@ export function HomePage() {
   );
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [radarOpen, setRadarOpen] = useState(false);
   const [editRequestNonce, setEditRequestNonce] = useState(0);
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const epoch = useRef(0);
@@ -190,6 +194,8 @@ export function HomePage() {
       await deleteResponse();
       clearWizardDraft();
       clearStatsSnapshot();
+      clearUserEngagement();
+      clearPassportDates();
       setSettingsOpen(false);
       setState({ mode: 'create', pending: false });
     } catch (error) {
@@ -241,7 +247,7 @@ export function HomePage() {
           onSubmit={create}
           disabled={state.pending}
           actionError={state.actionError ?? null}
-          chromeSuspended={settingsOpen}
+          chromeSuspended={settingsOpen || radarOpen}
         />
       );
     }
@@ -253,23 +259,36 @@ export function HomePage() {
         onSubmit={update}
         disabled={state.pending !== null}
         actionError={state.actionError}
-        chromeSuspended={settingsOpen}
+        chromeSuspended={settingsOpen || radarOpen}
         editRequestNonce={editRequestNonce}
         onStatsUpdatedAt={setStatsUpdatedAt}
       />
     );
   })();
 
+  const radarData =
+    state.mode === 'authenticated' &&
+    (state.statistics.status === 'success' || state.statistics.status === 'suppressed')
+      ? state.statistics.data
+      : null;
+
   return (
     <MiniAppShell
       title={t.app.title}
       subtitle={statsSubtitle}
       onOpenSettings={
-        !settingsOpen && (state.mode === 'authenticated' || state.mode === 'create' || state.mode === 'gate')
+        !settingsOpen &&
+        !radarOpen &&
+        (state.mode === 'authenticated' || state.mode === 'create' || state.mode === 'gate')
           ? () => setSettingsOpen(true)
           : undefined
       }
-      suspendActionBar={settingsOpen}
+      onOpenRadar={
+        !settingsOpen && !radarOpen && radarData && state.mode === 'authenticated'
+          ? () => setRadarOpen(true)
+          : undefined
+      }
+      suspendActionBar={settingsOpen || radarOpen}
     >
       {offline ? (
         <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm" role="status">
@@ -277,8 +296,10 @@ export function HomePage() {
         </p>
       ) : null}
       <div
-        aria-hidden={settingsOpen}
-        className={settingsOpen ? 'pointer-events-none space-y-4' : 'space-y-4'}
+        aria-hidden={settingsOpen || radarOpen}
+        className={
+          settingsOpen || radarOpen ? 'pointer-events-none space-y-4' : 'space-y-4'
+        }
       >
         {content}
       </div>
@@ -293,6 +314,14 @@ export function HomePage() {
         }
         onDelete={state.mode === 'authenticated' ? removeProfile : undefined}
       />
+      {radarData && state.mode === 'authenticated' ? (
+        <NawaRadarSheet
+          open={radarOpen}
+          onClose={() => setRadarOpen(false)}
+          data={radarData}
+          rankingCountry={state.current.rankingCountry}
+        />
+      ) : null}
     </MiniAppShell>
   );
 }
