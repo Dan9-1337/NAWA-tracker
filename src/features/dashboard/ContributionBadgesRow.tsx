@@ -1,12 +1,11 @@
 import type { ContributionBadgeId } from '../../../shared/contribution-badges';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { UsersIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 
 type ContributionBadgesRowProps = {
   badges: ContributionBadgeId[];
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2';
 
 export function ContributionBadgesRow({ badges }: ContributionBadgesRowProps) {
   const { t } = useI18n();
@@ -14,10 +13,10 @@ export function ContributionBadgesRow({ badges }: ContributionBadgesRowProps) {
   if (badges.length === 0) return null;
 
   return (
-    <section className={cardClass} aria-label={t.badges.title}>
-      <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.badges.title}</h2>
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.badges.disclaimer}</p>
-      <ul className="flex flex-wrap gap-2 pt-1">
+    <DashboardCard aria-label={t.badges.title}>
+      <CardHeader title={t.badges.title} icon={<UsersIcon size={16} />} />
+
+      <ul className="flex flex-wrap gap-2">
         {badges.map((badge) => (
           <li
             key={badge}
@@ -28,6 +27,6 @@ export function ContributionBadgesRow({ badges }: ContributionBadgesRowProps) {
           </li>
         ))}
       </ul>
-    </section>
+    </DashboardCard>
   );
 }

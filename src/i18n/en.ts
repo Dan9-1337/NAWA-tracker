@@ -568,6 +568,19 @@ export const en = {
     comingSoon: 'Coming soon',
   },
   dashboard: {
+    sections: {
+      primary: 'Your result',
+      community: 'Community context',
+      progress: 'Progress & outcomes',
+    },
+    sectionFootnotes: {
+      primary:
+        'This is your place among NAWAmeter users, not an official ranking. Scores are calculated by NAWAmeter and are not an official NAWA result or scholarship forecast.',
+      community:
+        'Benchmarks use NAWAmeter country and global samples. Country context is descriptive only; NAWA decisions are made within each country or country group.',
+      progress:
+        'Statuses and merit outcomes are reported by users. Comparison is based on self-reported data and is not a forecast of NAWA decisions.',
+    },
     score: {
       title: 'Orientation score',
       unit: 'pts',

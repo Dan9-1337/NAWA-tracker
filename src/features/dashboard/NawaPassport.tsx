@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { ApplicationStatus } from '../../../shared/contracts';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { PassportIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatDate } from '../../lib/format';
 import {
@@ -17,9 +19,6 @@ type NawaPassportProps = {
   /** When true, haptic feedback fires for newly stamped stages. */
   celebrateNewStage?: boolean;
 };
-
-const cardClass =
-  'rounded-2xl border border-[color-mix(in_srgb,var(--color-accent)_22%,var(--section-divider-color))] bg-[var(--tg-theme-section-bg-color)] px-3.5 py-3 space-y-3';
 
 function stageNote(
   t: ReturnType<typeof useI18n>['t'],
@@ -80,7 +79,6 @@ export function NawaPassport({
     const key = `${status}:${newlyStamped.join(',')}`;
     if (celebratedRef.current === key) return;
     celebratedRef.current = key;
-    // No playful haptics for negative merit outcomes.
     if (status === 'merit_review_negative') return;
     getTelegramWebApp()?.haptic.notification('success');
   }, [celebrateNewStage, newlyStamped, status]);
@@ -90,8 +88,8 @@ export function NawaPassport({
     : stages;
 
   return (
-    <section className={cardClass} aria-label={t.passport.title}>
-      <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t.passport.title}</h2>
+    <DashboardCard tone="muted" aria-label={t.passport.title}>
+      <CardHeader title={t.passport.title} icon={<PassportIcon size={16} />} />
 
       <ol className="space-y-3">
         {visibleStages.map((stage) => (
@@ -127,6 +125,6 @@ export function NawaPassport({
           </li>
         ))}
       </ol>
-    </section>
+    </DashboardCard>
   );
 }

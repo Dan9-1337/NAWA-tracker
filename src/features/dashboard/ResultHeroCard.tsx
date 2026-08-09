@@ -1,7 +1,9 @@
 import type { ScholarshipTrack, StatisticsResult } from '../../../shared/contracts';
 import { CountryFlag } from '../../components/CountryFlag';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
 import { DataSourceBadge } from '../../components/DataSourceBadge';
 import { DensityStrip } from '../../components/DensityStrip';
+import { TargetIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { computeCompetitionNeighbourhood } from '../../lib/competition-neighbourhood';
 import { formatCountryLabel } from '../../lib/country-label';
@@ -26,9 +28,6 @@ type ResultHeroCardProps = {
   trackWideMedian?: number | null;
   previousSnapshot?: StatsSnapshot | null;
 };
-
-const cardClass =
-  'rounded-2xl border border-[color-mix(in_srgb,var(--color-accent)_28%,var(--section-divider-color))] bg-[var(--tg-theme-section-bg-color)] px-3.5 py-3 space-y-3';
 
 function trackBenchmarkCopy(
   t: ReturnType<typeof useI18n>['t'],
@@ -105,22 +104,22 @@ export function ResultHeroCard({
       : null;
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-result-hero-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="dashboard-result-hero-title"
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
-        >
-          {t.dashboard.hero.title}
-        </h2>
-        <div className="flex flex-wrap gap-1.5">
-          <DataSourceBadge source="calculated" />
-          {variant === 'detailed' ? <DataSourceBadge source="country_sample" /> : null}
-        </div>
-      </div>
+    <DashboardCard tone="hero" aria-labelledby="dashboard-result-hero-title">
+      <CardHeader
+        titleId="dashboard-result-hero-title"
+        title={t.dashboard.hero.title}
+        icon={<TargetIcon size={16} />}
+        badge={
+          <div className="flex flex-wrap gap-1.5">
+            <DataSourceBadge source="calculated" />
+            {variant === 'detailed' ? <DataSourceBadge source="country_sample" /> : null}
+          </div>
+        }
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
 
       <div className="flex items-baseline gap-1.5">
-        <span className="text-3xl font-bold tabular-nums tracking-tight text-[var(--text-primary)]">
+        <span className="text-4xl font-bold tabular-nums tracking-tight text-[var(--text-primary)]">
           {formatScore(total, locale)}
         </span>
         <span className="text-sm text-[var(--text-secondary)]">{t.dashboard.score.unit}</span>
@@ -238,14 +237,10 @@ export function ResultHeroCard({
               <p className="text-xs text-[var(--text-helper)]">
                 {t.dashboard.smallCountry.benchmarkMedian(formatScore(trackWideMedian, locale))}
               </p>
-              <DataSourceBadge source="global_sample" />
             </div>
           ) : null}
         </>
       )}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.position.sampleDisclaimer}</p>
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.score.disclaimer}</p>
-    </section>
+    </DashboardCard>
   );
 }

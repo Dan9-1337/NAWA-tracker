@@ -1,7 +1,8 @@
 import type { GlobalBenchmark, ScholarshipTrack } from '../../../shared/contracts';
 import { canShowGlobalMedian, canShowGlobalPercentile } from '../../../shared/product-rules';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
 import { DensityStrip } from '../../components/DensityStrip';
+import { TargetIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatScore } from '../../lib/format';
 import { canShowScoreDistribution } from '../../lib/score-buckets';
@@ -11,9 +12,6 @@ type GlobalBenchmarkCardProps = {
   benchmark: GlobalBenchmark;
   track: ScholarshipTrack;
 };
-
-const cardClass =
-  'rounded-2xl border border-[color-mix(in_srgb,var(--color-accent)_18%,var(--section-divider-color))] bg-[var(--tg-theme-section-bg-color)] px-3.5 py-3 space-y-2.5';
 
 export function GlobalBenchmarkCard({ userScore, benchmark, track }: GlobalBenchmarkCardProps) {
   const { t, locale } = useI18n();
@@ -31,13 +29,8 @@ export function GlobalBenchmarkCard({ userScore, benchmark, track }: GlobalBench
     canShowGlobalPercentile({ secondary: true }) && benchmark.lowerScorePercentage != null;
 
   return (
-    <section className={cardClass} aria-label={t.dashboard.globalBenchmark.title}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t.dashboard.globalBenchmark.title}
-        </h2>
-        <DataSourceBadge source="global_sample" />
-      </div>
+    <DashboardCard aria-label={t.dashboard.globalBenchmark.title}>
+      <CardHeader title={t.dashboard.globalBenchmark.title} icon={<TargetIcon size={16} />} />
 
       <p className="text-sm text-[var(--text-secondary)]">
         {t.dashboard.globalBenchmark.yourScore(formatScore(userScore, locale))}
@@ -87,10 +80,6 @@ export function GlobalBenchmarkCard({ userScore, benchmark, track }: GlobalBench
           groupSize={benchmark.sampleSize ?? 0}
         />
       ) : null}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">
-        {t.dashboard.globalBenchmark.disclaimer}
-      </p>
-    </section>
+    </DashboardCard>
   );
 }

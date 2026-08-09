@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getDashboardSectionOrder,
+  groupDashboardSections,
   resolveDashboardVisitMode,
   type DashboardSectionId,
 } from './dashboard-layout';
@@ -141,5 +142,22 @@ describe('getDashboardSectionOrder', () => {
         sectionSet('what_changed', 'result_hero', 'group_progress'),
       ),
     ).toEqual(['what_changed', 'result_hero', 'group_progress']);
+  });
+
+  it('groups consecutive sections by visual cluster', () => {
+    expect(
+      groupDashboardSections([
+        'what_changed',
+        'result_hero',
+        'nawa_passport',
+        'global_benchmark',
+        'cohort_pulse',
+        'group_progress',
+      ]),
+    ).toEqual([
+      { group: 'primary', sections: ['what_changed', 'result_hero', 'nawa_passport'] },
+      { group: 'community', sections: ['global_benchmark', 'cohort_pulse'] },
+      { group: 'progress', sections: ['group_progress'] },
+    ]);
   });
 });

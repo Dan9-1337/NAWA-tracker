@@ -1,4 +1,4 @@
-import { DataSourceBadge } from '../../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../../components/DashboardCard';
 import { useI18n } from '../../../i18n/context';
 import type { AllocationConfidenceExplanation } from '../../../../shared/allocation-calculator';
 import { formatAllocationConfidenceExplanation } from '../../../lib/allocation-confidence-explanation';
@@ -20,9 +20,6 @@ type AllocationEstimateCardProps = {
   estimate: SeatAllocationEstimateView;
   groupEstimate?: SeatAllocationEstimateView | null;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-3';
 
 function formatShare(share: number, locale: string): string {
   return new Intl.NumberFormat(locale, {
@@ -87,16 +84,12 @@ export function AllocationEstimateCard({ estimate, groupEstimate = null }: Alloc
   const { t } = useI18n();
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-allocation-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="dashboard-allocation-title"
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
-        >
-          {groupEstimate ? t.dashboard.allocation.titleGroup : t.dashboard.allocation.title}
-        </h2>
-        <DataSourceBadge source="estimate" />
-      </div>
+    <DashboardCard aria-labelledby="dashboard-allocation-title">
+      <CardHeader
+        titleId="dashboard-allocation-title"
+        title={groupEstimate ? t.dashboard.allocation.titleGroup : t.dashboard.allocation.title}
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
 
       <EstimateBlock estimate={estimate} />
       {groupEstimate ? (
@@ -105,8 +98,6 @@ export function AllocationEstimateCard({ estimate, groupEstimate = null }: Alloc
           <EstimateBlock estimate={groupEstimate} />
         </>
       ) : null}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.allocation.disclaimer}</p>
-    </section>
+    </DashboardCard>
   );
 }

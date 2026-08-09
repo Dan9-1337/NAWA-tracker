@@ -1,5 +1,6 @@
 import type { CountryContextStats, GlobalBenchmark } from '../../../shared/contracts';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { GlobeIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatCountryLabel } from '../../lib/country-label';
 import { formatScore } from '../../lib/format';
@@ -9,9 +10,6 @@ type CountryContextCardProps = {
   countryContext: CountryContextStats;
   globalBenchmark: GlobalBenchmark;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2.5';
 
 function formatDelta(delta: number, locale: string): string {
   const formatted = formatScore(Math.abs(delta), locale);
@@ -58,13 +56,8 @@ export function CountryContextCard({
   }
 
   return (
-    <section className={cardClass} aria-label={t.dashboard.countryContext.title}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t.dashboard.countryContext.title}
-        </h2>
-        <DataSourceBadge source="country_sample" />
-      </div>
+    <DashboardCard aria-label={t.dashboard.countryContext.title}>
+      <CardHeader title={t.dashboard.countryContext.title} icon={<GlobeIcon size={16} />} />
 
       {countryMedian != null && globalMedian != null ? (
         <>
@@ -109,10 +102,6 @@ export function CountryContextCard({
           ))}
         </ul>
       ) : null}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">
-        {t.dashboard.countryContext.disclaimer}
-      </p>
-    </section>
+    </DashboardCard>
   );
 }

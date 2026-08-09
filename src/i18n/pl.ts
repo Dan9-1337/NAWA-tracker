@@ -568,6 +568,19 @@ export const pl = {
     comingSoon: 'Wkrótce',
   },
   dashboard: {
+    sections: {
+      primary: 'Twój wynik',
+      community: 'Kontekst społeczności',
+      progress: 'Postęp i wyniki',
+    },
+    sectionFootnotes: {
+      primary:
+        'To miejsce wśród użytkowników NAWAmeter, a nie oficjalny ranking. Wyniki są obliczone przez NAWAmeter i nie są oficjalnym wynikiem NAWA ani prognozą stypendium.',
+      community:
+        'Benchmarki korzystają z próbek krajowej i ogólnej NAWAmeter. Kontekst kraju ma charakter opisowy; decyzje NAWA są podejmowane w ramach kraju lub grupy krajów.',
+      progress:
+        'Statusy i wyniki merytoryczne są zgłaszane przez użytkowników. Porównanie opiera się na samoocenie i nie jest prognozą decyzji NAWA.',
+    },
     score: {
       title: 'Wynik orientacyjny',
       unit: 'pkt',

@@ -1,10 +1,12 @@
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
 import { getScoreBreakdown } from '../../../shared/nawa-score';
 import type { DashboardSectionId } from '../../../shared/dashboard-layout';
+import { groupDashboardSections } from '../../../shared/dashboard-layout';
 import {
   getDashboardSectionOrder,
   resolveDashboardVisitMode,
 } from '../../../shared/dashboard-layout';
+import { DashboardSectionGroup } from '../../components/DashboardCard';
 import { PositionHistoryList } from '../../components/PositionHistoryList';
 import { useI18n } from '../../i18n/context';
 import { formatCountryLabel } from '../../lib/country-label';
@@ -197,6 +199,8 @@ export function StatisticsPanel({
     [availableSections, visitMode],
   );
 
+  const sectionGroups = useMemo(() => groupDashboardSections(sectionOrder), [sectionOrder]);
+
   const heroVariant = useMemo(() => {
     if (!data) return 'small_country' as const;
     return usesSmallCountryHero(state, data, groupSize) ? 'small_country' : 'detailed';
@@ -261,6 +265,115 @@ export function StatisticsPanel({
   const showTerminalScholarship = profile.currentStatus === 'scholarship_awarded';
   const countryLabel = formatCountryLabel(profile.rankingCountry, locale);
 
+  function renderDashboardSection(sectionId: DashboardSectionId) {
+    if (!data || !profile || !scoreBreakdown || userScore == null) return null;
+
+    switch (sectionId) {
+      case 'result_hero':
+        return (
+          <ResultHeroCard
+            variant={heroVariant}
+            total={scoreBreakdown.total}
+            gradesScore={scoreBreakdown.gradesScore}
+            polishSchoolBonus={scoreBreakdown.polishSchoolBonus}
+            rankingCountry={profile.rankingCountry}
+            userScore={userScore}
+            data={heroVariant === 'detailed' ? data : undefined}
+            track={profile.scholarshipTrack}
+            countryCount={countryCount}
+            trackWideMedian={data.globalBenchmark.median ?? data.trackWideMedian}
+            previousSnapshot={previousSnapshot}
+          />
+        );
+      case 'nawa_passport':
+        return (
+          <NawaPassport
+            status={profile.currentStatus}
+            statusChangedAt={profile.statusChangedAt}
+            compact={visitMode === 'terminal'}
+            celebrateNewStage={recentlyUpdatedStatus || visitMode === 'post_merit'}
+          />
+        );
+      case 'contribution_badges':
+        return <ContributionBadgesRow badges={contributionBadges} />;
+      case 'global_benchmark':
+        return (
+          <GlobalBenchmarkCard
+            userScore={userScore}
+            benchmark={data.globalBenchmark}
+            track={profile.scholarshipTrack}
+          />
+        );
+      case 'country_context':
+        return (
+          <CountryContextCard
+            rankingCountry={profile.rankingCountry}
+            countryContext={data.countryContext}
+            globalBenchmark={data.globalBenchmark}
+          />
+        );
+      case 'cohort_pulse':
+        return (
+          <CohortPulseCard
+            growth={data.growth7d}
+            globalBenchmark={data.globalBenchmark}
+            reportedMeritOutcomes={data.reportedMeritOutcomes}
+            rankingCountryLabel={countryLabel}
+          />
+        );
+      case 'community_milestones':
+        return (
+          <CommunityMilestonesCard
+            globalBenchmark={data.globalBenchmark}
+            reportedMeritOutcomes={data.reportedMeritOutcomes}
+          />
+        );
+      case 'distribution_detailed':
+        return data.scoreBuckets ? (
+          <DistributionDetailsSection
+            buckets={data.scoreBuckets}
+            track={profile.scholarshipTrack}
+            userScore={userScore}
+            medianScore={data.medianScore}
+            groupSize={groupSize}
+          />
+        ) : null;
+      case 'what_changed':
+        return <WhatChangedCard previous={previousSnapshot ?? null} current={data} />;
+      case 'reported_merit_outcomes':
+        return data.reportedMeritOutcomes ? (
+          <ReportedMeritOutcomesCard stats={data.reportedMeritOutcomes} />
+        ) : null;
+      case 'group_progress':
+        return data.groupProgress ? (
+          <ProgressInGroupCard progress={data.groupProgress} />
+        ) : null;
+      case 'allocation':
+        if (allocation?.showEstimate && allocation.countryEstimate) {
+          return (
+            <div className="space-y-3">
+              <AllocationEstimateCard
+                estimate={allocation.countryEstimate}
+                groupEstimate={allocation.groupEstimate}
+              />
+              <HistoricalAllocationContext
+                records={historicalRecords}
+                rankingCountry={profile.rankingCountry}
+              />
+            </div>
+          );
+        }
+        if (allocation?.unavailableExplanation) {
+          return (
+            <AllocationUnavailableNotice explanation={allocation.unavailableExplanation} />
+          );
+        }
+        return null;
+      default:
+        return null;
+    }
+  }
+
   return (
     <section className="space-y-3" aria-label={t.stats.heroLabel}>
       {showTerminalMeritNegative ? <MeritNegativeOutcomeCard /> : null}
@@ -269,130 +382,19 @@ export function StatisticsPanel({
         <ScholarshipAwardedCard statusChangedAt={profile.statusChangedAt} />
       ) : null}
 
-      {sectionOrder.map((sectionId) => {
-        switch (sectionId) {
-          case 'result_hero':
-            return (
-              <ResultHeroCard
-                key={sectionId}
-                variant={heroVariant}
-                total={scoreBreakdown.total}
-                gradesScore={scoreBreakdown.gradesScore}
-                polishSchoolBonus={scoreBreakdown.polishSchoolBonus}
-                rankingCountry={profile.rankingCountry}
-                userScore={userScore}
-                data={heroVariant === 'detailed' ? data : undefined}
-                track={profile.scholarshipTrack}
-                countryCount={countryCount}
-                trackWideMedian={data.globalBenchmark.median ?? data.trackWideMedian}
-                previousSnapshot={previousSnapshot}
-              />
-            );
-          case 'nawa_passport':
-            return (
-              <NawaPassport
-                key={sectionId}
-                status={profile.currentStatus}
-                statusChangedAt={profile.statusChangedAt}
-                compact={visitMode === 'terminal'}
-                celebrateNewStage={recentlyUpdatedStatus || visitMode === 'post_merit'}
-              />
-            );
-          case 'contribution_badges':
-            return <ContributionBadgesRow key={sectionId} badges={contributionBadges} />;
-          case 'global_benchmark':
-            return (
-              <GlobalBenchmarkCard
-                key={sectionId}
-                userScore={userScore}
-                benchmark={data.globalBenchmark}
-                track={profile.scholarshipTrack}
-              />
-            );
-          case 'country_context':
-            return (
-              <CountryContextCard
-                key={sectionId}
-                rankingCountry={profile.rankingCountry}
-                countryContext={data.countryContext}
-                globalBenchmark={data.globalBenchmark}
-              />
-            );
-          case 'cohort_pulse':
-            return (
-              <CohortPulseCard
-                key={sectionId}
-                growth={data.growth7d}
-                globalBenchmark={data.globalBenchmark}
-                reportedMeritOutcomes={data.reportedMeritOutcomes}
-                rankingCountryLabel={countryLabel}
-              />
-            );
-          case 'community_milestones':
-            return (
-              <CommunityMilestonesCard
-                key={sectionId}
-                globalBenchmark={data.globalBenchmark}
-                reportedMeritOutcomes={data.reportedMeritOutcomes}
-              />
-            );
-          case 'distribution_detailed':
-            return data.scoreBuckets ? (
-              <DistributionDetailsSection
-                key={sectionId}
-                buckets={data.scoreBuckets}
-                track={profile.scholarshipTrack}
-                userScore={userScore}
-                medianScore={data.medianScore}
-                groupSize={groupSize}
-              />
-            ) : null;
-          case 'what_changed':
-            return (
-              <WhatChangedCard key={sectionId} previous={previousSnapshot ?? null} current={data} />
-            );
-          case 'reported_merit_outcomes':
-            return data.reportedMeritOutcomes ? (
-              <ReportedMeritOutcomesCard key={sectionId} stats={data.reportedMeritOutcomes} />
-            ) : null;
-          case 'group_progress':
-            return data.groupProgress ? (
-              <ProgressInGroupCard key={sectionId} progress={data.groupProgress} />
-            ) : null;
-          case 'allocation':
-            if (allocation?.showEstimate && allocation.countryEstimate) {
-              return (
-                <div key={sectionId} className="space-y-3">
-                  <AllocationEstimateCard
-                    estimate={allocation.countryEstimate}
-                    groupEstimate={allocation.groupEstimate}
-                  />
-                  <HistoricalAllocationContext
-                    records={historicalRecords}
-                    rankingCountry={profile.rankingCountry}
-                  />
-                </div>
-              );
-            }
-            if (allocation?.unavailableExplanation) {
-              return (
-                <AllocationUnavailableNotice
-                  key={sectionId}
-                  explanation={allocation.unavailableExplanation}
-                />
-              );
-            }
-            return null;
-          default:
-            return null;
-        }
-      })}
+      {sectionGroups.map((group, groupIndex) => (
+        <DashboardSectionGroup
+          key={`${group.group}-${groupIndex}`}
+          label={t.dashboard.sections[group.group]}
+          footnote={t.dashboard.sectionFootnotes[group.group]}
+        >
+          {group.sections.map((sectionId) => (
+            <div key={sectionId}>{renderDashboardSection(sectionId)}</div>
+          ))}
+        </DashboardSectionGroup>
+      ))}
 
       {state.status === 'success' ? <PositionHistoryList history={data.history} /> : null}
-
-      <p className="text-xs leading-5 text-[var(--tg-theme-subtitle-text-color)]">
-        {t.stats.disclaimerShort}
-      </p>
     </section>
   );
 }

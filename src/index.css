@@ -694,8 +694,41 @@ body {
   font-size: 0.6875rem;
 }
 
-.result-preview-card {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 8%, transparent);
+.result-preview-card,
+.dashboard-card-hero {
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--section-divider-color));
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--color-accent) 10%, var(--tg-theme-section-bg-color)) 0%,
+      var(--tg-theme-section-bg-color) 55%
+    );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 8%, transparent),
+    0 8px 24px color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.card-footnote {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: var(--text-helper);
+}
+
+.dashboard-section-group__label {
+  margin: 0;
+  padding-top: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tg-theme-subtitle-text-color);
+}
+
+.dashboard-section-group + .dashboard-section-group {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--section-divider-color);
 }
 
 .result-preview__user-marker {

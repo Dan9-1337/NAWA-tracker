@@ -248,6 +248,137 @@ export function InfoIcon({ className, size = 18 }: IconProps) {
   );
 }
 
+export function TrendIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3 17l6-6 4 4 8-8"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 7h7v7"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function UsersIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function FlagIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M4 22v-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function TargetIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.75" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function PassportIcon({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect
+        x="5"
+        y="3"
+        width="14"
+        height="18"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      />
+      <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M8.5 17a3.5 3.5 0 0 1 7 0"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function RadarIcon({ className, size = 18 }: IconProps) {
   return (
     <svg

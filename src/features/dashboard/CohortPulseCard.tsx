@@ -1,5 +1,6 @@
 import type { GlobalBenchmark, StatisticsGrowth7d, StatisticsResult } from '../../../shared/contracts';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { TrendIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatScore } from '../../lib/format';
 
@@ -9,9 +10,6 @@ type CohortPulseCardProps = {
   reportedMeritOutcomes: StatisticsResult['reportedMeritOutcomes'];
   rankingCountryLabel: string;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-3';
 
 function medianDeltaLine(
   t: ReturnType<typeof useI18n>['t'],
@@ -76,13 +74,8 @@ export function CohortPulseCard({
   if (countryLines.length === 0 && programLines.length === 0) return null;
 
   return (
-    <section className={cardClass} aria-label={t.dashboard.cohortPulse.title}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t.dashboard.cohortPulse.title}
-        </h2>
-        <DataSourceBadge source="global_sample" />
-      </div>
+    <DashboardCard aria-label={t.dashboard.cohortPulse.title}>
+      <CardHeader title={t.dashboard.cohortPulse.title} icon={<TrendIcon size={16} />} />
 
       {countryLines.length > 0 ? (
         <div className="space-y-1">
@@ -109,10 +102,6 @@ export function CohortPulseCard({
           </ul>
         </div>
       ) : null}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">
-        {t.dashboard.cohortPulse.disclaimer}
-      </p>
-    </section>
+    </DashboardCard>
   );
 }

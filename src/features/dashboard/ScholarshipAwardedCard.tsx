@@ -1,4 +1,5 @@
 import { StatusTimeline } from '../../components/StatusTimeline';
+import { DashboardCard } from '../../components/DashboardCard';
 import { useI18n } from '../../i18n/context';
 import { formatDate } from '../../lib/format';
 import { getSequentialStatusOptions } from '../../../shared/status-options';
@@ -7,14 +8,15 @@ type ScholarshipAwardedCardProps = {
   statusChangedAt: string;
 };
 
-const cardClass =
-  'rounded-2xl border border-[color-mix(in_srgb,var(--color-positive)_35%,var(--section-divider-color))] bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-3';
-
 export function ScholarshipAwardedCard({ statusChangedAt }: ScholarshipAwardedCardProps) {
   const { t, locale } = useI18n();
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-scholarship-awarded-title" role="status">
+    <DashboardCard
+      tone="positive"
+      aria-labelledby="dashboard-scholarship-awarded-title"
+      role="status"
+    >
       <h2 id="dashboard-scholarship-awarded-title" className="text-lg font-semibold text-[var(--color-positive)]">
         {t.dashboard.terminal.scholarshipAwardedTitle}
       </h2>
@@ -35,6 +37,6 @@ export function ScholarshipAwardedCard({ statusChangedAt }: ScholarshipAwardedCa
         onChange={() => undefined}
         showHints={false}
       />
-    </section>
+    </DashboardCard>
   );
 }

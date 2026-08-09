@@ -34,7 +34,7 @@ describe('StatisticsPanel', () => {
   it('renders suppressed state with small-country hero', () => {
     render(<StatisticsPanel state={{ status: 'suppressed', data: suppressedStatistics }} profile={profile} userScore={81} />);
 
-    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Twój wynik', level: 2 })).toBeInTheDocument();
     expect(screen.getByText(/Do rankingu krajowego potrzeba jeszcze 1 ankiet/)).toBeInTheDocument();
     expect(screen.queryByText('Pokaż pełny rozkład wyników')).not.toBeInTheDocument();
   });
@@ -48,7 +48,7 @@ describe('StatisticsPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Twój wynik', level: 2 })).toBeInTheDocument();
     expect(screen.getByText(/6\. z 30/)).toBeInTheDocument();
     expect(screen.getByText('Wyżej niż 65% grupy')).toBeInTheDocument();
     expect(screen.getByText('Pokaż pełny rozkład wyników')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('StatisticsPanel', () => {
     );
 
     expect(screen.getByText('Ocena merytoryczna zakończona negatywnie')).toBeInTheDocument();
-    expect(screen.getByText('Twój wynik')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Twój wynik', level: 2 })).toBeInTheDocument();
   });
 
   it('renders scholarship awarded outcome before result hero', () => {

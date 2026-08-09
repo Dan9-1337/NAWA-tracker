@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ScholarshipTrack } from '../../../shared/contracts';
+import { DashboardCard } from '../../components/DashboardCard';
 import { DensityStrip } from '../../components/DensityStrip';
 import { ChevronIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
@@ -23,7 +24,7 @@ export function DistributionDetailsSection({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <section className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3">
+    <DashboardCard className="!space-y-0">
       <button
         type="button"
         className="disclosure-row flex w-full items-center justify-between gap-3 !px-0 !py-0"
@@ -50,6 +51,6 @@ export function DistributionDetailsSection({
           />
         </div>
       ) : null}
-    </section>
+    </DashboardCard>
   );
 }

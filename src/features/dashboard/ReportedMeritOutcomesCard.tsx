@@ -1,14 +1,12 @@
 import type { ReportedMeritOutcomeStats } from '../../../shared/contracts';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { UsersIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatScore } from '../../lib/format';
 
 type ReportedMeritOutcomesCardProps = {
   stats: ReportedMeritOutcomeStats;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2';
 
 export function ReportedMeritOutcomesCard({ stats }: ReportedMeritOutcomesCardProps) {
   const { t, locale } = useI18n();
@@ -43,19 +41,15 @@ export function ReportedMeritOutcomesCard({ stats }: ReportedMeritOutcomesCardPr
   }
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-merit-outcomes-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="dashboard-merit-outcomes-title"
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
-        >
-          {t.dashboard.meritOutcomes.title}
-        </h2>
-        <DataSourceBadge source="reported" />
-      </div>
+    <DashboardCard aria-labelledby="dashboard-merit-outcomes-title">
+      <CardHeader
+        titleId="dashboard-merit-outcomes-title"
+        title={t.dashboard.meritOutcomes.title}
+        icon={<UsersIcon size={16} />}
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
 
       <p className="text-sm leading-6 text-[var(--text-secondary)]">{body}</p>
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.meritOutcomes.disclaimer}</p>
-    </section>
+    </DashboardCard>
   );
 }

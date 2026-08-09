@@ -1,4 +1,6 @@
 import type { StatisticsResult } from '../../../shared/contracts';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { TrendIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatScore } from '../../lib/format';
 import {
@@ -21,9 +23,6 @@ type WhatChangedCardProps = {
   previousAllocation?: AllocationSnapshot | null;
   currentAllocation?: AllocationSnapshot | null;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2';
 
 function growthSummaryLine(
   t: ReturnType<typeof useI18n>['t'],
@@ -331,13 +330,13 @@ export function WhatChangedCard({
   );
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-what-changed-title">
-      <h2
-        id="dashboard-what-changed-title"
-        className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
-      >
-        {t.dashboard.whatChanged.title}
-      </h2>
+    <DashboardCard aria-labelledby="dashboard-what-changed-title">
+      <CardHeader
+        titleId="dashboard-what-changed-title"
+        title={t.dashboard.whatChanged.title}
+        icon={<TrendIcon size={16} />}
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
 
       {deltaRows.length > 0 ? (
         <dl className="space-y-1.5">
@@ -351,6 +350,6 @@ export function WhatChangedCard({
       ) : (
         <WhatChangedContent previous={previous} current={current} />
       )}
-    </section>
+    </DashboardCard>
   );
 }

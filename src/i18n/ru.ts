@@ -473,7 +473,16 @@ export const ru = {
     title: (season: string) => `NAWAmeter ${season}`,
     apps: (count: string) => `${count} анкет`,
     countries: (count: string) => `${count} стран`,
-    detailed: (count: string) => `${count} когорт с подробной статистикой`,
+    detailed: (count: string) => {
+      const n = Number(count);
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${count} когорта с подробной статистикой`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+        return `${count} когорты с подробной статистикой`;
+      }
+      return `${count} когорт с подробной статистикой`;
+    },
     unlockedTitle: 'Вехи',
     disclaimer: 'Прогресс сообщества по активному треку — не официальный рейтинг NAWA.',
     items: {
@@ -570,6 +579,19 @@ export const ru = {
     comingSoon: 'Скоро',
   },
   dashboard: {
+    sections: {
+      primary: 'Ваш результат',
+      community: 'Контекст сообщества',
+      progress: 'Прогресс и исходы',
+    },
+    sectionFootnotes: {
+      primary:
+        'Это место среди пользователей NAWAmeter, а не официальный рейтинг. Баллы рассчитаны NAWAmeter и не являются официальным результатом NAWA или прогнозом стипендии.',
+      community:
+        'Ориентиры используют выборку NAWAmeter по стране и общую выборку. Контекст страны носит описательный характер; решения NAWA принимаются внутри страны или группы стран.',
+      progress:
+        'Статусы и исходы содержательной оценки сообщаются пользователями. Сравнение основано на самоотчётных данных и не является прогнозом решения NAWA.',
+    },
     score: {
       title: 'Ориентировочный балл',
       unit: 'б.',
@@ -661,7 +683,16 @@ export const ru = {
       firstMeritOutcomes: 'Появились первые сообщённые результаты содержательной оценки',
       programApps: (count: string) => `${count} анкет`,
       programCountries: (count: string) => `${count} стран`,
-      detailedCountries: (count: string) => `${count} стран с подробной статистикой`,
+      detailedCountries: (count: string) => {
+        const n = Number(count);
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${count} страна с подробной статистикой`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+          return `${count} страны с подробной статистикой`;
+        }
+        return `${count} стран с подробной статистикой`;
+      },
       weekNewApps: (count: string) => `+${count} анкет за неделю`,
       disclaimer:
         'Недельная сводка активности — отдельно от личных изменений с прошлого визита.',

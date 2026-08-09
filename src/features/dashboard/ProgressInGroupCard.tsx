@@ -1,13 +1,11 @@
 import type { GroupProgress } from '../../../shared/contracts';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { UsersIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 
 type ProgressInGroupCardProps = {
   progress: GroupProgress;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2';
 
 export function ProgressInGroupCard({ progress }: ProgressInGroupCardProps) {
   const { t } = useI18n();
@@ -32,16 +30,13 @@ export function ProgressInGroupCard({ progress }: ProgressInGroupCardProps) {
   ];
 
   return (
-    <section className={cardClass} aria-labelledby="dashboard-group-progress-title">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2
-          id="dashboard-group-progress-title"
-          className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
-        >
-          {t.dashboard.groupProgress.title}
-        </h2>
-        <DataSourceBadge source="reported" />
-      </div>
+    <DashboardCard aria-labelledby="dashboard-group-progress-title">
+      <CardHeader
+        titleId="dashboard-group-progress-title"
+        title={t.dashboard.groupProgress.title}
+        icon={<UsersIcon size={16} />}
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
 
       <dl className="space-y-1.5">
         {rows.map((row) => (
@@ -51,8 +46,6 @@ export function ProgressInGroupCard({ progress }: ProgressInGroupCardProps) {
           </div>
         ))}
       </dl>
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.groupProgress.disclaimer}</p>
-    </section>
+    </DashboardCard>
   );
 }

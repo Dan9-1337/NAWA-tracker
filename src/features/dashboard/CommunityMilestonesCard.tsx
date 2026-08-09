@@ -1,5 +1,6 @@
 import type { GlobalBenchmark, ReportedMeritOutcomeStats } from '../../../shared/contracts';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
+import { DashboardCard, CardHeader } from '../../components/DashboardCard';
+import { FlagIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import {
   resolveCommunityMilestones,
@@ -11,9 +12,6 @@ type CommunityMilestonesCardProps = {
   reportedMeritOutcomes: ReportedMeritOutcomeStats | null;
   seasonLabel?: string;
 };
-
-const cardClass =
-  'rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 space-y-2.5';
 
 export function CommunityMilestonesCard({
   globalBenchmark,
@@ -33,13 +31,8 @@ export function CommunityMilestonesCard({
   if (globalBenchmark.sampleSize == null) return null;
 
   return (
-    <section className={cardClass} aria-label={t.milestones.title(seasonLabel)}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t.milestones.title(seasonLabel)}
-        </h2>
-        <DataSourceBadge source="global_sample" />
-      </div>
+    <DashboardCard aria-label={t.milestones.title(seasonLabel)}>
+      <CardHeader title={t.milestones.title(seasonLabel)} icon={<FlagIcon size={16} />} />
 
       <ul className="space-y-0.5 text-sm text-[var(--text-primary)]">
         <li>{t.milestones.apps(String(globalBenchmark.sampleSize))}</li>
@@ -69,8 +62,6 @@ export function CommunityMilestonesCard({
           {t.milestones.celebration[latest]}
         </p>
       ) : null}
-
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.milestones.disclaimer}</p>
-    </section>
+    </DashboardCard>
   );
 }

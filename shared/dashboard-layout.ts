@@ -15,6 +15,52 @@ export type DashboardSectionId =
   | 'group_progress'
   | 'allocation';
 
+export type DashboardSectionGroup = 'primary' | 'community' | 'progress';
+
+export const dashboardSectionGroup: Record<DashboardSectionId, DashboardSectionGroup> = {
+  what_changed: 'primary',
+  result_hero: 'primary',
+  nawa_passport: 'primary',
+  contribution_badges: 'primary',
+  global_benchmark: 'community',
+  country_context: 'community',
+  cohort_pulse: 'community',
+  community_milestones: 'community',
+  distribution_detailed: 'community',
+  reported_merit_outcomes: 'progress',
+  group_progress: 'progress',
+  allocation: 'progress',
+};
+
+export const dashboardSectionGroupOrder: DashboardSectionGroup[] = [
+  'primary',
+  'community',
+  'progress',
+];
+
+export function getDashboardSectionGroup(sectionId: DashboardSectionId): DashboardSectionGroup {
+  return dashboardSectionGroup[sectionId];
+}
+
+export function groupDashboardSections(sectionOrder: DashboardSectionId[]): Array<{
+  group: DashboardSectionGroup;
+  sections: DashboardSectionId[];
+}> {
+  const grouped: Array<{ group: DashboardSectionGroup; sections: DashboardSectionId[] }> = [];
+
+  for (const sectionId of sectionOrder) {
+    const group = getDashboardSectionGroup(sectionId);
+    const last = grouped[grouped.length - 1];
+    if (last?.group === group) {
+      last.sections.push(sectionId);
+    } else {
+      grouped.push({ group, sections: [sectionId] });
+    }
+  }
+
+  return grouped;
+}
+
 export type DashboardVisitMode =
   | 'first_result'
   | 'returning_no_changes'
