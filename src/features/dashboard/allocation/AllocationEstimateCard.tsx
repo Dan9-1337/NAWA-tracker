@@ -1,0 +1,103 @@
+import { DashboardCard, CardHeader } from '../../../components/DashboardCard';
+import { useI18n } from '../../../i18n/context';
+import type { AllocationConfidenceExplanation } from '../../../../shared/allocation-calculator';
+import { formatAllocationConfidenceExplanation } from '../../../lib/allocation-confidence-explanation';
+
+export type SeatAllocationEstimateView = {
+  scope: 'country' | 'country_group';
+  applicationCount: number;
+  totalApplicationCount: number;
+  applicationShare: number;
+  estimatedSeatRange: { min: number; max: number };
+  userRankInScope: number | null;
+  sampleSize: number;
+  dataBasis: 'submitted_proxy' | 'reported_formal_positive';
+  confidenceExplanation: AllocationConfidenceExplanation;
+  groupScenarioLabel?: string;
+};
+
+type AllocationEstimateCardProps = {
+  estimate: SeatAllocationEstimateView;
+  groupEstimate?: SeatAllocationEstimateView | null;
+};
+
+function formatShare(share: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(share * 100);
+}
+
+function EstimateBlock({ estimate }: { estimate: SeatAllocationEstimateView }) {
+  const { t, locale } = useI18n();
+
+  return (
+    <div className="space-y-2">
+      {estimate.groupScenarioLabel ? (
+        <p className="text-sm font-semibold text-[var(--text-primary)]">{estimate.groupScenarioLabel}</p>
+      ) : null}
+      <dl className="space-y-1.5 text-sm">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-[var(--text-secondary)]">{t.dashboard.allocation.countryShare}</dt>
+          <dd className="font-medium tabular-nums text-[var(--text-primary)]">
+            {formatShare(estimate.applicationShare, locale)}%
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-[var(--text-secondary)]">{t.dashboard.allocation.seatRange}</dt>
+          <dd className="font-medium tabular-nums text-[var(--text-primary)]">
+            {t.dashboard.allocation.seatRangeValue(
+              String(estimate.estimatedSeatRange.min),
+              String(estimate.estimatedSeatRange.max),
+            )}
+          </dd>
+        </div>
+        {estimate.userRankInScope != null ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-[var(--text-secondary)]">{t.dashboard.allocation.yourRank}</dt>
+            <dd className="font-medium tabular-nums text-[var(--text-primary)]">
+              {t.dashboard.allocation.rankInSample(
+                String(estimate.userRankInScope),
+                String(estimate.sampleSize),
+              )}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      <p className="text-xs leading-5 text-[var(--text-helper)]">
+        {estimate.dataBasis === 'reported_formal_positive'
+          ? t.dashboard.allocation.basisFormalPositive
+          : t.dashboard.allocation.basisSubmittedProxy}
+      </p>
+      <p className="text-sm leading-6 text-[var(--text-secondary)]">
+        {formatAllocationConfidenceExplanation(
+          t.dashboard.allocation.confidence,
+          locale,
+          estimate.confidenceExplanation,
+        )}
+      </p>
+    </div>
+  );
+}
+
+export function AllocationEstimateCard({ estimate, groupEstimate = null }: AllocationEstimateCardProps) {
+  const { t } = useI18n();
+
+  return (
+    <DashboardCard aria-labelledby="dashboard-allocation-title">
+      <CardHeader
+        titleId="dashboard-allocation-title"
+        title={groupEstimate ? t.dashboard.allocation.titleGroup : t.dashboard.allocation.title}
+        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+      />
+
+      <EstimateBlock estimate={estimate} />
+      {groupEstimate ? (
+        <>
+          <hr className="border-0 border-t border-[var(--section-divider-color)]" />
+          <EstimateBlock estimate={groupEstimate} />
+        </>
+      ) : null}
+    </DashboardCard>
+  );
+}

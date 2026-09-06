@@ -1,0 +1,53 @@
+{
+  "name": "nawa-tracker",
+  "private": true,
+  "version": "0.9.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:db": "node supabase/tests/run-database-tests.mjs && npm run test:db:concurrency",
+    "test:db:concurrency": "node supabase/tests/concurrent-rate-limits.mjs",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:reset": "npx supabase db reset",
+    "db:status": "npx supabase status",
+    "local:env": "node scripts/write-local-env.mjs",
+    "local:env:new": "node scripts/write-local-env.mjs --persona=new",
+    "local:env:returning": "node scripts/write-local-env.mjs --persona=returning",
+    "local:dev": "node scripts/local-dev.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "audit:prod": "npm audit --omit=dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "@twa-dev/sdk": "^8.0.2",
+    "react": "^18.3.1",
+    "react-circle-flags": "^0.0.30",
+    "react-dom": "^18.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.3.0",
+    "@types/react": "^18.3.24",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.0.1",
+    "autoprefixer": "^10.4.21",
+    "jsdom": "^26.1.0",
+    "pg": "^8.22.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "vercel": "^45.0.0",
+    "vite": "^7.1.3",
+    "vitest": "^3.2.4"
+  }
+}
