@@ -90,6 +90,23 @@ describe('responseFormInputSchema', () => {
     ).toThrow();
   });
 
+  it('rejects polishSchoolLevel bonus for Belarus citizenship', () => {
+    expect(() =>
+      responseFormInputSchema.parse({
+        ...validForm,
+        rankingCountry: 'BY',
+        polishSchoolLevel: 'secondary',
+      }),
+    ).toThrow();
+    expect(
+      responseFormInputSchema.parse({
+        ...validForm,
+        rankingCountry: 'BY',
+        polishSchoolLevel: 'none',
+      }),
+    ).toBeTruthy();
+  });
+
   it('requires targetUniversity for direct_studies and rejects mismatched track universities', () => {
     expect(() =>
       responseFormInputSchema.parse({ ...validForm, targetUniversity: undefined }),
@@ -143,6 +160,30 @@ describe('responseFormInputSchema', () => {
     expect(
       responseFormInputSchema.safeParse({ ...validForm, hasPolishCitizenship: true, scholarshipTrack: 'nawa_director' })
         .success,
+    ).toBe(true);
+  });
+
+  it('rejects polishSchoolLevel bonus for Belarus citizenship', () => {
+    expect(
+      responseFormInputSchema.safeParse({
+        ...validForm,
+        rankingCountry: 'BY',
+        polishSchoolLevel: 'secondary',
+      }).success,
+    ).toBe(false);
+    expect(
+      responseFormInputSchema.safeParse({
+        ...validForm,
+        rankingCountry: 'BY',
+        polishSchoolLevel: 'none',
+      }).success,
+    ).toBe(true);
+    expect(
+      responseFormInputSchema.safeParse({
+        ...validForm,
+        rankingCountry: 'UA',
+        polishSchoolLevel: 'secondary',
+      }).success,
     ).toBe(true);
   });
 

@@ -55,7 +55,10 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
           label={t.labels.averageGrade}
           value={`${formatGrade(draft.averageGrade, locale)} / ${formatGrade(draft.maximumGrade, locale)}`}
         />
-        {draft.scholarshipTrack === 'nawa_director' && draft.polishSchoolLevel ? (
+        {draft.scholarshipTrack === 'nawa_director' &&
+        draft.polishSchoolLevel &&
+        draft.polishSchoolLevel !== 'none' &&
+        draft.rankingCountry !== 'BY' ? (
           <Row label={t.labels.polishSchoolLevel} value={t.choices.polishSchoolLevel[draft.polishSchoolLevel]} />
         ) : null}
       </SummaryBlock>

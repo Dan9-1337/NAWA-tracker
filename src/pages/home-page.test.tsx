@@ -146,8 +146,8 @@ describe('HomePage', () => {
     await clickMain(user);
 
     for (let step = 0; step < 3; step += 1) {
-      if (screen.queryByLabelText('Uczelnia docelowa')) {
-        await pickSearchableOption(user, 'Uczelnia docelowa', /Uniwersytet Warszawski/i);
+      if (screen.queryByLabelText('Gdzie marzysz o studiach?')) {
+        await pickSearchableOption(user, 'Gdzie marzysz o studiach?', /Uniwersytet Warszawski/i);
       }
       if (screen.queryByLabelText('Kraj obywatelstwa')) {
         await pickSearchableOption(user, 'Kraj obywatelstwa', 'Ukraina');

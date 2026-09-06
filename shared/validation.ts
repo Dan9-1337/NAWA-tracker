@@ -59,6 +59,12 @@ function refineSharedQuestionnaireRules(
         path: ['polishSchoolLevel'],
         message: 'polishSchoolLevel is required for nawa_director',
       });
+    } else if (value.rankingCountry === 'BY' && value.polishSchoolLevel !== 'none') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['polishSchoolLevel'],
+        message: 'polishSchoolLevel bonus is not available for Belarus citizenship',
+      });
     }
   } else if (value.polishSchoolLevel !== undefined) {
     ctx.addIssue({
@@ -293,6 +299,12 @@ export const publicStatisticsRequestSchema = z
           code: 'custom',
           path: ['polishSchoolLevel'],
           message: 'polishSchoolLevel is required for nawa_director',
+        });
+      } else if (value.rankingCountry === 'BY' && value.polishSchoolLevel !== 'none') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['polishSchoolLevel'],
+          message: 'polishSchoolLevel bonus is not available for Belarus citizenship',
         });
       }
     } else if (value.polishSchoolLevel !== undefined) {

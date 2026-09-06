@@ -82,11 +82,13 @@ export const pl = {
     rankingCountryHint: 'Określa Twoją grupę porównawczą — będziesz zestawiany/a z kandydatami z tego samego kraju.',
     schoolCountryHint: 'Ustala skalę ocen w kalkulatorze (np. 12-punktową na Ukrainie lub 5-punktową w Kazachstanie).',
     targetUniversityHint:
-      'Lista uczelni, które zawarły z NAWA umowę ramową — wybierz uczelnię, na którą składasz dokumenty.',
+      'Uczelnie partnerskie NAWA — wskaż, gdzie marzysz o studiach w tym roku. To pomoże zobaczyć, gdzie kierują się kandydaci.',
     branchResetWarning:
       'Po zmianie tej odpowiedzi wybrany program i część danych zostaną zresetowane.',
     maximumGradeLockedHint: 'Skala ustawiona według kraju ukończenia szkoły.',
-    averageAboveMaximum: 'Średnia ocen nie może być wyższa niż maksymalna ocena w skali.',
+    averageAboveMaximum: 'Ej, ej — średnia jest wyższa niż maksimum skali. Bez ściemy.',
+    belarusPoloniaBonusNotice:
+      'Zgodnie z Ogłoszeniem nr 13/2026, pkt 2.7 (kryterium 2) bonus za ukończenie polskiej szkoły nie dotyczy obywateli Białorusi.',
     nawaExtraTitle: 'Dodatkowe dane NAWA',
     nawaExtraDescription: 'Te informacje są wymagane tylko dla Stypendium Dyrektora NAWA.',
     statusDateQuestion: 'Kiedy pojawił się ten status?',
@@ -101,7 +103,7 @@ export const pl = {
     editSection: 'Zmień',
     editStep: 'Edytuj',
     validation: {
-      universityRequired: 'Wybierz uczelnię docelową, aby przejść dalej.',
+      universityRequired: 'Wskaż, gdzie marzysz o studiach, aby przejść dalej.',
       rankingCountryRequired: 'Wybierz kraj obywatelstwa.',
       schoolCountryRequired: 'Wybierz kraj ukończenia szkoły średniej.',
       educationRequired: 'Uzupełnij dane edukacyjne, aby przejść dalej.',
@@ -146,7 +148,7 @@ export const pl = {
     schoolCountry: 'W jakim kraju ukończyłeś/aś szkołę średnią?',
     scholarshipTrack: 'Rodzaj stypendium',
     studyRoute: 'Ścieżka stypendialna',
-    targetUniversity: 'Uczelnia docelowa',
+    targetUniversity: 'Gdzie marzysz o studiach?',
     averageGrade: 'Średnia ocen',
     maximumGrade: 'Maksymalna ocena w Twojej skali',
     polishSchoolLevel: 'Czy ukończyłeś/aś polską szkołę?',
@@ -204,7 +206,7 @@ export const pl = {
   nawaScore: {
     preview: (score: string) => `Wstępny wynik: ${score} pkt.`,
     previewNote:
-      'To techniczny wynik na podstawie wprowadzonych danych, a nie oficjalny wynik NAWA.',
+      'Wynik orientacyjny według formuły z Ogłoszenia nr 13/2026, pkt 2.7 (kryterium 2): oceny 0–90 pkt + bonus za polską szkołę 0/5/10. To nie jest oficjalny wynik NAWA.',
   },
   stats: {
     title: 'Twój wynik na tle innych zgłoszeń',

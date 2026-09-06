@@ -119,6 +119,7 @@ export function ProfileDashboard({
       current.averageGrade,
       current.maximumGrade,
       current.polishSchoolLevel ?? 'none',
+      current.rankingCountry,
     );
   }, [current]);
 

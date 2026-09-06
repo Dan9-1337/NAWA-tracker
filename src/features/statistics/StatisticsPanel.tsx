@@ -94,6 +94,7 @@ export function StatisticsPanel({
       profile.averageGrade,
       profile.maximumGrade,
       profile.polishSchoolLevel ?? 'none',
+      profile.rankingCountry,
     );
   }, [profile]);
 

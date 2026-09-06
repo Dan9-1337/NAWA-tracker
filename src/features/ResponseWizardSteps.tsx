@@ -43,6 +43,7 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
     if (next.hasPolishCitizenship) next.scholarshipTrack = 'nawa_director';
     if (next.scholarshipTrack === 'health_minister') next.studyRoute = 'preparatory_course';
     if (next.scholarshipTrack !== 'nawa_director') next.polishSchoolLevel = 'none';
+    if (next.rankingCountry === 'BY') next.polishSchoolLevel = 'none';
     if (next.studyRoute !== 'direct_studies') {
       next.targetUniversity = '';
     } else if (next.targetUniversity && !isUniversityAllowedForTrack(next.targetUniversity, next.scholarshipTrack)) {
@@ -72,14 +73,29 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
     });
   }
 
+  function setRankingCountry(rankingCountry: string) {
+    applyDraft({
+      ...draft,
+      rankingCountry,
+      ...(rankingCountry === 'BY' ? { polishSchoolLevel: 'none' as const } : {}),
+    });
+  }
+
   const hapticSelect = () => getTelegramWebApp()?.haptic.selection();
+
+  const polishSchoolBonusEligible = draft.rankingCountry !== 'BY';
 
   const nawaScorePreview =
     draft.scholarshipTrack === 'nawa_director' &&
     draft.maximumGrade != null &&
     draft.maximumGrade > 0 &&
     draft.averageGrade != null
-      ? calculateNawaOrientationScore(draft.averageGrade, draft.maximumGrade, draft.polishSchoolLevel)
+      ? calculateNawaOrientationScore(
+          draft.averageGrade,
+          draft.maximumGrade,
+          draft.polishSchoolLevel,
+          draft.rankingCountry,
+        )
       : null;
 
   const countryDefaultScale = isCountryCode(draft.schoolCountry)
@@ -167,7 +183,7 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
             label={t.labels.rankingCountry}
             hint={t.wizard.rankingCountryHint}
             value={draft.rankingCountry}
-            onChange={(value) => updateDraft({ rankingCountry: value })}
+            onChange={setRankingCountry}
             error={rankingCountryError}
           />
           <CountrySelect
@@ -193,7 +209,7 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
             onAverageChange={(value) => applyDraft({ ...draft, averageGrade: value })}
             onMaximumChange={(value) => applyDraft({ ...draft, maximumGrade: value })}
           />
-          {draft.scholarshipTrack === 'nawa_director' ? (
+          {draft.scholarshipTrack === 'nawa_director' && polishSchoolBonusEligible ? (
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">{t.labels.polishSchoolLevel}</legend>
               <RadioGroup
@@ -207,6 +223,14 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
                 onSelect={hapticSelect}
               />
             </fieldset>
+          ) : null}
+          {draft.scholarshipTrack === 'nawa_director' && !polishSchoolBonusEligible ? (
+            <p
+              className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]"
+              role="status"
+            >
+              {t.wizard.belarusPoloniaBonusNotice}
+            </p>
           ) : null}
           {nawaScorePreview !== null ? <NawaScorePreview score={nawaScorePreview} /> : null}
         </FormSection>

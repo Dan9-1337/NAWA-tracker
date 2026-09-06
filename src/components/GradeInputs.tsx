@@ -14,12 +14,9 @@ type GradeInputsProps = {
   averageExceedsWarning?: string | null;
 };
 
-function clampAverage(value: number | null, maximumGrade: number | null): number | null {
+function normalizeAverage(value: number | null): number | null {
   if (value == null) return null;
-  let next = value;
-  if (next < 0) next = 0;
-  if (maximumGrade != null && maximumGrade > 0 && next > maximumGrade) next = maximumGrade;
-  return next;
+  return value < 0 ? 0 : value;
 }
 
 function formatInputValue(value: number | null): string {
@@ -66,9 +63,6 @@ export function GradeInputs({
             setMaximumRaw(raw);
             const nextMaximum = parseLocalizedNumber(raw);
             onMaximumChange(nextMaximum);
-            if (averageGrade != null && nextMaximum != null && nextMaximum > 0) {
-              onAverageChange(clampAverage(averageGrade, nextMaximum));
-            }
           }}
           onBlur={() => {
             if (maximumGrade != null) setMaximumRaw(formatInputValue(maximumGrade));
@@ -94,7 +88,7 @@ export function GradeInputs({
           onChange={(event) => {
             const raw = event.target.value;
             setAverageRaw(raw);
-            onAverageChange(clampAverage(parseLocalizedNumber(raw), maximumGrade));
+            onAverageChange(normalizeAverage(parseLocalizedNumber(raw)));
           }}
           onBlur={() => {
             if (averageGrade != null) setAverageRaw(formatInputValue(averageGrade));

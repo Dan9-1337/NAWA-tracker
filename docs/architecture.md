@@ -40,6 +40,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
 | `/api/statistics/public` | POST | initData + Origin | Cohort preview from draft questionnaire values |
+| `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
 
 Removed from the anonymous POC: `/api/session/restore`, `/api/session/logout`, `/api/recovery/rotate`.
 
@@ -79,7 +80,16 @@ Questionnaire fields plus:
 
 Three tracks: `nawa_director`, `health_minister`, `culture_minister`. Two study routes: `preparatory_course`, `direct_studies`. Ten application statuses from `submitted` through terminal award outcomes. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
 
+## Scheduled jobs
+
+Supabase free-tier projects pause after roughly seven days without database activity. A Vercel Cron job calls `GET /api/cron/keep-alive` once per day (`0 12 * * *` UTC). The handler verifies `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in Vercel; the platform attaches it automatically) and runs a lightweight `responses` read via the existing service-role client.
+
 ## Architecture changelog
+
+### 2026-08-09 — Supabase keep-alive cron
+
+- Added `GET /api/cron/keep-alive` and daily Vercel Cron schedule to prevent Supabase project inactivity pauses.
+- Requires production `CRON_SECRET` (minimum 32 characters).
 
 ### 2026-07-21 — Telegram Mini App (greenfield)
 

@@ -1112,7 +1112,11 @@ begin
 
   v_nawa_score := round(
     p_average_grade / p_maximum_grade * 90
-      + case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end,
+      + case
+          when p_ranking_country <> 'BY' then
+            case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end
+          else 0
+        end,
     2
   );
 
@@ -1334,7 +1338,11 @@ begin
   insert into public.submission_limits (ip_hash, limit_type) values (p_ip_hash, 'public_stats');
 
   if p_scholarship_track = 'nawa_director' then
-    v_bonus := case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end;
+    v_bonus := case
+      when p_ranking_country <> 'BY' then
+        case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end
+      else 0
+    end;
     v_metric := round(p_average_grade / p_maximum_grade * 90 + v_bonus, 2);
   else
     v_metric := round(p_average_grade / p_maximum_grade * 100, 2);
@@ -1500,7 +1508,11 @@ begin
 
   v_nawa_score := round(
     p_average_grade / p_maximum_grade * 90
-      + case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end,
+      + case
+          when p_ranking_country <> 'BY' then
+            case p_polish_school_level when 'primary' then 5 when 'secondary' then 10 else 0 end
+          else 0
+        end,
     2
   );
 

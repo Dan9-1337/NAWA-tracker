@@ -2,7 +2,7 @@
 
 Polish-first scholarship questionnaire and community statistics by country, delivered as a **Telegram Mini App**. One Telegram account maps to one applicant profile. The browser talks only to same-origin Vercel Functions; Supabase is accessed server-side with a service-role credential.
 
-Architecture details live in [`docs/architecture.md`](docs/architecture.md).
+Architecture details live in [`docs/architecture.md`](docs/architecture.md). Product intent, questionnaire flow, and Anders 13/2026 mapping live in [`docs/product-flow.md`](docs/product-flow.md).
 
 The active questionnaire scope is fixed to three programme tracks (`nawa_director`, `health_minister`, `culture_minister`), two study routes (`preparatory_course`, `direct_studies`), and ten application statuses from `submitted` through `scholarship_awarded` / `scholarship_not_awarded`.
 
@@ -36,6 +36,7 @@ Copy `.env.example` to `.env.local` and set these values:
 | `SUPABASE_SERVICE_ROLE_KEY` | Server | Supabase secret/service-role key used only by Vercel Functions. |
 | `IP_HASH_SALT` | Server | Independent secret for transient IP HMACs on public statistics rate limits. Minimum 32 characters. |
 | `APP_PUBLIC_URL` | Server | Exact HTTPS origin of the Mini App used for Origin checks. |
+| `CRON_SECRET` | Server (production) | Secret for Vercel Cron auth on `/api/cron/keep-alive`; minimum 32 characters. Generate with `openssl rand -base64 32`. |
 | `DATABASE_URL` | Tests only | PostgreSQL connection string for an isolated, migrated test project. |
 
 All variables except `VITE_TELEGRAM_DEV_INIT_DATA` are server-only. Never prefix a secret with `VITE_`, expose `SUPABASE_SERVICE_ROLE_KEY` to the browser, or add real values to tracked files.

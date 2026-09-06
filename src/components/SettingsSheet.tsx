@@ -132,6 +132,7 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
             current.averageGrade,
             current.maximumGrade,
             current.polishSchoolLevel ?? 'none',
+            current.rankingCountry,
           )
         : null;
 

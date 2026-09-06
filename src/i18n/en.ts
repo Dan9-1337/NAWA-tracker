@@ -84,10 +84,12 @@ export const en = {
     rankingCountryHint: 'Determines your comparison group — you will be ranked together with candidates from this country.',
     schoolCountryHint: 'Sets the grading scale used in the calculator (e.g. a 12-point scale in Ukraine or a 5-point scale in Kazakhstan).',
     targetUniversityHint:
-      'List of universities that have an agreement with NAWA — choose the one you are applying to.',
+      'NAWA partner universities — tell us where you dream of enrolling this year. This helps show where candidates are aiming.',
     branchResetWarning: 'Changing this answer will reset your selected program and some entered data.',
     maximumGradeLockedHint: 'Scale set from your secondary school country.',
-    averageAboveMaximum: 'The average grade cannot be higher than the maximum grade on the scale.',
+    averageAboveMaximum: 'Oops — that average is above the scale maximum. Let’s keep it honest.',
+    belarusPoloniaBonusNotice:
+      'Under Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2), the Polish-school bonus does not apply to citizens of Belarus.',
     nawaExtraTitle: 'Additional NAWA data',
     nawaExtraDescription: 'This information is required only for the NAWA Director scholarship.',
     statusDateQuestion: 'When did this status appear?',
@@ -102,7 +104,7 @@ export const en = {
     editSection: 'Edit',
     editStep: 'Edit',
     validation: {
-      universityRequired: 'Select a target university to continue.',
+      universityRequired: 'Tell us where you dream of enrolling to continue.',
       rankingCountryRequired: 'Select your country of citizenship.',
       schoolCountryRequired: 'Select the country where you completed secondary school.',
       educationRequired: 'Complete the education fields to continue.',
@@ -147,7 +149,7 @@ export const en = {
     schoolCountry: 'In which country did you complete secondary school?',
     scholarshipTrack: 'Scholarship track',
     studyRoute: 'Scholarship path',
-    targetUniversity: 'Target university',
+    targetUniversity: 'Where do you dream of enrolling?',
     averageGrade: 'Average grade',
     maximumGrade: 'Maximum grade on your scale',
     polishSchoolLevel: 'Did you graduate from a Polish school?',
@@ -205,7 +207,7 @@ export const en = {
   nawaScore: {
     preview: (score: string) => `Preliminary score: ${score} pts`,
     previewNote:
-      'This is a technical calculation based on your entries, not an official NAWA result.',
+      'Preliminary score using the formula from Ogłoszenie nr 13/2026, section 2.7 (criterion 2): grades 0–90 pts + Polish school bonus 0/5/10. This is not an official NAWA result.',
   },
   stats: {
     title: 'Your score compared to other declarations',
