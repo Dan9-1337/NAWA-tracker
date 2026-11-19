@@ -2,9 +2,7 @@ import { z } from 'zod';
 
 import type { ResponseFormInput } from '../../shared/contracts.js';
 import {
-  cohortOutcomesResultSchema,
-  prepCityDistributionSchema,
-  responseFormStoredSchema,
+  responseFormInputSchema,
   statisticsResultSchema,
 } from '../../shared/validation.js';
 import { HttpError, unauthorized } from './errors.js';
@@ -95,31 +93,7 @@ export function normalizeQuestionnaire(response: ResponseFormInput) {
 }
 
 export function parseCurrentResponse(value: unknown): ResponseFormInput {
-  return responseFormStoredSchema.parse(projectFields(value, responseFields));
-}
-
-export function parseCohortOutcomes(value: unknown) {
-  return cohortOutcomesResultSchema.parse(
-    projectFields(value, [
-      'ownCountry',
-      'scope',
-      'groupId',
-      'awardedCount',
-      'notAwardedCount',
-      'awardedRate',
-      'awardedBandLow',
-      'awardedBandHigh',
-      'notAwardedBandHigh',
-    ]),
-  );
-}
-
-export function parsePrepCityDistribution(value: unknown) {
-  const projected = projectFields(value, ['studyField', 'level', 'groupCode', 'total', 'cities', 'otherCount']);
-  if (Array.isArray(projected.cities)) {
-    projected.cities = projected.cities.map((entry) => projectFields(entry, ['city', 'count']));
-  }
-  return prepCityDistributionSchema.parse(projected);
+  return responseFormInputSchema.parse(projectFields(value, responseFields));
 }
 
 export function parseStatistics(value: unknown) {

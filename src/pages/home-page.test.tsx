@@ -130,22 +130,11 @@ describe('HomePage', () => {
   it('loads an authenticated profile and statistics', async () => {
     api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
     api.getStatistics.mockResolvedValue(statistics(12));
-    const user = userEvent.setup();
     render(<HomePage />);
 
     expect(await screen.findByTestId('score-value')).toHaveTextContent('81,00');
-    expect(screen.getByRole('tab', { name: 'Wynik' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(api.getStatistics).toHaveBeenCalled();
-
-    await user.click(screen.getByRole('tab', { name: 'Rezultaty' }));
-    await waitFor(() => {
-      expect(screen.getByText('Status wniosku')).toBeInTheDocument();
-      expect(screen.getAllByText('Wniosek złożony').length).toBeGreaterThanOrEqual(1);
-    });
-
-    await user.click(screen.getByRole('tab', { name: 'Sezon' }));
-    expect(screen.getByRole('heading', { name: 'Sezon' })).toBeInTheDocument();
-    expect(screen.getByText('Ocena').closest('li')).toHaveAttribute('aria-current', 'step');
   });
 
   it('previews a different average on the tape without saving it', async () => {
@@ -197,11 +186,7 @@ describe('HomePage', () => {
     await screen.findByText('Gdzie jesteś wśród kandydatów NAWA?');
     await clickMain(user);
 
-    for (let step = 0; step < 3; step += 1) {
-      if (screen.queryByLabelText('Uczelnia we wniosku NAWA')) {
-        await pickSearchableOption(user, 'Kierunek studiów', /Tworzenie i analiza oprogramowania/i);
-        await pickSearchableOption(user, 'Uczelnia we wniosku NAWA', /Uniwersytet Warszawski/i);
-      }
+    for (let step = 0; step < 2; step += 1) {
       if (screen.queryByLabelText('Kraj obywatelstwa')) {
         await pickSearchableOption(user, 'Kraj obywatelstwa', 'Ukraina');
         await pickSearchableOption(user, 'W jakim kraju ukończyłeś/aś szkołę średnią?', 'Ukraina');
@@ -226,5 +211,10 @@ describe('HomePage', () => {
       expect(api.createResponse).toHaveBeenCalled();
       expect(screen.getByTestId('score-value')).toBeInTheDocument();
     });
+
+    // The wizard no longer asks for a university or a field; the server contract gets neutral defaults.
+    const [{ response: saved }] = api.createResponse.mock.calls[0];
+    expect(saved).not.toHaveProperty('targetUniversity');
+    expect(saved).toMatchObject({ studyField: 'other', currentStatus: 'submitted', studyRoute: 'direct_studies' });
   });
 });

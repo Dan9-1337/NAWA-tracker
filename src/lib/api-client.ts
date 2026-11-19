@@ -1,7 +1,5 @@
 import type {
   ApiError,
-  CohortOutcomesResult,
-  PrepCityDistribution,
   CreateResponseRequest,
   CreateResponseResult,
   CurrentResponseResult,
@@ -12,8 +10,6 @@ import type {
 } from '../../shared/contracts';
 import {
   apiErrorSchema,
-  cohortOutcomesResultSchema,
-  prepCityDistributionSchema,
   createResponseResultSchema,
   currentResponseResultSchema,
   deleteResponseResultSchema,
@@ -93,14 +89,6 @@ export function getCurrentResponse(): Promise<CurrentResponseResult> {
 
 export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
-}
-
-export function getCohortOutcomes(): Promise<CohortOutcomesResult> {
-  return request('/api/outcomes', 'POST', {}, cohortOutcomesResultSchema);
-}
-
-export function getPrepCityDistribution(): Promise<PrepCityDistribution> {
-  return request('/api/prep-cities', 'POST', {}, prepCityDistributionSchema);
 }
 
 export function deleteResponse(): Promise<DeleteResponseResult> {

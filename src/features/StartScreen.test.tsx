@@ -62,4 +62,20 @@ describe('StartScreen', () => {
     await user.click(how);
     expect(how).toHaveAttribute('aria-expanded', 'false');
   });
+
+  it('lets a visitor drag the sample ruler and see the position change', async () => {
+    const user = userEvent.setup();
+    setup();
+    const score = screen.getByTestId('preview-score');
+    const median = screen.getByTestId('preview-median');
+    const before = score.textContent;
+
+    screen.getByRole('slider').focus();
+    await user.keyboard('{ArrowRight}');
+    expect(Number(score.textContent?.replace(',', '.'))).toBeGreaterThan(Number(before?.replace(',', '.')));
+
+    await user.keyboard('{PageDown}{PageDown}{PageDown}{PageDown}{PageDown}{PageDown}');
+    expect(median).toHaveTextContent('Poniżej mediany');
+    expect(screen.getByTestId('preview-percentile')).toHaveTextContent(pl.start.previewPercentileLabel);
+  });
 });

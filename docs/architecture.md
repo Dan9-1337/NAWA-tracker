@@ -8,7 +8,7 @@ NAWA Tracker is a **Telegram Mini App only** scholarship questionnaire with priv
 
 | Layer | Technology | Role |
 | --- | --- | --- |
-| Client | Vite + React in Telegram WebView | Questionnaire, status updates, statistics panel |
+| Client | Vite + React in Telegram WebView | Questionnaire, statistics panel |
 | API | Vercel Functions (`api/`) | Auth, validation, Supabase RPC orchestration |
 | Database | Supabase PostgreSQL | `responses` rows, aggregate statistics RPCs |
 | Bot | Telegram Bot (BotFather) | Menu button / direct link into the Mini App |
@@ -43,8 +43,6 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses` | PUT | initData + Origin | Update owned profile |
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
-| `/api/outcomes` | POST | initData + Origin | Award score band of the caller's cohort (≥ 3 awarded, 5-point bands) |
-| `/api/prep-cities` | POST | initData + Origin | Preparatory-course cities reported in the caller's study field (≥ 3 per city, widening field → group → area → all) |
 | `/api/bot` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook: `/start` (with `c_<ISO>` or `subscribe` payload), `/subscribe`, `/stop`, `/help`, and `my_chat_member` (blocked bot) |
 | `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`results_soon`, `results_out`, `intake_open`) |
 | `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
@@ -59,7 +57,7 @@ Questionnaire fields plus:
 
 - `identity_hash text not null` — 64 hex characters (check constraint rejects raw ids); unique together with `intake_year`
 - `intake_year`, `grade_basis` (`final_certificate` | `half_year`), `applicant_kind` (`school_leaver` | `student_in_poland`, the latter scored 100)
-- `is_suspicious boolean` — sticky flag from implausible status transitions
+- `is_suspicious boolean` — sticky flag from implausible status transitions (the app no longer changes a status, so it only matters for older rows)
 - `study_field text not null default 'other'` — ISCED-F detailed code (`^[0-9]{4}$`) or `other`; the default only covers rows created before the field existed (`shared/study-fields.ts`)
 - `prep_course_city text` — optional; only allowed on the preparatory route with outcome `scholarship_awarded`; values from `shared/prep-course-cities.ts` or `other`
 
@@ -73,8 +71,8 @@ Questionnaire fields plus:
 - `get_current_response(identity_hash, intake_year)`
 - `update_current_response(identity_hash, intake_year, …)` — allows correcting one final outcome to another
 - `get_current_statistics(identity_hash, intake_year)`
-- `get_prep_city_distribution(identity_hash, intake_year)` — cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
-- `get_cohort_outcomes(identity_hash, intake_year)` — walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
+- `get_prep_city_distribution(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
+- `get_cohort_outcomes(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
 - `compute_orientation_score` — the single SQL implementation of the published formula (mirrors `shared/nawa-score.ts`; parity is tested)
 
 ### `bot_subscriptions`
@@ -83,7 +81,7 @@ Questionnaire fields plus:
 
 ## Security and privacy
 
-**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name plus, for status updates only, the two status values; never free text, enforced by the API schema and a payload size check).
+**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name only; the retired `status_updated` event carried two status values in old rows; never free text, enforced by the API schema and a payload size check).
 
 **Not stored:** Telegram id, Telegram username, name, email, phone, search queries, recovery or session tokens, raw IP addresses (IP hashes used transiently for public-stats rate limits).
 
@@ -95,7 +93,7 @@ Questionnaire fields plus:
 
 ## Questionnaire scope
 
-Only `nawa_director` is writable (the API rejects other tracks); `health_minister` and `culture_minister` stay in the enums for later. Two study routes: `preparatory_course`, `direct_studies`. Six application statuses: `submitted` → `formal_review_positive` → `merit_review_positive` → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
+Only `nawa_director` is writable (the API rejects other tracks); `health_minister` and `culture_minister` stay in the enums for later. Two study routes: `preparatory_course`, `direct_studies`. Six application statuses (`submitted` → … → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`) stay in the enums and constraints, but the app only ever sends `submitted`. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
 
 ## Season rollover
 
@@ -103,7 +101,7 @@ Records are keyed by `(identity_hash, intake_year)` and every statistic is scope
 NAWA publishes a new call:
 
 1. Add its dates to `seasons` in `shared/season.ts` (the reminder cron derives `intake_open`, `results_soon` and
-   `results_out` from them) and add its copy where the Season tab mentions dates.
+   `results_out` from them) and check the copy that mentions dates.
 2. Change `currentIntakeYear` in `shared/season.ts` **and** `update public.season_config set active_intake_year = <year>` in
    the same release; the API rejects any other year (`INVALID_INTAKE_YEAR`).
 3. Past years stay in the database as an archive and drop out of live cohorts automatically. People who applied before simply
@@ -114,6 +112,14 @@ NAWA publishes a new call:
 Supabase free-tier projects pause after roughly seven days without database activity. A Vercel Cron job calls `GET /api/cron/keep-alive` once per day (`0 12 * * *` UTC). The handler verifies `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in Vercel; the platform attaches it automatically) and runs a lightweight `responses` read via the existing service-role client.
 
 ## Architecture changelog
+
+### Unreleased — Refocus on the score comparison
+
+- No migration. The client stopped asking for the university, field, route and status and sends `currentStatus: 'submitted'`, today’s `statusChangedAt`, `studyField: 'other'`, `studyRoute: 'direct_studies'` and no `targetUniversity`; `targetUniversity` is no longer required on writes (`shared/validation.ts`).
+- Removed `POST /api/outcomes`, `POST /api/prep-cities`, the `status_updated` product event, `shared/status-options.ts`, `shared/status-transitions.ts` and `shared/anders-history.ts`. The SQL (`get_cohort_outcomes`, `get_prep_city_distribution`, status transition rules) stays for the post-award flow.
+- `migration-contracts.test.ts` pins the outcome thresholds (3 and 5) as literals because `OUTCOME_MIN_AWARDED` / `OUTCOME_BAND_WIDTH` left `shared/product-rules.ts`.
+- Wizard sessions saved in `localStorage` are versioned (2); a version 1 session has its step index shifted by one for the removed step.
+- Decision record: [ADR 0008](adr/0008-refocus-on-score-comparison.md).
 
 ### 2026-11-26 — Study field and preparatory-course city
 

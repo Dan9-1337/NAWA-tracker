@@ -4,15 +4,12 @@ import {
   applicantKinds,
   applicationStatuses,
   cohortScopes,
-  fieldLevels,
   gradeBases,
   polishSchoolLevels,
   scholarshipTracks,
   studyRoutes,
   type ApiError,
   type CreateResponseRequest,
-  type CohortOutcomesResult,
-  type PrepCityDistribution,
   type CreateResponseResult,
   type CurrentResponseResult,
   type DeleteResponseResult,
@@ -20,7 +17,7 @@ import {
   type UpdateResponseRequest,
   type UpdateResponseResult,
 } from './contracts';
-import { MIN_COHORT_SIZE, OUTCOME_BAND_WIDTH, OUTCOME_MIN_AWARDED } from './product-rules';
+import { MIN_COHORT_SIZE } from './product-rules';
 import { isPrepCourseCity } from './prep-course-cities';
 import { isStudyFieldCode } from './study-fields';
 import { isUniversityAllowedForTrack } from './universities';
@@ -135,21 +132,9 @@ function refineSharedQuestionnaireRules(
   }
 }
 
-/** Profiles loaded from storage may predate targetUniversity; writes still require it. */
-export const responseFormStoredSchema = responseFormObjectSchema.superRefine((value, ctx) => {
-  refineSharedQuestionnaireRules(value, ctx);
-});
-
+/** Reads and writes share the rules: the first screen no longer asks for a university, so it is optional. */
 export const responseFormInputSchema = responseFormObjectSchema.superRefine((value, ctx) => {
   refineSharedQuestionnaireRules(value, ctx);
-
-  if (value.targetUniversity === undefined) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['targetUniversity'],
-      message: 'targetUniversity is required',
-    });
-  }
 });
 
 const emptyRequestSchema = z.object({}).strict();
@@ -167,8 +152,6 @@ export const updateResponseRequestSchema = z
   .strict() satisfies z.ZodType<UpdateResponseRequest>;
 
 export const currentResponseRequestSchema = emptyRequestSchema;
-export const cohortOutcomesRequestSchema = emptyRequestSchema;
-export const prepCityRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
 
 export const statisticsResultSchema = z
@@ -228,80 +211,6 @@ export const statisticsResultSchema = z
     }
   }) satisfies z.ZodType<StatisticsResult>;
 
-const bandSchema = z
-  .number()
-  .min(0)
-  .max(100)
-  .refine((value) => value % OUTCOME_BAND_WIDTH === 0, {
-    message: `scores are disclosed as ${OUTCOME_BAND_WIDTH}-point bands`,
-  });
-
-export const cohortOutcomesResultSchema = z
-  .object({
-    ownCountry: countryCodeSchema,
-    scope: z.enum(cohortScopes).nullable(),
-    groupId: z.string().min(2).max(32).nullable(),
-    awardedCount: z.number().int().nonnegative(),
-    notAwardedCount: z.number().int().nonnegative(),
-    awardedRate: z.number().min(0).max(1).nullable(),
-    awardedBandLow: bandSchema.nullable(),
-    awardedBandHigh: bandSchema.nullable(),
-    notAwardedBandHigh: bandSchema.nullable(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.scope === null) {
-      if (value.awardedCount !== 0 || value.awardedBandLow !== null || value.awardedBandHigh !== null) {
-        ctx.addIssue({ code: 'custom', path: ['scope'], message: 'undisclosed outcomes cannot carry details' });
-      }
-      return;
-    }
-    if (value.awardedCount < OUTCOME_MIN_AWARDED || value.awardedBandLow === null || value.awardedBandHigh === null) {
-      ctx.addIssue({ code: 'custom', path: ['awardedCount'], message: 'disclosed outcomes need enough awarded responses' });
-    } else if (value.awardedBandLow > value.awardedBandHigh) {
-      ctx.addIssue({ code: 'custom', path: ['awardedBandLow'], message: 'awardedBandLow must not exceed awardedBandHigh' });
-    }
-    if (value.notAwardedBandHigh !== null && value.notAwardedCount < OUTCOME_MIN_AWARDED) {
-      ctx.addIssue({ code: 'custom', path: ['notAwardedBandHigh'], message: 'not-awarded band needs enough reports' });
-    }
-  }) satisfies z.ZodType<CohortOutcomesResult>;
-
-export const prepCityDistributionSchema = z
-  .object({
-    studyField: z.string().refine(isStudyFieldCode),
-    level: z.enum(fieldLevels).nullable(),
-    groupCode: z.string().regex(/^\d{2,4}$/).nullable(),
-    total: z.number().int().nonnegative(),
-    cities: z.array(
-      z
-        .object({
-          city: z.string().refine(isPrepCourseCity),
-          count: z.number().int().min(OUTCOME_MIN_AWARDED),
-        })
-        .strict(),
-    ),
-    otherCount: z.number().int().nonnegative(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    const named = value.cities.reduce((sum, entry) => sum + entry.count, 0);
-    if (value.level === null) {
-      if (value.total !== 0 || value.cities.length > 0 || value.otherCount !== 0 || value.groupCode !== null) {
-        ctx.addIssue({ code: 'custom', path: ['level'], message: 'an undisclosed distribution cannot carry details' });
-      }
-      return;
-    }
-    if (value.total < OUTCOME_MIN_AWARDED) {
-      ctx.addIssue({ code: 'custom', path: ['total'], message: 'a disclosed distribution needs enough reports' });
-    }
-    if (named + value.otherCount !== value.total) {
-      ctx.addIssue({ code: 'custom', path: ['total'], message: 'cities and the other count must add up to the total' });
-    }
-    if (new Set(value.cities.map((entry) => entry.city)).size !== value.cities.length) {
-      ctx.addIssue({ code: 'custom', path: ['cities'], message: 'cities must be unique' });
-    }
-  }) satisfies z.ZodType<PrepCityDistribution>;
-
 export const createResponseResultSchema = z
   .object({
     created: z.literal(true),
@@ -318,7 +227,7 @@ export const updateResponseResultSchema = z
 
 export const currentResponseResultSchema = z
   .object({
-    response: responseFormStoredSchema,
+    response: responseFormInputSchema,
   })
   .strict() satisfies z.ZodType<CurrentResponseResult>;
 
@@ -339,31 +248,15 @@ export const apiErrorSchema = z
   })
   .strict() satisfies z.ZodType<ApiError>;
 
-/** Events without a payload. */
-export const plainProductEventNames = [
+export const productEventNames = [
   'wizard_started',
   'wizard_completed',
   'score_viewed',
   'position_or_fallback_viewed',
 ] as const;
 
-export const productEventNames = [...plainProductEventNames, 'status_updated'] as const;
-
-/**
- * Product analytics never carry free text: plain events have no payload, and the only payload is the
- * status transition (two known enum values).
- */
-export const productEventRequestSchema = z.union([
-  z.object({ eventName: z.enum(plainProductEventNames) }).strict(),
-  z
-    .object({
-      eventName: z.literal('status_updated'),
-      payload: z
-        .object({ from: z.enum(applicationStatuses), to: z.enum(applicationStatuses) })
-        .strict(),
-    })
-    .strict(),
-]);
+/** Product analytics never carry free text or a payload: an event is just its name. */
+export const productEventRequestSchema = z.object({ eventName: z.enum(productEventNames) }).strict();
 
 export const productEventResultSchema = z
   .object({

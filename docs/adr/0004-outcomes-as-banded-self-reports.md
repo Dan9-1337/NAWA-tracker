@@ -1,6 +1,6 @@
 # 0004. Outcomes are self-reported, per intake year, disclosed in 5-point bands
 
-Status: Accepted
+Status: Superseded by [0008](0008-refocus-on-score-comparison.md)
 
 ## Context
 

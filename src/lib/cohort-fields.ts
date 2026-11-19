@@ -3,7 +3,6 @@ import type { ResponseFormInput } from '../../shared/contracts';
 export const COHORT_FIELDS = [
   'hasPolishCitizenship',
   'scholarshipTrack',
-  'studyRoute',
   'rankingCountry',
   'schoolCountry',
 ] as const;

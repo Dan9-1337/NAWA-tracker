@@ -23,7 +23,7 @@ What we deliberately do **not** model as product priorities:
 - Full NAWA System paperwork (attachments, translations, parental consent, etc.)
 - Post-award contract, payments, reporting, appeals
 
-Status updates that users report (formal positive → merit → award/negative) exist to improve community signal and passport UX, not to mirror every official branch of the procedure.
+Users no longer report application statuses: the 2026 intake is over and the feature served the season. A later flow will collect outcomes only from people who received a scholarship ([ADR 0008](adr/0008-refocus-on-score-comparison.md)).
 
 ## Season lifecycle
 
@@ -31,7 +31,7 @@ Status updates that users report (formal positive → merit → award/negative) 
 Open intake  →  collect + live community stats  →  freeze dataset  →  next nabór (new season)
 ```
 
-There is no freeze: records are keyed by `(account, intake year)`, so a new nabór simply opens a new year (`season_config.active_intake_year`, `currentIntakeYear` in `shared/season.ts`) and past years stay as an archive. Outcomes can be reported after the results are out (retro entry).
+There is no freeze: records are keyed by `(account, intake year)`, so a new nabór simply opens a new year (`season_config.active_intake_year`, `currentIntakeYear` in `shared/season.ts`) and past years stay as an archive.
 
 ## In-app user flow
 
@@ -39,32 +39,27 @@ Channel: Telegram Mini App only (`gate` → `loading` → `create` | `authentica
 
 ### Start
 
-- Pitch + result preview
+- Pitch + a live sample ruler: dragging it changes a demo score, its position against a sample cohort and the percentile (no real data)
 - One start button; **NAWA Director** is the only live track (Health / Culture are hidden until their scoring documents are modelled)
 - Optional resume of local draft
 - FAQ (what you see / how it works)
 
-On first save, status is set automatically to `submitted` + today’s date (not asked in the wizard).
+On save the client sends neutral defaults for what is not asked: status `submitted` + today’s date, field of study `other`, route `direct_studies`, no university.
 
 ### Wizard (create / edit)
 
-#### Step 1 — Basics (`application`)
-
-| Question | Values / notes |
-| --- | --- |
-| Scholarship path | `preparatory_course` or `direct_studies` |
-| University | Asked on **both** routes, as in NAWA's form; NAWA framework partners for the track |
+The wizard has two steps. The university and field of study were dropped from the start ([ADR 0008](adr/0008-refocus-on-score-comparison.md)); the server still accepts them, and profiles that already have them keep the values.
 
 The Polish-citizenship question and the track choice return together with the Health / Culture tracks (dual Polish citizens may only apply for Dyrektor NAWA).
 
-#### Step 2 — Education
+#### Step 1 — Education
 
 | Question | Role |
 | --- | --- |
 | Country of citizenship (`rankingCountry`) | Comparison cohort / country list (Ogłoszenie: lists by non-Polish citizenship) |
 | Country of secondary school completion (`schoolCountry`) | Default grading scale for the calculator |
 
-#### Step 3 — Grades
+#### Step 2 — Grades
 
 | Question | Role |
 | --- | --- |
@@ -79,29 +74,17 @@ Formula and 60-point merit threshold align with Ogłoszenie §2.7 for Dyrektor N
 
 ### Confirm
 
-Summary of cohort-defining fields + grades + auto `submitted` → create (`POST`) or update (`PUT`).
+Summary of the countries + grades → create (`POST`) or update (`PUT`).
 
 ### Dashboard (authenticated)
 
-Three tabs:
-
-- **Score** — large orientation score, threshold-60 chip, draggable measuring tape (what-if only, never saved), then the position inside the comparison cohort: rank, percentile and distribution once a cohort of ten exists. The cohort follows the ladder country → country group → whole track and says which tier it used.
-- **Outcomes** — the caller's cohort: awarded score band, awarded / merit-positive-without-seat counts, awarded rate, from three awarded reports and in 5-point bands; plus the official Anders history (`shared/anders-history.ts`) and the status reporter.
-- **Season** — four-stage ruler (documents → evaluation → results → university) driven by the reported status. No documents checklist: paperwork stays out of scope.
+One screen, no tabs: large orientation score, threshold-60 chip, draggable measuring tape (what-if only, never saved), then the position inside the comparison cohort: rank, percentile and distribution once a cohort of ten exists. The cohort follows the ladder country → country group → whole track and says which tier it used.
 
 Also: edit profile (same wizard), Settings, delete profile.
 
-Reported status ladder (product-simplified):
+### Retired: application statuses, Outcomes and Season
 
-```text
-submitted
-  → formal_review_positive
-    → merit_review_positive → scholarship_awarded
-                            → scholarship_not_awarded   (≥ 60 points, no seat within the country limit)
-    → merit_review_negative
-```
-
-Any later stage can be reported directly (a late joiner goes `submitted` → `scholarship_awarded` in one step); going back is not possible, and the two seat decisions can be corrected into each other. No `formal_review_negative` by design (see intent).
+Until the 2026 intake closed, users could report a status ladder (`submitted` → `formal_review_positive` → `merit_review_positive` → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`), and the dashboard had Outcomes and Season tabs built on it. All of that is gone from the app. The columns, the transition rules and `get_cohort_outcomes` / `get_prep_city_distribution` remain in the database for the post-award flow.
 
 ## Mapping to Anders Ogłoszenie 13/2026
 
@@ -112,11 +95,11 @@ Any later stage can be reported directly (a late joiner goes `submitted` → `sc
 | Three scholarships: Dyrektor / MKIDN / MZ | Enums keep all three; only Director live, the ministries run their own merit stage |
 | Dual Polish citizenship → only Dyrektor | Moot while only Director is live |
 | Path: preparatory + studies **or** direct studies | Same two `studyRoute` values |
-| University choice binds which scholarship you apply for (Dyrektor / MKIDN / MZ) | `targetUniversity` filtered by scholarship (Director partners) |
+| University choice binds which scholarship you apply for (Dyrektor / MKIDN / MZ) | Not asked at the start any more; a stored `targetUniversity` is still checked against the track's partners |
 | Merit points: grades 0–90 + Polonia school 0/5/10, max 100 | Same orientation formula |
 | Merit pass threshold 60 | Threshold used as orientation signal |
 | Seats by citizenship country / country groups | Country cohort + allocation-oriented cards (community estimate, not official limits) |
-| Deadline 9 Jul 2026; results by 30 Sep 2026 (Director) | Season timeline; then freeze |
+| Deadline 9 Jul 2026; results by 30 Sep 2026 (Director) | Season calendar (`shared/season.ts`) drives the bot reminders; records are kept per intake year |
 
 ### Out of product scope (intentionally thin or absent)
 
@@ -133,7 +116,7 @@ Any later stage can be reported directly (a late joiner goes `submitted` → `sc
 
 Regulamin defines the shared shell: System registration → submit → formal → merit (if any) → Director decision → contract. Field-level Anders rules live in the Ogłoszenie, not in the Regulamin.
 
-Our statuses are a **lossy projection** of that shell for community storytelling. Formal rejection branches are omitted on purpose.
+The app no longer tracks any stage of that shell: users enter their grades and see where they stand.
 
 ## Gaps vs Ogłoszenie (product-relevant watchlist)
 
@@ -141,8 +124,8 @@ Checked against live PDFs (both URLs resolve). Items below are **not** “missin
 
 | Gap | Official rule | Current product | Why it matters |
 | --- | --- | --- | --- |
-| University always asked | Applicant always picks a university → that declares Dyrektor / MKIDN / MZ | **Fixed:** asked on both routes, filtered by track | — |
-| Merit pass ≠ seat | ≥60 = eligible; seats by country / country **group** go to highest scores | No status for “merit ok, no seat” | **Deprioritized:** product assumes people who would clearly fail (<60) self-select out; among declarers the fight is mainly seat quotas, and we already collect award / merit-negative outcomes |
+| University always asked | Applicant always picks a university → that declares Dyrektor / MKIDN / MZ | Not asked at the start ([ADR 0008](adr/0008-refocus-on-score-comparison.md)); returns in a later flow for scholarship holders | The comparison does not depend on it |
+| Merit pass ≠ seat | ≥60 = eligible; seats by country / country **group** go to highest scores | No statuses are collected | **Deprioritized:** product assumes people who would clearly fail (<60) self-select out; among declarers the fight is mainly seat quotas |
 | Country **groups** | Official limits may be for groups, not only single countries | Illustrative allocation, not official 2026 groups | Don’t imply real quotas |
 | Belarus × Polonia bonus | Polonia school points **nie dotyczy obywateli Białorusi** | **Fixed:** bonus 0 for `BY`; UI notice cites pkt 2.7 kryterium 2 | — |
 | Continuing students in PL | ≥4.75 (scale 2–5) → **100 pts** | **Fixed:** `applicant_kind = student_in_poland` is scored 100 | — |
@@ -159,9 +142,9 @@ Intentionally still out of scope (confirm OK): Karta Polaka / attachments, forma
 | State machine | `src/pages/HomePage.tsx` |
 | Create / wizard / confirm | `src/features/CreateProfileFlow.tsx`, `ResponseWizardSteps.tsx`, `ConfirmSummary.tsx` |
 | Dashboard | `src/features/ProfileDashboard.tsx`, `statistics/StatisticsPanel.tsx` |
-| Contracts / statuses | `shared/contracts.ts`, `shared/status-options.ts` |
+| Contracts | `shared/contracts.ts` |
 | Score formula | `shared/nawa-score.ts` |
-| Cohort ladder and outcomes | `supabase/migrations/202611210001_cohort_ladder.sql`, `shared/anders-history.ts` |
+| Cohort ladder | `supabase/migrations/202611210001_cohort_ladder.sql` |
 | Bot, reminders and country links | `api/bot.ts`, `api/cron/reminders.ts`, `shared/reminders.ts`, `shared/bot-messages.ts`, `src/lib/bot-links.ts` |
 | Languages | `src/i18n/{pl,en,ru,uk,be}.ts`, `src/i18n/locales.test.ts` |
 | Season calendar | `shared/season.ts` |
@@ -175,6 +158,13 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 - Opting in stores the Telegram id in `bot_subscriptions`, separate from the answers; it is removed on `/stop`, when the bot is blocked, and when the survey is deleted.
 
 ## Changelog
+
+### Unreleased — Refocus on the score comparison
+
+- Landing: a live sample ruler replaces the fake density strip.
+- Wizard: the university / field step is gone; two steps (countries, grades).
+- Removed from the app: status reporting, the Outcomes and Season tabs, the prep-city card, `/api/outcomes` and `/api/prep-cities`; reminder copy no longer asks for an outcome.
+- Decision record: [ADR 0008](adr/0008-refocus-on-score-comparison.md).
 
 ### 2026-11-25 — Bot, languages, retro outcomes
 

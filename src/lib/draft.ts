@@ -2,7 +2,9 @@ import type { ApplicantKind, ApplicationStatus, GradeBasis, PolishSchoolLevel, R
 import { getTelegramUserId } from './telegram';
 
 export const DRAFT_STORAGE_KEY_PREFIX = 'nawa-wizard-draft';
-const SESSION_VERSION = 1 as const;
+const SESSION_VERSION = 2 as const;
+/** Version 1 had a first wizard step (university and field) that no longer exists, so its step index is one too high. */
+const LEGACY_SESSION_VERSION = 1 as const;
 
 // Scoped by Telegram user id so drafts never leak between accounts sharing a device/browser.
 function draftStorageKey(): string {
@@ -78,7 +80,8 @@ function isWizardSession(value: unknown): value is WizardSession {
     typeof value === 'object' &&
     value != null &&
     'version' in value &&
-    (value as WizardSession).version === SESSION_VERSION &&
+    ((value as WizardSession).version === SESSION_VERSION ||
+      (value as { version: unknown }).version === LEGACY_SESSION_VERSION) &&
     'draft' in value &&
     isWizardDraft((value as WizardSession).draft)
   );
@@ -91,7 +94,13 @@ export function loadWizardSession(): WizardSession | null {
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (isWizardSession(parsed)) {
-      return { ...parsed, draft: normalizeWizardDraft(parsed.draft) };
+      const legacy = (parsed as { version: unknown }).version === LEGACY_SESSION_VERSION;
+      return {
+        ...parsed,
+        version: SESSION_VERSION,
+        draft: normalizeWizardDraft(parsed.draft),
+        stepIndex: legacy ? Math.max(0, parsed.stepIndex - 1) : parsed.stepIndex,
+      };
     }
     if (isWizardDraft(parsed)) {
       return {

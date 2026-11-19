@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { MIN_COHORT_SIZE, OUTCOME_BAND_WIDTH, OUTCOME_MIN_AWARDED } from '../../shared/product-rules';
+import { MIN_COHORT_SIZE } from '../../shared/product-rules';
 
 const migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202608030001_schema.sql'),
@@ -349,8 +349,10 @@ describe('cleanup and thresholds migration contract', () => {
 
   it('keeps the privacy thresholds identical in SQL and TypeScript', () => {
     expect(constantReturnedBy('min_cohort_size')).toBe(MIN_COHORT_SIZE);
-    expect(constantReturnedBy('outcome_min_awarded')).toBe(OUTCOME_MIN_AWARDED);
-    expect(constantReturnedBy('outcome_band_width')).toBe(OUTCOME_BAND_WIDTH);
+    // The outcome thresholds have no TypeScript twin any more: the app stopped reading outcomes (ADR 0008), but the
+    // SQL stays for the post-award flow, so its values are pinned here.
+    expect(constantReturnedBy('outcome_min_awarded')).toBe(3);
+    expect(constantReturnedBy('outcome_band_width')).toBe(5);
   });
 
   it('uses the named thresholds instead of literals in the statistics and outcomes functions', () => {

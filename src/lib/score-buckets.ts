@@ -90,3 +90,34 @@ export function displayBuckets(buckets: number[], groupSize: number): number[] {
   const targetCount = displayBinCount(groupSize);
   return aggregateBuckets(buckets, targetCount);
 }
+
+/** Share (0–100) of responses below `score`, interpolating inside the bucket that holds it. */
+export function percentileInBuckets(score: number, buckets: number[], origin: number, step: number): number {
+  const total = buckets.reduce((sum, count) => sum + count, 0);
+  if (total <= 0 || step <= 0) return 0;
+
+  const position = (score - origin) / step;
+  if (position <= 0) return 0;
+  if (position >= buckets.length) return 100;
+
+  const whole = Math.floor(position);
+  const below = buckets.slice(0, whole).reduce((sum, count) => sum + count, 0) + buckets[whole] * (position - whole);
+  return (below / total) * 100;
+}
+
+/** Inverse of `percentileInBuckets`: the score that has `percentile` percent of responses below it. */
+export function scoreAtPercentile(percentile: number, buckets: number[], origin: number, step: number): number {
+  const total = buckets.reduce((sum, count) => sum + count, 0);
+  if (total <= 0) return origin;
+
+  const target = (total * Math.min(Math.max(percentile, 0), 100)) / 100;
+  let cumulative = 0;
+  for (let index = 0; index < buckets.length; index += 1) {
+    const next = cumulative + buckets[index];
+    if (target <= next && buckets[index] > 0) {
+      return origin + (index + (target - cumulative) / buckets[index]) * step;
+    }
+    cumulative = next;
+  }
+  return origin + buckets.length * step;
+}

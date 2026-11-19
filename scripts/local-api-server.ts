@@ -3,8 +3,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { HttpResponse } from '../api/_lib/http.js';
 import { createBotHandler } from '../api/bot.js';
 import { createRemindersHandler } from '../api/cron/reminders.js';
-import { createCohortOutcomesHandler } from '../api/outcomes.js';
-import { createPrepCitiesHandler } from '../api/prep-cities.js';
 import { createProductEventsHandler } from '../api/product-events.js';
 import { createResponsesHandler } from '../api/responses.js';
 import { createCurrentResponseHandler } from '../api/responses/current.js';
@@ -29,8 +27,6 @@ const routes: Array<{ method: string; path: string; handler: ApiHandler }> = [
   { method: 'DELETE', path: '/api/responses', handler: createResponsesHandler() },
   { method: 'POST', path: '/api/responses/current', handler: createCurrentResponseHandler() },
   { method: 'POST', path: '/api/statistics', handler: createStatisticsHandler() },
-  { method: 'POST', path: '/api/outcomes', handler: createCohortOutcomesHandler() },
-  { method: 'POST', path: '/api/prep-cities', handler: createPrepCitiesHandler() },
   { method: 'POST', path: '/api/product-events', handler: createProductEventsHandler() },
   { method: 'POST', path: '/api/bot', handler: createBotHandler() },
   { method: 'GET', path: '/api/cron/reminders', handler: createRemindersHandler() },

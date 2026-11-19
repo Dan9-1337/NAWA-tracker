@@ -324,113 +324,11 @@ body {
   color: var(--tg-theme-subtitle-text-color);
 }
 
-.status-stepper {
-  margin-top: 0.75rem;
-}
-
-.status-stepper__track {
-  display: flex;
-  align-items: center;
-}
-
-.status-stepper__segment {
-  display: flex;
-  flex: 1;
-  align-items: center;
-}
-
-.status-stepper__segment:last-child {
-  flex: 0;
-}
-
-.status-stepper__node {
-  width: 0.6875rem;
-  height: 0.6875rem;
-  flex-shrink: 0;
-  border-radius: var(--radius-full);
-  border: 2px solid color-mix(in srgb, var(--tg-theme-subtitle-text-color) 45%, transparent);
-  background: var(--tg-theme-bg-color);
-}
-
-.status-stepper__node--completed {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-}
-
-.status-stepper__node--active {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
-}
-
-.status-stepper__node--positive {
-  border-color: var(--color-positive);
-  background: var(--color-positive);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-positive) 22%, transparent);
-}
-
-.status-stepper__node--negative {
-  border-color: var(--tg-theme-destructive-text-color);
-  background: var(--tg-theme-destructive-text-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tg-theme-destructive-text-color) 20%, transparent);
-}
-
-.status-stepper__line {
-  height: 2px;
-  flex: 1;
-  margin: 0 0.125rem;
-  border-radius: var(--radius-full);
-  background: var(--section-divider-color);
-}
-
-.status-stepper__line--completed {
-  background: var(--color-accent);
-}
-
-.status-stepper__labels {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.25rem;
-  margin-top: 0.375rem;
-}
-
-.status-stepper__label {
-  font-size: 0.6875rem;
-  line-height: 1.25;
-  text-align: center;
-  color: var(--tg-theme-subtitle-text-color);
-}
-
-.status-stepper__label--active {
-  font-weight: 600;
-  color: var(--color-accent-ink);
-}
-
 .result-preview-card,
 .dashboard-card-hero {
   border-color: var(--text-primary);
   border-width: 2px;
   background: var(--tg-theme-secondary-bg-color);
-}
-
-.result-preview__user-marker {
-  animation: result-preview-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes result-preview-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent),
-      0 1px 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
-  }
-  50% {
-    box-shadow:
-      0 0 0 4px color-mix(in srgb, var(--color-accent) 18%, transparent),
-      0 1px 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

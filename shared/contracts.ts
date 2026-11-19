@@ -17,12 +17,6 @@ export const applicationStatuses = [
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
-export const terminalApplicationStatuses = [
-  'merit_review_negative',
-  'scholarship_awarded',
-  'scholarship_not_awarded',
-] as const;
-
 /** Which document the declared average comes from (Ogłoszenie 13/2026, pkt 2.6). */
 export const gradeBases = ['final_certificate', 'half_year'] as const;
 export type GradeBasis = (typeof gradeBases)[number];
@@ -83,43 +77,6 @@ export type StatisticsResult = {
   cohortScope: CohortScope | null;
   /** Id of the pooled country group when `cohortScope` is 'group'. */
   cohortGroupId: string | null;
-};
-
-/**
- * Outcomes reported by people in the caller's cohort. Disclosed from three awarded responses;
- * scores are rounded outward to 5-point bands so no applicant's own score is exposed.
- */
-export type CohortOutcomesResult = {
-  ownCountry: string;
-  /** Null until some tier of the ladder has enough awarded responses to disclose. */
-  scope: CohortScope | null;
-  groupId: string | null;
-  awardedCount: number;
-  notAwardedCount: number;
-  /** Awarded / (awarded + not awarded) among merit-positive responses. */
-  awardedRate: number | null;
-  awardedBandLow: number | null;
-  awardedBandHigh: number | null;
-  /** Upper band of scores that passed merit but got no seat; needs three such reports. */
-  notAwardedBandHigh: number | null;
-};
-
-export const fieldLevels = ['detailed', 'narrow', 'broad', 'all'] as const;
-export type FieldLevel = (typeof fieldLevels)[number];
-
-/**
- * Where reporters in the caller's study field were sent for the preparatory course. `level` is how far the field
- * had to be widened to reach the disclosure floor (null: nothing can be shown yet). Cities below the floor are
- * merged into `otherCount`.
- */
-export type PrepCityDistribution = {
-  studyField: string;
-  level: FieldLevel | null;
-  /** ISCED-F code of the group at `level`: 4, 3 or 2 digits, null for "all". */
-  groupCode: string | null;
-  total: number;
-  cities: Array<{ city: string; count: number }>;
-  otherCount: number;
 };
 
 export type CreateResponseRequest = {

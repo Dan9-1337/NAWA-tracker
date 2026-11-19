@@ -1,30 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
-import { nawaSystemUrl, season2026 } from '../../shared/season';
-import { getStatusOptions } from '../../shared/status-options';
-import { DashboardTabs, type DashboardTab } from '../components/DashboardTabs';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
 import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
-import { trackProductEvent } from '../lib/product-events';
-import { getTelegramWebApp } from '../lib/telegram';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
 import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
 import { ConfirmSummary } from './ConfirmSummary';
-import { buildDashboardChrome } from './dashboard-chrome';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
   toResponseInput,
   type WizardStep,
 } from './ResponseWizardSteps';
-import { OutcomesScreen } from './outcomes/OutcomesScreen';
 import { ScoreScreen } from './score/ScoreScreen';
-import { SeasonScreen } from './season/SeasonScreen';
 import { StatisticsPanel, type StatisticsState } from './statistics/StatisticsPanel';
-import { StatusReporter } from './StatusReporter';
 import { useWizardSteps } from './useWizardSteps';
 
 type View = 'dashboard' | 'edit-wizard' | 'edit-confirm';
@@ -52,10 +43,6 @@ export function ProfileDashboard({
 }: ProfileDashboardProps) {
   const { t } = useI18n();
   const [view, setView] = useState<View>('dashboard');
-  const [tab, setTab] = useState<DashboardTab>('score');
-  const [currentStatus, setCurrentStatus] = useState(current.currentStatus);
-  const [statusChangedAt, setStatusChangedAt] = useState(current.statusChangedAt);
-  const [prepCourseCity, setPrepCourseCity] = useState(current.prepCourseCity ?? '');
   const [editDraft, setEditDraft] = useState<WizardDraft>(() => responseToDraft(current));
   const {
     stepIndex: editStepIndex,
@@ -66,16 +53,12 @@ export function ProfileDashboard({
     resetToStart: resetEditSteps,
   } = useWizardSteps();
   const { pending, run: runGuarded } = useGuardedSubmit();
-  const [statusConfirmation, setStatusConfirmation] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [cohortWarning, setCohortWarning] = useState(false);
-  const [statusEditorOpen, setStatusEditorOpen] = useState(false);
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const lastProcessedStatisticsRef = useRef<unknown>(null);
 
   useEffect(() => {
-    setCurrentStatus(current.currentStatus);
-    setStatusChangedAt(current.statusChangedAt);
-    setPrepCourseCity(current.prepCourseCity ?? '');
     setEditDraft(responseToDraft(current));
   }, [current]);
 
@@ -92,26 +75,18 @@ export function ProfileDashboard({
   }, [onStatsUpdatedAt, statsUpdatedAt]);
 
   // A new view, wizard step or tab starts at its top.
-  useScrollToTopOnChange(view, editStepIndex, tab);
+  useScrollToTopOnChange(view, editStepIndex);
 
-  // The saved-status confirmation sits at the top of the dashboard, so bring it into view.
+  // The saved confirmation sits at the top of the dashboard, so bring it into view.
   useEffect(() => {
-    if (statusConfirmation) scrollAppToTop();
-  }, [statusConfirmation]);
+    if (saved) scrollAppToTop();
+  }, [saved]);
 
   useEffect(() => {
-    if (!statusConfirmation) return undefined;
-    const id = window.setTimeout(() => setStatusConfirmation(false), 3500);
+    if (!saved) return undefined;
+    const id = window.setTimeout(() => setSaved(false), 3500);
     return () => window.clearTimeout(id);
-  }, [statusConfirmation]);
-
-  const statusOptions = useMemo(() => getStatusOptions(current.currentStatus), [current.currentStatus]);
-  const statusDirty =
-    currentStatus !== current.currentStatus ||
-    statusChangedAt !== current.statusChangedAt ||
-    prepCourseCity !== (current.prepCourseCity ?? '');
-  // Final outcomes can still be corrected (awarded <-> not awarded); others have nothing left to report.
-  const canReportStatus = statusOptions.length > 1;
+  }, [saved]);
 
   const userOrientationScore = useMemo(() => {
     if (current.scholarshipTrack !== 'nawa_director') return null;
@@ -124,24 +99,6 @@ export function ProfileDashboard({
     );
   }, [current]);
 
-  const submitStatus = useCallback(async () => {
-    if (disabled || !statusDirty) return;
-    await runGuarded(async () => {
-      const { prepCourseCity: _previous, ...rest } = current;
-      const keepsCity =
-        current.studyRoute === 'preparatory_course' && currentStatus === 'scholarship_awarded' && prepCourseCity !== '';
-      await onSubmit({
-        ...rest,
-        currentStatus,
-        statusChangedAt,
-        ...(keepsCity ? { prepCourseCity } : {}),
-      });
-      void trackProductEvent({ name: 'status_updated', from: current.currentStatus, to: currentStatus });
-      setStatusConfirmation(true);
-      setStatusEditorOpen(false);
-    });
-  }, [current, currentStatus, disabled, onSubmit, prepCourseCity, runGuarded, statusChangedAt, statusDirty]);
-
   const submitEdit = useCallback(async () => {
     if (disabled) return;
     const next = toResponseInput(editDraft);
@@ -153,7 +110,7 @@ export function ProfileDashboard({
       await onSubmit(next);
       setView('dashboard');
       setCohortWarning(false);
-      setStatusConfirmation(true);
+      setSaved(true);
     });
   }, [cohortWarning, current, disabled, editDraft, onSubmit, runGuarded]);
 
@@ -200,24 +157,7 @@ export function ProfileDashboard({
 
   function chromeConfig(): MiniAppChromeConfig {
     if (chromeSuspended) return {};
-    if (view === 'dashboard') {
-      return buildDashboardChrome({
-        t,
-        tab,
-        disabled,
-        pending,
-        statusDirty,
-        canReportStatus,
-        statusEditorOpen,
-        seasonYear: season2026.year,
-        actions: {
-          submitStatus: () => void submitStatus(),
-          openStatusEditor: () => setStatusEditorOpen(true),
-          showOutcomes: () => setTab('outcomes'),
-          openOfficialSystem: () => getTelegramWebApp()?.openLink(nawaSystemUrl),
-        },
-      });
-    }
+    if (view === 'dashboard') return {};
     if (view === 'edit-wizard') {
       return {
         main: {
@@ -278,66 +218,16 @@ export function ProfileDashboard({
     );
   }
 
-  const statusReporter = canReportStatus ? (
-    <StatusReporter
-      savedStatus={current.currentStatus}
-      status={currentStatus}
-      statusChangedAt={statusChangedAt}
-      options={statusOptions}
-      dirty={statusDirty}
-      open={statusEditorOpen}
-      onOpenChange={setStatusEditorOpen}
-      onStatusChange={(status) => {
-        setStatusConfirmation(false);
-        setCurrentStatus(status);
-      }}
-      onDateChange={(value) => {
-        setStatusConfirmation(false);
-        setStatusChangedAt(value);
-      }}
-      showCity={current.studyRoute === 'preparatory_course'}
-      prepCourseCity={prepCourseCity}
-      onCityChange={(city) => {
-        setStatusConfirmation(false);
-        setPrepCourseCity(city);
-      }}
-    />
-  ) : null;
-
   return (
     <div className="space-y-3">
-      <DashboardTabs value={tab} onChange={setTab} />
-
-      {statusConfirmation ? (
+      {saved ? (
         <p className="text-sm text-[var(--tg-theme-success-text-color)]" role="status" aria-live="polite">
-          ✓ {t.form.statusSaved}
+          ✓ {t.form.saved}
         </p>
       ) : null}
 
-      <div role="tabpanel" id={`dashboard-panel-${tab}`} aria-labelledby={`dashboard-tab-${tab}`} className="space-y-3">
-        {tab === 'score' ? (
-          <>
-            <ScoreScreen current={current} onEditSection={openEditAt} />
-            <StatisticsPanel
-              state={statistics}
-              profile={current}
-              userScore={userOrientationScore}
-            />
-          </>
-        ) : null}
-
-        {tab === 'outcomes' ? (
-          <>
-            <OutcomesScreen
-              userScore={userOrientationScore}
-              showPrepCities={current.studyRoute === 'preparatory_course'}
-            />
-            {statusReporter}
-          </>
-        ) : null}
-
-        {tab === 'season' ? <SeasonScreen status={current.currentStatus} /> : null}
-      </div>
+      <ScoreScreen current={current} onEditSection={openEditAt} />
+      <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
 
       {actionError ? (
         <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">

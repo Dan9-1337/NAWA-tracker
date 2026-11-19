@@ -1,6 +1,6 @@
 # 0007. Collect the study field and the prep-course city, aggregate them as field by city
 
-Status: Accepted (built in migration `202611260001`)
+Status: Superseded by [0008](0008-refocus-on-score-comparison.md) (built in migration `202611260001`; the app no longer asks for the field or the city)
 
 ## Context
 

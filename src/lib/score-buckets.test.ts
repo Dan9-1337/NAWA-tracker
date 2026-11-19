@@ -4,6 +4,8 @@ import {
   displayBinCount,
   displayBuckets,
   mergeSparseBuckets,
+  percentileInBuckets,
+  scoreAtPercentile,
   scoreToAxisPercent,
 } from './score-buckets';
 
@@ -29,5 +31,15 @@ describe('score-buckets', () => {
     const fine = Array.from({ length: 16 }, (_, index) => index + 1);
     expect(aggregateBuckets(fine, 4)).toEqual([10, 26, 42, 58]);
     expect(displayBuckets(fine, 80)).toHaveLength(8);
+  });
+
+  it('places a score inside the cohort and inverts it back', () => {
+    const buckets = [10, 20, 40, 20, 10];
+    expect(percentileInBuckets(50, buckets, 60, 8)).toBe(0);
+    expect(percentileInBuckets(120, buckets, 60, 8)).toBe(100);
+    expect(percentileInBuckets(80, buckets, 60, 8)).toBe(50);
+    expect(scoreAtPercentile(50, buckets, 60, 8)).toBe(80);
+    expect(scoreAtPercentile(0, buckets, 60, 8)).toBe(60);
+    expect(scoreAtPercentile(100, buckets, 60, 8)).toBe(100);
   });
 });

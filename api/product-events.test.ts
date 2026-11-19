@@ -39,23 +39,10 @@ describe('POST /api/product-events', () => {
     expect(JSON.stringify(insert.mock.calls)).not.toContain('424242424');
   });
 
-  it('accepts the status transition payload only', async () => {
-    const { send, insert } = setup();
-
-    await send({ eventName: 'status_updated', payload: { from: 'submitted', to: 'formal_review_positive' } });
-
-    expect(insert).toHaveBeenCalledWith({
-      identity_hash: IDENTITY_HASH,
-      event_name: 'status_updated',
-      payload: { from: 'submitted', to: 'formal_review_positive' },
-    });
-  });
-
   it.each([
     ['free text on a plain event', { eventName: 'score_viewed', payload: { query: 'warsaw' } }],
     ['an unknown event', { eventName: 'university_search_no_results', payload: { query: 'warsaw' } }],
-    ['extra payload fields', { eventName: 'status_updated', payload: { from: 'submitted', to: 'merit_review_positive', note: 'hi' } }],
-    ['a free-text status', { eventName: 'status_updated', payload: { from: 'submitted', to: 'whatever' } }],
+    ['the retired status event', { eventName: 'status_updated', payload: { from: 'submitted', to: 'formal_review_positive' } }],
   ])('rejects %s', async (_label, body) => {
     const { send, insert, state } = setup();
 

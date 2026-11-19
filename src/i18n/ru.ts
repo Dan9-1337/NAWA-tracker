@@ -5,8 +5,6 @@ const points = (count: string) =>
   plural('ru', count, { one: 'балл', few: 'балла', many: 'баллов', other: 'балла' });
 const participants = (count: string) =>
   plural('ru', count, { one: 'участник', few: 'участника', many: 'участников', other: 'участника' });
-const applicationsGenitive = (count: string) =>
-  plural('ru', count, { one: 'заявки', few: 'заявок', many: 'заявок', other: 'заявок' });
 
 export const ru = {
   app: {
@@ -33,26 +31,13 @@ export const ru = {
       'Процентиль показывает, какая доля результатов участников трекера находится ниже вашего.',
     howPercentileExample:
       'Например, 70–80-й процентиль означает, что ваш результат выше примерно 70–80% результатов в выбранной группе.',
-    howDensityTitle: 'Что означают цвета на полосе?',
-    howDensityBody:
-      'Полоса показывает распределение результатов участников по диапазонам. Чем ярче сегмент, тем больше заявок в этом диапазоне.',
-    howDensityLess: 'Меньше заявок',
-    howDensityMore: 'Больше заявок',
-    howDensityHint: 'Цвет показывает количество заявок',
-    howDensityMedian: 'Медиана — у половины участников результат ниже, у другой половины выше',
-    howDensityYou: 'Вы — ваш ориентировочный результат',
-    howDensityNotQuality:
-      'Цвета не означают, что результат хороший или плохой, и не показывают вероятность получения стипендии.',
     previewBadge: 'Пример результата',
-    previewScoreValue: '82,4',
     previewScoreUnit: 'балла',
-    previewAboveMedianBy: 'Выше медианы на 6,2 балла',
-    previewPercentileRange: '70–80',
+    previewAboveMedianBy: (delta: string) => `Выше медианы на ${delta} балла`,
+    previewBelowMedianBy: (delta: string) => `Ниже медианы на ${delta} балла`,
+    previewTapeHint: 'Потяните ленту, чтобы увидеть, как меняется ваша позиция',
     previewPercentileLabel: 'процентиль',
-    previewMedianLabel: 'медиана',
-    previewYouLabel: 'вы',
     previewLive: '48 заявок · +7 за неделю',
-    previewDensityHint: 'Цвет показывает количество заявок',
     timePromise: 'Займёт около 1 минуты',
     resumeTitle: 'Есть сохранённый прогресс',
     resumeBody: 'Продолжите с того места, где остановились, или начните анкету заново.',
@@ -62,32 +47,20 @@ export const ru = {
   wizard: {
     next: 'Далее',
     sections: {
-      application: 'Основное',
       education: 'Образование',
       grades: 'Оценки',
-      status: 'Статус',
     },
-    applicationTitle: 'Ваша заявка',
-    applicationDescription: 'Эти данные определяют программу и маршрут поступления.',
     educationTitle: 'Образование',
     educationDescription: 'Мы сравниваем вас с кандидатами из похожей группы.',
     gradesTitle: 'Оценки',
     gradesDescription:
       'Укажите средний балл аттестата. Максимальная оценка по шкале определяется страной, в которой вы окончили школу.',
-    statusDescription: 'Выберите текущий этап и укажите, когда он наступил.',
     rankingCountryHint: 'Определяет вашу группу сравнения: вас будут ранжировать вместе с кандидатами из этой же страны.',
     schoolCountryHint: 'Определяет шкалу оценок в калькуляторе (например, 12-балльная в Украине или 5-балльная в Казахстане).',
-    targetUniversityHint:
-      'В заявке NAWA нужно указать вуз-партнёр. Выберите тот, который вы указали.',
     maximumGradeLockedHint: 'Шкала определяется страной окончания школы.',
     averageAboveMaximum: 'Ай-ай-ай, средний балл выше максимума шкалы. Давайте по-честному.',
     belarusPoloniaBonusNotice:
       'Согласно документу Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2), бонус за окончание польской школы не распространяется на граждан Беларуси.',
-    statusDateQuestion: 'Когда появился этот статус?',
-    today: 'Сегодня',
-    yesterday: 'Вчера',
-    pickDate: 'Выбрать дату',
-    dontRemember: 'Не помню точно',
     summaryTitle: 'Сводка',
     summaryDescription: 'Проверьте, с какой группой вас сравнят и что будет сохранено.',
     cohortTitle: 'Вас будут сравнивать с кандидатами:',
@@ -96,13 +69,8 @@ export const ru = {
     editStep: 'Изменить',
     gradeBasisHint: 'NAWA берёт средний балл по итоговому аттестату или по оценкам за полугодие, если вы заканчиваете школу после 1 июля.',
     studentInPolandNote: 'Студентам в Польше со средним баллом не ниже 4,75 присваивается максимум — 100 баллов.',
-    studyFieldHint: 'Выберите kierunek, который вы указали в заявке. Список единый для всех (классификация ISCED-F, которую использует POL-on).',
-    philologyNote: 'NAWA не финансирует прикладную лингвистику и филологические направления, кроме польской филологии (исключение: польская филология и польская филология как иностранная). Проверьте это до подачи заявки.',
-    prepCourseCityHint: 'Центр курса назначает NAWA. Укажите город, куда вас направили (можно пропустить).',
     validation: {
-      studyFieldRequired: 'Выберите направление подготовки, чтобы продолжить.',
       studentAverageRequired: 'Студенты в Польше могут участвовать со средним баллом не ниже 4,75 по шкале 2–5.',
-      universityRequired: 'Укажите, куда мечтаете поступить, чтобы продолжить.',
       rankingCountryRequired: 'Выберите страну гражданства.',
       schoolCountryRequired: 'Выберите страну окончания средней школы.',
       educationRequired: 'Заполните данные об образовании, чтобы продолжить.',
@@ -113,13 +81,9 @@ export const ru = {
   form: {
     submitCreate: 'Сохранить ответ',
     submitUpdate: 'Обновить данные',
-    collapseStatus: 'Готово',
-    statusSaved: 'Статус сохранён',
-    statusUpdatedShort: 'Обновлено',
+    saved: 'Сохранено',
     saveError: 'Не удалось сохранить',
     saveErrorDraft: 'Ваши ответы остались на устройстве. Попробуйте ещё раз.',
-    suspiciousTransitionWarning:
-      'Это изменение статуса выглядит необычно (например, возврат с финального этапа или более ранняя дата). Проверьте данные.',
     cohortChangeTitle: 'Изменение группы сравнения',
     cohortChangeBody:
       'Изменение этих данных переведёт вас в другую группу сравнения. Предыдущая статистика больше не будет отображаться.',
@@ -130,27 +94,15 @@ export const ru = {
       'Удаление анкеты необратимо. Все сохранённые данные и ваше место в статистике будут потеряны навсегда.',
     deleteConfirmPermanent: 'Да, удалить навсегда',
   },
-  statusPhase: {
-    submitted: 'Подача',
-    formal: 'Формальная',
-    merit: 'Оценка',
-    outcome: 'Решение',
-  },
   labels: {
     rankingCountry: 'Страна гражданства',
     schoolCountry: 'В какой стране вы окончили школу?',
     scholarshipTrack: 'Вид стипендии',
-    studyRoute: 'Маршрут поступления',
-    targetUniversity: 'Вуз в заявке NAWA',
     averageGrade: 'Средний балл',
     maximumGrade: 'Максимальный балл по вашей шкале',
     polishSchoolLevel: 'Окончили ли вы польскую школу?',
     gradeBasis: 'По каким оценкам вы указали средний балл?',
     applicantKind: 'В каком качестве вы подаёте заявку?',
-    studyField: 'Направление подготовки (kierunek)',
-    prepCourseCity: 'Город подготовительного курса',
-    currentStatus: 'Статус заявки',
-    statusChangedAt: 'Дата последнего изменения статуса',
     averageGradePlaceholder: 'напр. 4,82',
     maximumGradePlaceholder: 'напр. 5,00',
   },
@@ -159,10 +111,6 @@ export const ru = {
       nawa_director: 'Стипендия Директора NAWA',
       health_minister: 'Стипендия Министра здравоохранения',
       culture_minister: 'Стипендия Министра культуры и национального наследия',
-    },
-    studyRoute: {
-      preparatory_course: 'Подготовительный курс и обучение',
-      direct_studies: 'Обучение без подготовительного курса',
     },
     gradeBasis: {
       final_certificate: 'Итоговый аттестат (о среднем образовании)',
@@ -177,33 +125,6 @@ export const ru = {
       primary: 'Уровень начальной школы',
       secondary: 'Уровень средней школы',
     },
-    currentStatus: {
-      submitted: 'Заявка подана',
-      formal_review_positive: 'Положительная формальная оценка',
-      merit_review_positive: 'Положительная оценка по существу',
-      merit_review_negative: 'Отрицательная оценка по существу',
-      scholarship_awarded: 'Стипендия присуждена',
-      scholarship_not_awarded: 'Стипендия не присуждена (не хватило места)',
-    },
-    currentStatusHint: {
-      submitted: 'Вы отправили заявку — теперь она в очереди на рассмотрение в NAWA.',
-      formal_review_positive: 'Документы прошли формальную оценку и переданы на оценку по существу.',
-      merit_review_positive: 'Комиссия рекомендовала вас к получению стипендии, окончательное решение ещё не принято.',
-      merit_review_negative: 'Комиссия не рекомендовала вас к получению стипендии.',
-      scholarship_awarded: 'Поздравляем — вам присуждена стипендия.',
-      scholarship_not_awarded: 'Оценка по существу пройдена, но в лимите для вашей страны не хватило места.',
-    },
-  },
-  universities: {
-    placeholder: 'Выберите вуз',
-    searchPlaceholder: 'Поиск вуза…',
-    emptyTitle: 'По вашему запросу ничего не найдено.',
-    emptyTipAbbreviation: 'Попробуйте аббревиатуру вуза (напр. PWr, UWr, AGH).',
-    emptyTipCity: 'Попробуйте город (напр. Вроцлав, Краков).',
-    emptyTipFormerName: 'Попробуйте прежнее название вуза.',
-    emptySupportHint: 'Если вашего вуза нет в списке, обратитесь в поддержку.',
-    formerNameHint: (name: string) => `ранее ${name}`,
-    fuzzySuggestions: 'подсказка',
   },
   countries: {
     placeholder: 'Выберите страну',
@@ -223,10 +144,6 @@ export const ru = {
     groupResponseCount: 'Ответов в группе',
     densityTitle: 'Распределение результатов',
     densityCaption: 'Доля анкет в каждом диапазоне баллов',
-    densityBinLow: 'Низкий',
-    densityBinBelowAvg: 'Ниже среднего',
-    densityBinAboveAvg: 'Выше среднего',
-    densityBinHigh: 'Высокий',
     chartYouLabel: 'Вы',
     chartMedianLabel: 'Медиана группы',
     chartYou: (score: string) => `Ваш результат: ${score} ${points(score)}`,
@@ -286,19 +203,19 @@ export const ru = {
     intro: 'NAWAmeter — неофициальный трекер кандидатов Anders NAWA.',
     capabilitiesTitle: 'Что умеет сервис',
     capabilitiesBody:
-      'Показывает ваш балл, ваше место среди заявленных баллов в вашей стране или группе стран, сообщённые итоги и ход вашей заявки.',
+      'Показывает ваш балл и ваше место среди заявленных баллов в вашей стране или группе стран.',
     dataTitle: 'Откуда берутся данные',
     dataBody:
-      'Статистика считается по профилям NAWAmeter. Статусы и результаты оценки по существу сообщают сами пользователи, если не указано иное.',
+      'Статистика считается по профилям NAWAmeter, которые заполняют сами пользователи, если не указано иное.',
     officialTitle: 'Что считается официальным',
     officialBody:
       'Официальны только решения NAWA и опубликованные правила программы. Расчёты NAWAmeter и места в выборке — не официальный результат конкурса.',
     privacyTitle: 'Как защищены ваши данные',
     privacyBody:
-      'Другие пользователи не видят ваш профиль. Небольшие страны объединяются в группы, а баллы показываются интервалами, поэтому выделить отдельный ответ невозможно. Аккаунт хранится как односторонний ключ; в сообщениях в поддержку используется короткий идентификатор.',
+      'Другие пользователи не видят ваш профиль. Небольшие страны объединяются в группы, поэтому выделить отдельный ответ невозможно. Аккаунт хранится как односторонний ключ; в сообщениях в поддержку используется короткий идентификатор.',
     metricsTitle: 'Как рассчитываются показатели',
     metricsBody:
-      'Ваша позиция и процентиль считаются по вашей стране, затем по группе стран, затем по всем странам — в зависимости от числа ответов. Диапазоны итогов основаны на сообщениях участников и показаны интервалами по 5 баллов.',
+      'Ваша позиция и процентиль считаются по вашей стране, затем по группе стран, затем по всем странам — в зависимости от числа ответов.',
     authorTitle: 'Об авторе',
     authorBody: 'Независимый проект, который помогает кандидатам лучше понять контекст конкурса.',
     version: (version: string) => `Версия приложения: ${version}`,
@@ -348,38 +265,6 @@ export const ru = {
     global_sample: 'Общая выборка NAWAmeter',
     nawa_estimate: 'Оценка NAWAmeter',
   },
-  studyFields: {
-    placeholder: 'Выберите направление',
-    searchPlaceholder: 'Поиск направления…',
-    other: 'Другое направление',
-    emptyTitle: 'Ничего не найдено. Попробуйте по-польски, например «informatyka» или «prawo».',
-  },
-  cities: {
-    placeholder: 'Выберите город',
-    searchPlaceholder: 'Поиск города…',
-    other: 'Другой город',
-  },
-  prepCities: {
-    title: 'Куда направляют на курс',
-    subtitle: 'Города подготовительного курса, о которых сообщили участники вашего направления. Это данные пользователей, они неофициальные.',
-    loading: 'Загружаем…',
-    error: 'Не удалось загрузить.',
-    retry: 'Повторить',
-    empty: 'Сообщений слишком мало, чтобы что-то показать. Когда хотя бы трое сообщат город курса, здесь появится распределение.',
-    shownDetailed: (field: string) => `Направление: ${field}`,
-    shownNarrow: (group: string) => `Сообщений по вашему направлению мало, показана группа: ${group}`,
-    shownBroad: (group: string) => `Сообщений по вашей группе мало, показана область: ${group}`,
-    shownAll: 'Сообщений по вашему направлению мало, показаны все направления',
-    otherLine: (count: string) => `Другие города: ${count}`,
-    total: (count: string) => `Сообщений: ${count}`,
-    legend: 'Города, о которых сообщили меньше трёх человек, объединены в «Другие города». Страна гражданства здесь не учитывается.',
-  },
-  tabs: {
-    label: 'Разделы',
-    score: 'Балл',
-    outcomes: 'Итоги',
-    season: 'Сезон',
-  },
   scoreScreen: {
     seasonClosed: (year: string) => `Набор ${year} закрыт`,
     seasonOpen: (date: string) => `Приём заявок до ${date}`,
@@ -413,59 +298,6 @@ export const ru = {
       secondary: 'Средняя школа, +10',
     },
     formulaDisclaimer: 'Порог не гарантирует стипендию: места распределяются по лимитам для стран.',
-    compareCta: (year: string) => `Сравнить с итогами ${year}`,
-  },
-  outcomes: {
-    title: (year: string) => `Итоги ${year}`,
-    subtitle: 'Сообщают сами участники. Диапазон появляется, когда в вашей группе сообщено о трёх присуждённых стипендиях.',
-    loading: 'Загружаем итоги…',
-    error: 'Не удалось загрузить итоги.',
-    retry: 'Повторить',
-    reportCta: 'Сообщить итог',
-    bannerInside: (cohort: string, score: string, low: string, high: string) =>
-      `${cohort}: ваш балл ${score} внутри диапазона баллов получивших стипендию, ${low}–${high}. Это не прогноз.`,
-    bannerBelow: (cohort: string, score: string, low: string, high: string) =>
-      `${cohort}: ваш балл ${score} ниже диапазона баллов получивших стипендию, ${low}–${high}. Это не прогноз.`,
-    bannerAbove: (cohort: string, score: string, low: string, high: string) =>
-      `${cohort}: ваш балл ${score} выше диапазона баллов получивших стипендию, ${low}–${high}. Это не прогноз.`,
-    bannerNoData: (cohort: string) =>
-      `${cohort}: сообщено меньше трёх присуждённых стипендий, поэтому диапазона пока нет.`,
-    awardedLine: (count: string) =>
-      `${count} ${plural('ru', count, {
-        one: 'стипендия присуждена',
-        few: 'стипендии присуждены',
-        many: 'стипендий присуждено',
-        other: 'стипендии присуждено',
-      })}`,
-    notAwardedLine: (count: string) =>
-      `${count} ${plural('ru', count, {
-        one: 'участник прошёл оценку, но без места',
-        few: 'участника прошли оценку, но без места',
-        many: 'участников прошли оценку, но без места',
-        other: 'участника прошли оценку, но без места',
-      })}`,
-    rateLine: (percent: string) => `Доля получивших стипендию среди прошедших оценку: ${percent}%`,
-    rangeCaption: (low: string, high: string) => `Баллы получивших стипендию: ${low}–${high}`,
-    notAwardedCaption: (high: string) => `Участникам с баллом до ${high} тоже не хватило места, хотя оценку они прошли`,
-    tapeLabel: (cohort: string, low: string, high: string) => `${cohort}: баллы получивших стипендию, ${low}–${high}`,
-    you: 'вы',
-    empty: 'Пока ни в одной группе нет трёх сообщённых стипендий. Диапазон появится, когда больше людей добавят свой итог.',
-    legend:
-      'Жёлтый диапазон: баллы получивших стипендию, округлённые наружу до интервалов по 5 баллов. Данные вводят сами участники, они не проверены и не являются прогнозом.',
-  },
-  history: {
-    title: 'Официальная история',
-    subtitle: 'Опубликованные данные NAWA. Лимиты мест по странам и проходные баллы NAWA не публикует.',
-    levels: {
-      first_cycle: 'Бакалавриат и единая магистратура',
-      second_cycle: 'Магистратура',
-      all_levels: 'Все уровни',
-    },
-    line: (awarded: string, applications: string, percent: string) =>
-      `Со стипендией: ${awarded} из ${applications} ${applicationsGenitive(applications)} (${percent}%)`,
-    largest: (countries: string) => `Самые многочисленные страны: ${countries}`,
-    awardedByCountry: (list: string) => `Присуждено: ${list}`,
-    source: 'Источник',
   },
   cohort: {
     trackWide: 'все страны',
@@ -480,39 +312,6 @@ export const ru = {
     groupNote: (label: string) =>
       `Из вашей страны слишком мало ответов, поэтому вас сравнивают в группе: ${label}.`,
     trackNote: 'Из вашей страны и региона слишком мало ответов, поэтому вас сравнивают со всеми странами.',
-  },
-  season: {
-    title: 'Сезон',
-    subtitle: (year: string) =>
-      `Сроки набора ${year}. Даты следующего набора объявит сама NAWA.`,
-    stateDone: 'Завершено',
-    stateCurrent: 'Сейчас',
-    stateUpcoming: 'Впереди',
-    stateLocked: 'Недоступно',
-    documents: {
-      title: 'Документы',
-      dates: (from: string, to: string) => `${from} – ${to}`,
-      body: 'Заявка подана. Всё остальное оформляется в системе NAWA.',
-    },
-    evaluation: {
-      title: 'Оценка',
-      dates: (to: string) => `До ${to}`,
-      body: 'NAWA проверяет заявки. От вас ничего не нужно.',
-    },
-    results: {
-      title: 'Результаты',
-      dates: (date: string) => `До ${date}`,
-      body: 'Когда узнаете результат, сообщите итог.',
-      bodyReported: 'Итог сообщён. Спасибо!',
-    },
-    university: {
-      title: 'Вуз',
-      dates: 'После присуждения стипендии',
-      datesAwarded: 'Стипендия присуждена',
-      body: 'Следующие шаги появятся здесь после присуждения стипендии.',
-      bodyAwarded: 'Поздравляем! Следующие шаги — в системе NAWA и в вашем вузе.',
-    },
-    officialCta: 'Открыть систему NAWA',
   },
   dashboard: {
     score: {
@@ -559,17 +358,6 @@ export const ru = {
       aroundTrackMedian: 'Ваш балл близок к медиане по всей программе Директора NAWA.',
       belowTrackMedian: 'Ваш балл ниже медианы по всей программе Директора NAWA.',
       benchmarkMedian: (median: string) => `Медиана по программе: ${median} ${points(median)}`,
-    },
-    terminal: {
-      meritNegativeTitle: 'Оценка по существу завершилась отрицательно',
-      meritNegativeBody: 'Ваши данные остаются в статистике сообщества.',
-      meritNegativeNote: 'Мы не показываем прогнозов ваших шансов на стипендию.',
-      notAwardedTitle: 'Оценка пройдена, но без места',
-      notAwardedBody: 'Вы преодолели порог в 60 баллов, но в лимите для вашей страны или группы стран не хватило места.',
-      notAwardedNote: 'Ваши данные остаются в выборке и помогают другим понять, где проходит отсечка.',
-      scholarshipAwardedTitle: 'Стипендия присуждена',
-      awardedDate: 'Дата присуждения',
-      scholarshipAwardedNote: 'Ваше место в выборке NAWAmeter на момент присуждения стипендии.',
     },
   },
 } satisfies Messages;

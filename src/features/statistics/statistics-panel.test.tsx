@@ -84,20 +84,7 @@ describe('StatisticsPanel', () => {
     expect(screen.getByText(/porównujemy Cię ze wszystkimi krajami/)).toBeInTheDocument();
   });
 
-  it('renders terminal merit-negative screen with result hero', () => {
-    render(
-      <StatisticsPanel
-        state={{ status: 'success', data: detailedStatistics }}
-        profile={{ ...profile, currentStatus: 'merit_review_negative' }}
-        userScore={83.8}
-      />,
-    );
-
-    expect(screen.getByText('Ocena merytoryczna zakończona negatywnie')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Twój wynik', level: 2 })).toBeInTheDocument();
-  });
-
-  it('renders scholarship awarded outcome before result hero', () => {
+  it('shows only the result hero whatever status an older profile carries', () => {
     render(
       <StatisticsPanel
         state={{ status: 'success', data: detailedStatistics }}
@@ -106,21 +93,7 @@ describe('StatisticsPanel', () => {
       />,
     );
 
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
-    expect(headings.indexOf('Stypendium przyznane')).toBeLessThan(headings.indexOf('Twój wynik'));
-  });
-
-  it('renders the not-awarded outcome before the result hero', () => {
-    render(
-      <StatisticsPanel
-        state={{ status: 'success', data: detailedStatistics }}
-        profile={{ ...profile, currentStatus: 'scholarship_not_awarded' }}
-        userScore={83.8}
-      />,
-    );
-
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
-    expect(headings.indexOf('Ocena pozytywna, ale bez miejsca')).toBeLessThan(headings.indexOf('Twój wynik'));
+    expect(screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent)).toEqual(['Twój wynik']);
   });
 });
 

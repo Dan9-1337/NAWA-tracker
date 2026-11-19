@@ -42,7 +42,7 @@ export function createProductEventsHandler(overrides: Partial<ProductEventsDepen
       const result = await client.from('product_events').insert({
         identity_hash: dependencies.hashIdentity(identity),
         event_name: input.eventName,
-        payload: 'payload' in input ? input.payload : {},
+        payload: {},
       });
       assertRpcSucceeded(result.error);
       response.status(200).json(productEventResultSchema.parse({ logged: true }));

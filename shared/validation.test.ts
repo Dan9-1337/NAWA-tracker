@@ -3,7 +3,6 @@ import { applicationStatuses, polishSchoolLevels, scholarshipTracks, studyRoutes
 import {
   createResponseRequestSchema,
   responseFormInputSchema,
-  responseFormStoredSchema,
   statisticsRequestSchema,
 } from './validation';
 
@@ -112,10 +111,10 @@ describe('responseFormInputSchema', () => {
     ).toBeTruthy();
   });
 
-  it('requires targetUniversity on both routes and rejects mismatched track universities', () => {
-    expect(() =>
-      responseFormInputSchema.parse({ ...validForm, targetUniversity: undefined }),
-    ).toThrow();
+  it('treats targetUniversity as optional but rejects a university from another track', () => {
+    const { targetUniversity: _ignored, ...withoutUniversity } = validForm;
+    expect(() => responseFormInputSchema.parse(withoutUniversity)).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...withoutUniversity, studyRoute: 'preparatory_course' })).not.toThrow();
     expect(() =>
       responseFormInputSchema.parse({ ...validForm, targetUniversity: 'culture-013' }),
     ).toThrow();
@@ -126,13 +125,6 @@ describe('responseFormInputSchema', () => {
         targetUniversity: 'science-096',
       }),
     ).not.toThrow();
-    expect(() =>
-      responseFormInputSchema.parse({
-        ...validForm,
-        studyRoute: 'preparatory_course',
-        targetUniversity: undefined,
-      }),
-    ).toThrow();
   });
 
   it('accepts students in Poland only with an average of at least 4.75 on the 2-5 scale', () => {
@@ -146,11 +138,6 @@ describe('responseFormInputSchema', () => {
     expect(() => responseFormInputSchema.parse({ ...validForm, gradeBasis: 'half_year' })).not.toThrow();
     expect(() => responseFormInputSchema.parse({ ...validForm, gradeBasis: 'semester' })).toThrow();
     expect(() => responseFormInputSchema.parse({ ...validForm, applicantKind: 'graduate' })).toThrow();
-  });
-
-  it('allows stored direct_studies profiles without targetUniversity until the user saves again', () => {
-    const { targetUniversity: _ignored, ...legacyProfile } = validForm;
-    expect(responseFormStoredSchema.parse(legacyProfile)).toEqual(legacyProfile);
   });
 
   it('forces the preparatory course route for health_minister', () => {

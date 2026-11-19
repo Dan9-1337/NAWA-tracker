@@ -4,20 +4,17 @@ Polish-first scholarship questionnaire and community statistics by country, deli
 
 Architecture details live in [`docs/architecture.md`](docs/architecture.md). Product intent, questionnaire flow, and Anders 13/2026 mapping live in [`docs/product-flow.md`](docs/product-flow.md). How to test each layer is in [`docs/testing.md`](docs/testing.md).
 
-Only the **NAWA Director** scholarship is live: the Health and Culture minister tracks are hidden until their scoring documents are modelled (the enum values and database constraints stay in place). Records are keyed by `(Telegram account, intake year)`; the study route is `preparatory_course` or `direct_studies`, and the application status ladder has six values from `submitted` through `scholarship_awarded` / `scholarship_not_awarded` / `merit_review_negative`.
+Only the **NAWA Director** scholarship is live: the Health and Culture minister tracks are hidden until their scoring documents are modelled (the enum values and database constraints stay in place). Records are keyed by `(Telegram account, intake year)`. The app asks only for the countries and the grades, because the point is to show where a score stands among other applicants. Fields it no longer asks for (university, field of study, study route, application status) keep their columns and are sent as neutral defaults; see [ADR 0008](docs/adr/0008-refocus-on-score-comparison.md).
 
-Statistics compare the NAWA orientation score through a **cohort ladder** that mirrors how NAWA allocates seats: the applicant's country when it has at least 10 responses, otherwise their country group (`country_groups` table, editable without a deploy), otherwise the whole track. Outcomes are disclosed per cohort from three awarded responses and always rounded outward to 5-point bands. Aggregates are never an official ranking or seat-limit forecast.
+Statistics compare the NAWA orientation score through a **cohort ladder** that mirrors how NAWA allocates seats: the applicant's country when it has at least 10 responses, otherwise their country group (`country_groups` table, editable without a deploy), otherwise the whole track. Aggregates are never an official ranking or seat-limit forecast.
 
 ### Languages
 
 Polish, English, Russian, Ukrainian, and Belarusian (official orthography). The interface starts in the stored choice, then the Telegram language, then the browser language. The Ukrainian and Belarusian texts are drafts that still need a native-speaker review.
 
-### Target university
+### Not asked at the start
 
-Applicants choose one of about 141 NAWA partner universities, filtered by scholarship track, on both study routes (NAWA's own form asks for it either way).
-
-- **Search** is client-side: ranked matching by Polish name, abbreviation, city, English brand, former name, and diacritic-free spelling, with fuzzy suggestions when nothing exact matches. Search queries are not logged.
-- **Persistence** is server-side only as a stable ID (`targetUniversity`).
+The first screen asks for the country of citizenship, the school country and the grades. The target university and field of study are not asked; a later, separate flow for people who received a scholarship will ask where they wanted to go and where they were placed. The catalogue of NAWA partner universities (`shared/universities*.ts`, `shared/university-search/`) and the ISCED-F field list (`shared/study-fields.ts`) stay in the repository for that flow.
 
 ## Requirements
 

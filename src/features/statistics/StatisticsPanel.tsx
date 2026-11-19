@@ -8,10 +8,7 @@ import { canShowScoreDistribution } from '../../lib/score-buckets';
 import { MIN_COHORT_SIZE } from '../../../shared/product-rules';
 import { getCohortProgressCount } from '../../lib/stats-verdict';
 import { DistributionDetailsSection } from '../dashboard/DistributionDetailsSection';
-import { MeritNegativeOutcomeCard } from '../dashboard/MeritNegativeOutcomeCard';
-import { NotAwardedOutcomeCard } from '../dashboard/NotAwardedOutcomeCard';
 import { DetailedPosition, ResultHeroCard, SmallCohortNotice } from '../dashboard/ResultHeroCard';
-import { ScholarshipAwardedCard } from '../dashboard/ScholarshipAwardedCard';
 
 export type StatisticsState =
   | { status: 'unavailable' }
@@ -104,12 +101,6 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
 
   return (
     <section className="space-y-3" aria-label={t.stats.heroLabel}>
-      {profile.currentStatus === 'merit_review_negative' ? <MeritNegativeOutcomeCard /> : null}
-      {profile.currentStatus === 'scholarship_awarded' ? (
-        <ScholarshipAwardedCard statusChangedAt={profile.statusChangedAt} />
-      ) : null}
-      {profile.currentStatus === 'scholarship_not_awarded' ? <NotAwardedOutcomeCard /> : null}
-
       <ResultHeroCard
         gradesScore={scoreBreakdown.gradesScore}
         polishSchoolBonus={scoreBreakdown.polishSchoolBonus}

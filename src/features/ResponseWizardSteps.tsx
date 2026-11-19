@@ -1,16 +1,14 @@
 import type { ResponseFormInput } from '../../shared/contracts';
 import { currentIntakeYear } from '../../shared/season';
-import { isUniversityAllowedForTrack } from '../../shared/universities';
 import { WizardProgressBar } from '../components/WizardProgressBar';
 import { useI18n } from '../i18n/context';
 import type { Messages } from '../i18n/types';
 import { type WizardDraft } from '../lib/draft';
 import { normalizeDraft, withSchoolCountry } from '../lib/draft-rules';
-import { ApplicationStep } from './wizard/ApplicationStep';
 import { EducationStep } from './wizard/EducationStep';
 import { GradesStep } from './wizard/GradesStep';
 
-const steps = ['application', 'education', 'grades'] as const;
+const steps = ['education', 'grades'] as const;
 export type WizardStep = (typeof steps)[number];
 
 type ResponseWizardStepsProps = {
@@ -34,13 +32,6 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
     <div className="space-y-4">
       <WizardProgressBar steps={steps} currentStep={currentStep} />
 
-      {currentStep === 'application' ? (
-        <ApplicationStep
-          draft={draft}
-          onChange={update}
-        />
-      ) : null}
-
       {currentStep === 'education' ? (
         <EducationStep
           draft={draft}
@@ -63,10 +54,6 @@ export function ResponseWizardSteps({ draft, onDraftChange, stepIndex }: Respons
 export function wizardStepValidationHint(step: WizardStep, draft: WizardDraft, t: Messages): string | null {
   if (canAdvanceWizardStep(step, draft)) return null;
   switch (step) {
-    case 'application':
-      return draft.studyField.length === 0
-        ? t.wizard.validation.studyFieldRequired
-        : t.wizard.validation.universityRequired;
     case 'education':
       if (!draft.rankingCountry.trim()) return t.wizard.validation.rankingCountryRequired;
       if (!draft.schoolCountry.trim()) return t.wizard.validation.schoolCountryRequired;
@@ -97,7 +84,8 @@ export function toResponseInput(draft: WizardDraft): ResponseFormInput {
     scholarshipTrack: draft.scholarshipTrack,
     studyRoute: draft.studyRoute,
     ...(draft.targetUniversity ? { targetUniversity: draft.targetUniversity } : {}),
-    studyField: draft.studyField,
+    // The first screen no longer asks for the field of study; the server contract still wants a value.
+    studyField: draft.studyField || 'other',
     ...(draft.prepCourseCity ? { prepCourseCity: draft.prepCourseCity } : {}),
     gradeBasis: draft.gradeBasis,
     applicantKind: draft.applicantKind,
@@ -111,12 +99,6 @@ export function toResponseInput(draft: WizardDraft): ResponseFormInput {
 
 export function canAdvanceWizardStep(step: WizardStep, draft: WizardDraft): boolean {
   switch (step) {
-    case 'application':
-      return (
-        draft.studyField.length > 0 &&
-        draft.targetUniversity.length > 0 &&
-        isUniversityAllowedForTrack(draft.targetUniversity, draft.scholarshipTrack)
-      );
     case 'education':
       return draft.rankingCountry.trim().length > 0 && draft.schoolCountry.trim().length > 0;
     case 'grades':

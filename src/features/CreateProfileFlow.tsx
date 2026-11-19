@@ -90,7 +90,7 @@ export function CreateProfileFlow({
 
   useEffect(() => {
     if (screen === 'wizard' || screen === 'confirm') {
-      saveWizardSession({ version: 1, draft, screen, stepIndex });
+      saveWizardSession({ version: 2, draft, screen, stepIndex });
       setDirty(true);
     }
   }, [draft, screen, stepIndex]);
