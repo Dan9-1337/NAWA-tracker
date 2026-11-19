@@ -4,7 +4,12 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        display: ['var(--font-display)'],
+        sans: ['var(--font-body)'],
+      },
+    },
   },
   plugins: [],
 } satisfies Config;

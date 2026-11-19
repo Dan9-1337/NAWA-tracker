@@ -191,10 +191,6 @@ const trackMinistry: Record<ScholarshipTrack, UniversityMinistry> = {
   health_minister: 'health',
 };
 
-export function isUniversityId(value: string): boolean {
-  return universityByIdMap.has(value);
-}
-
 export function getUniversityById(id: string): University | undefined {
   return universityByIdMap.get(id);
 }
@@ -211,14 +207,4 @@ export function universitiesForScholarshipTrack(track: ScholarshipTrack): readon
 export function isUniversityAllowedForTrack(id: string, track: ScholarshipTrack): boolean {
   const university = getUniversityById(id);
   return university != null && university.ministry === ministryForScholarshipTrack(track);
-}
-
-/** Raw catalog entries without search metadata merge (for reconcile scripts). */
-export function getRawUniversities(): readonly University[] {
-  return universities;
-}
-
-export function getEnrichedUniversityById(id: string): University | undefined {
-  const base = universities.find((u) => u.id === id);
-  return base ? mergeUniversityMetadata(base) : undefined;
 }

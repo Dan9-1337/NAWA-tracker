@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { emptyCountryContext, emptyGlobalBenchmark, fineBuckets } from '../shared/test-statistics';
+import { fineBuckets } from '../shared/test-statistics';
 import { HttpError } from './_lib/errors';
 import { signTelegramInitData } from './_lib/telegram-auth';
 import {
@@ -8,19 +8,24 @@ import {
   type ResponsesHandlerDependencies,
 } from './responses';
 import { createCurrentResponseHandler } from './responses/current';
-import { createPublicStatisticsHandler } from './statistics/public';
 import { createStatisticsHandler } from './statistics';
+import { createCohortOutcomesHandler } from './outcomes';
 
 const BOT_TOKEN = 'test-bot-token-that-is-at-least-32-characters';
+const IDENTITY_HASH = 'a'.repeat(64);
 const USER_ID = 424242424;
 
 const validForm = {
+  intakeYear: 2026,
   hasPolishCitizenship: false,
   rankingCountry: 'UA',
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   targetUniversity: 'science-096',
+  studyField: '0613',
+  gradeBasis: 'final_certificate',
+  applicantKind: 'school_leaver',
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'secondary',
@@ -38,17 +43,10 @@ const statistics = {
   lowerScorePercentage: 40,
   rankPosition: 6,
   rankTotal: 10,
-  gradesScore: 76.5,
-  polishSchoolBonus: 0,
   trackWideMedian: 80,
   scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
-  cohortScores: [95, 90, 88, 85],
-  growth7d: null,
-  history: [],
-  groupProgress: null,
-  reportedMeritOutcomes: null,
-  globalBenchmark: emptyGlobalBenchmark,
-  countryContext: emptyCountryContext,
+  cohortScope: 'country',
+  cohortGroupId: null,
 } as const;
 
 type Request = {
@@ -102,7 +100,7 @@ function responsesDependencies(
     name: string,
     parameters: Record<string, unknown>,
   ) => { data: unknown; error: { message: string } | null } = (name) => {
-    if (name === 'create_response_for_telegram_user') {
+    if (name === 'create_response_for_identity') {
       return { data: { created: true, statistics }, error: null };
     }
     if (name === 'update_current_response') {
@@ -117,6 +115,7 @@ function responsesDependencies(
       rpc: vi.fn((name, parameters) => Promise.resolve(rpcImplementation(name, parameters))),
     })),
     deleteProfile: vi.fn(async () => 1),
+    hashIdentity: vi.fn(() => IDENTITY_HASH),
     assertSameOrigin: vi.fn(),
     requireTelegramIdentity: vi.fn(() => ({
       user: { id: USER_ID, username: 'tester' },
@@ -160,12 +159,14 @@ describe('POST /api/responses', () => {
 
     await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
 
-    expect(calls[0]?.[0]).toBe('create_response_for_telegram_user');
+    expect(calls[0]?.[0]).toBe('create_response_for_identity');
     expect(calls[0]?.[1]).toMatchObject({
-      p_telegram_user_id: USER_ID,
-      p_telegram_username: 'tester',
+      p_identity_hash: IDENTITY_HASH,
       p_ranking_country: 'UA',
     });
+    expect(JSON.stringify(calls[0]?.[1])).not.toContain(String(USER_ID));
+    expect(JSON.stringify(calls[0]?.[1])).not.toContain('tester');
+    expect(calls[0]?.[1]).not.toHaveProperty('p_telegram_username');
     expect(state.status).toBe(201);
     expect(state.body).toEqual({ created: true, statistics });
   });
@@ -190,7 +191,7 @@ describe('POST /api/responses', () => {
       data: null,
       error: {
         code: '23505',
-        message: 'duplicate key value violates unique constraint "responses_telegram_user_id_key"',
+        message: 'duplicate key value violates unique constraint "responses_identity_hash_intake_year_key"',
       },
     }));
     const { response, state } = createResponseDouble();
@@ -201,6 +202,28 @@ describe('POST /api/responses', () => {
     expect(state.body).toEqual({
       error: { code: 'PROFILE_EXISTS', message: 'Ten profil Telegram ma już ankietę.' },
     });
+  });
+});
+
+describe('DELETE /api/responses', () => {
+  it('deletes by identity hash and also drops the bot subscription of the same Telegram user', async () => {
+    const dependencies = responsesDependencies();
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('DELETE'), response);
+
+    expect(dependencies.deleteProfile).toHaveBeenCalledWith(IDENTITY_HASH, USER_ID);
+    expect(state.status).toBe(200);
+    expect(state.body).toEqual({ deleted: true });
+  });
+
+  it('answers 404 when nothing was deleted', async () => {
+    const dependencies = { ...responsesDependencies(), deleteProfile: vi.fn(async () => 0) };
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('DELETE'), response);
+
+    expect(state.status).toBe(404);
   });
 });
 
@@ -216,7 +239,7 @@ describe('PUT /api/responses', () => {
     await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
 
     expect(calls[0]?.[0]).toBe('update_current_response');
-    expect(calls[0]?.[1]).toMatchObject({ p_telegram_user_id: USER_ID });
+    expect(calls[0]?.[1]).toMatchObject({ p_identity_hash: IDENTITY_HASH });
     expect(state.status).toBe(200);
     expect(state.body).toEqual({ updated: true, statistics });
   });
@@ -247,6 +270,7 @@ describe('POST /api/responses/current', () => {
         }),
       })),
       assertSameOrigin: vi.fn(),
+      hashIdentity: vi.fn(() => IDENTITY_HASH),
       requireTelegramIdentity: vi.fn(() => ({
         user: { id: USER_ID, username: 'tester' },
         authDate: 1_700_000_000,
@@ -283,6 +307,7 @@ describe('POST /api/statistics', () => {
         rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
       })),
       assertSameOrigin: vi.fn(),
+      hashIdentity: vi.fn(() => IDENTITY_HASH),
       requireTelegramIdentity: vi.fn(() => ({
         user: { id: USER_ID },
         authDate: 1_700_000_000,
@@ -297,34 +322,86 @@ describe('POST /api/statistics', () => {
   });
 });
 
-describe('POST /api/statistics/public', () => {
-  it('requires Telegram auth and returns cohort preview statistics', async () => {
-    const handler = createPublicStatisticsHandler({
-      getClient: vi.fn(() => ({
-        rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
-      })),
+describe('POST /api/outcomes', () => {
+  const outcomes = {
+    ownCountry: 'UA',
+    scope: 'country',
+    groupId: null,
+    awardedCount: 12,
+    notAwardedCount: 4,
+    awardedRate: 0.75,
+    awardedBandLow: 70,
+    awardedBandHigh: 80,
+    notAwardedBandHigh: 70,
+  };
+
+  function handlerWith(data: unknown) {
+    const rpc = vi.fn().mockResolvedValue({ data, error: null });
+    const handler = createCohortOutcomesHandler({
+      getClient: vi.fn(() => ({ rpc })),
       assertSameOrigin: vi.fn(),
-      requireTelegramIdentity: vi.fn(() => ({
-        user: { id: USER_ID },
-        authDate: 1_700_000_000,
-      })),
-      getClientIp: vi.fn(() => '203.0.113.9'),
-      hashIp: vi.fn(() => 'ip-hash'),
+      hashIdentity: vi.fn(() => IDENTITY_HASH),
+      requireTelegramIdentity: vi.fn(() => ({ user: { id: USER_ID }, authDate: 1_700_000_000 })),
+    });
+    return { handler, rpc };
+  }
+
+  it('requires the configured Origin', async () => {
+    const handler = createCohortOutcomesHandler({
+      getClient: vi.fn(),
+      assertSameOrigin: vi.fn(() => {
+        throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+      }),
+      requireTelegramIdentity: vi.fn(),
     });
     const { response, state } = createResponseDouble();
 
-    await handler(
-      request('POST', {
-        scholarshipTrack: 'nawa_director',
-        rankingCountry: 'UA',
-        averageGrade: 4.5,
-        maximumGrade: 5,
-        polishSchoolLevel: 'secondary',
-      }),
-      response,
-    );
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(403);
+  });
+
+  it('returns outcomes scoped to the authenticated Telegram user', async () => {
+    const { handler, rpc } = handlerWith(outcomes);
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(rpc).toHaveBeenCalledWith('get_cohort_outcomes', { p_identity_hash: IDENTITY_HASH, p_intake_year: 2026 });
+    expect(state.status).toBe(200);
+    expect(state.body).toEqual(outcomes);
+  });
+
+  it('answers 401 when the user has no profile', async () => {
+    const { handler } = handlerWith(null);
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(401);
+  });
+
+  it.each([
+    ['details without a disclosed cohort', { scope: null, groupId: null }],
+    ['a cohort below the awarded floor', { awardedCount: 2 }],
+    ['an exact score instead of a 5-point band', { awardedBandLow: 72.3 }],
+  ])('refuses to forward %s', async (_label, patch) => {
+    const { handler } = handlerWith({ ...outcomes, ...patch });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(500);
+    expect(JSON.stringify(state.body)).not.toContain('72.3');
+  });
+
+  it('drops unknown fields from the RPC payload instead of exposing them', async () => {
+    const { handler } = handlerWith({ ...outcomes, debug: 'secret', minScore: 70.4 });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
 
     expect(state.status).toBe(200);
-    expect(state.body).toEqual(statistics);
+    expect(state.body).toEqual(outcomes);
   });
 });

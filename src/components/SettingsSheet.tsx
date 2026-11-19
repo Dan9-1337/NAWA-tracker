@@ -1,27 +1,18 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
-import { getScoreBreakdown, NAWA_SCORE_FORMULA_VERSION } from '../../shared/nawa-score';
 import { ConfirmSummary } from '../features/ConfirmSummary';
 import { useI18n } from '../i18n/context';
-import { getAppVersion } from '../lib/app-version';
-import { buildSupportMessage, openSupportChat } from '../lib/support-context';
 import { getStoredThemePreference, type ThemePreference } from '../lib/theme';
 import { getTelegramWebApp } from '../lib/telegram';
-import {
-  ChatIcon,
-  ChevronIcon,
-  DocumentIcon,
-  GlobeIcon,
-  InfoIcon,
-  PaletteIcon,
-  ShieldIcon,
-  UserEditIcon,
-} from './icons';
-import { LanguageSwitcher } from './LanguageSwitcher';
-import { ThemeSwitcher } from './ThemeSwitcher';
 import { DeleteProfileZone } from './DeleteProfileZone';
-
-type SettingsView = 'menu' | 'data' | 'privacy' | 'language' | 'appearance' | 'help' | 'about';
+import { ChevronIcon } from './icons';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { AboutView } from './settings/AboutView';
+import { HelpView } from './settings/HelpView';
+import { MainMenu } from './settings/MainMenu';
+import { PrivacyView } from './settings/PrivacyView';
+import { settingsViewTitle, type SettingsView } from './settings/settings-view';
+import { ThemeSwitcher } from './ThemeSwitcher';
 
 type SettingsSheetProps = {
   open: boolean;
@@ -37,55 +28,11 @@ function resolveThemePreference(): ThemePreference {
   return getTelegramWebApp()?.colorScheme === 'dark' ? 'dark' : 'light';
 }
 
-function SettingsMenuGroup({ children }: { children: ReactNode }) {
-  return (
-    <div className="overflow-hidden rounded-2xl bg-[var(--tg-theme-secondary-bg-color)]">
-      <div className="divide-y divide-[var(--section-divider-color)]">{children}</div>
-    </div>
-  );
-}
-
-function SettingsMenuIcon({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--tg-theme-bg-color)] text-[var(--color-accent)]">
-      {children}
-    </span>
-  );
-}
-
-function SettingsMenuRow({
-  label,
-  value,
-  onClick,
-  icon,
-}: {
-  label: string;
-  value?: string;
-  onClick: () => void;
-  icon: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full min-h-[3.25rem] items-center gap-3 px-4 py-3 text-left text-[var(--text-primary)] transition-colors hover:bg-[color-mix(in_srgb,var(--tg-theme-hint-color)_12%,transparent)] active:bg-[color-mix(in_srgb,var(--tg-theme-hint-color)_18%,transparent)]"
-    >
-      <SettingsMenuIcon>{icon}</SettingsMenuIcon>
-      <span className="min-w-0 flex-1 text-sm font-medium leading-snug">{label}</span>
-      {value ? (
-        <span className="shrink-0 text-sm text-[var(--tg-theme-subtitle-text-color)]">{value}</span>
-      ) : null}
-      <ChevronIcon className="shrink-0 text-[var(--tg-theme-hint-color)]" />
-    </button>
-  );
-}
-
 export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete }: SettingsSheetProps) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [view, setView] = useState<SettingsView>('menu');
   const closeRef = useRef<HTMLButtonElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
-  const appVersion = getAppVersion();
 
   useEffect(() => {
     if (!open) {
@@ -109,45 +56,6 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
   if (!open) return null;
 
   const nested = view !== 'menu';
-  const themePreference = resolveThemePreference();
-  const title =
-    view === 'data'
-      ? t.settings.viewData
-      : view === 'privacy'
-        ? t.settings.privacyPolicy
-        : view === 'language'
-          ? t.settings.language
-          : view === 'appearance'
-            ? t.settings.appearance
-            : view === 'help'
-              ? t.settings.help
-              : view === 'about'
-                ? t.about.title
-                : t.settings.title;
-
-  const openSupport = (kind: 'help' | 'calculation_error' | 'bug') => {
-    const scoreBreakdown =
-      current?.scholarshipTrack === 'nawa_director'
-        ? getScoreBreakdown(
-            current.averageGrade,
-            current.maximumGrade,
-            current.polishSchoolLevel ?? 'none',
-            current.rankingCountry,
-          )
-        : null;
-
-    openSupportChat(
-      buildSupportMessage({
-        screen: current ? 'Dashboard' : 'Settings',
-        locale,
-        rankingCountry: current?.rankingCountry ?? null,
-        kind,
-        scoreBreakdown: kind === 'calculation_error' ? scoreBreakdown : null,
-        polishSchoolLevel: current?.polishSchoolLevel,
-        formulaVersion: NAWA_SCORE_FORMULA_VERSION,
-      }),
-    );
-  };
 
   return (
     <div className="fixed inset-0 z-[100]" role="presentation">
@@ -187,62 +95,18 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
               id="settings-title"
               className={`text-center text-lg font-semibold leading-tight${nested ? ' px-14' : ''}`}
             >
-              {title}
+              {settingsViewTitle(view, t)}
             </h2>
           </div>
 
           {view === 'menu' ? (
-            <div className="mt-5 space-y-3">
-              <SettingsMenuGroup>
-                {onEditProfile ? (
-                  <SettingsMenuRow
-                    label={t.settings.editProfile}
-                    icon={<UserEditIcon size={17} />}
-                    onClick={() => {
-                      onClose();
-                      onEditProfile();
-                    }}
-                  />
-                ) : null}
-                {current ? (
-                  <SettingsMenuRow
-                    label={t.settings.viewData}
-                    icon={<DocumentIcon size={17} />}
-                    onClick={() => setView('data')}
-                  />
-                ) : null}
-                <SettingsMenuRow
-                  label={t.settings.privacyPolicy}
-                  icon={<ShieldIcon size={17} />}
-                  onClick={() => setView('privacy')}
-                />
-                <SettingsMenuRow
-                  label={t.settings.language}
-                  value={t.language[locale]}
-                  icon={<GlobeIcon size={17} />}
-                  onClick={() => setView('language')}
-                />
-                <SettingsMenuRow
-                  label={t.settings.appearance}
-                  value={themePreference === 'dark' ? t.theme.dark : t.theme.light}
-                  icon={<PaletteIcon size={17} />}
-                  onClick={() => setView('appearance')}
-                />
-              </SettingsMenuGroup>
-
-              <SettingsMenuGroup>
-                <SettingsMenuRow
-                  label={t.settings.help}
-                  icon={<ChatIcon size={17} />}
-                  onClick={() => setView('help')}
-                />
-                <SettingsMenuRow
-                  label={t.about.title}
-                  icon={<InfoIcon size={17} />}
-                  onClick={() => setView('about')}
-                />
-              </SettingsMenuGroup>
-            </div>
+            <MainMenu
+              current={current}
+              themePreference={resolveThemePreference()}
+              onNavigate={setView}
+              onEditProfile={onEditProfile}
+              onClose={onClose}
+            />
           ) : null}
 
           {view === 'language' ? (
@@ -264,80 +128,9 @@ export function SettingsSheet({ open, onClose, current, onEditProfile, onDelete 
             </div>
           ) : null}
 
-          {view === 'privacy' ? (
-            <div className="mt-5 space-y-3 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] p-4 text-sm leading-6">
-              <p className="text-[var(--tg-theme-subtitle-text-color)]">{t.privacyNotice.body}</p>
-              <ul className="space-y-2">
-                {t.privacyNotice.points.map((point) => (
-                  <li key={point} className="flex gap-2">
-                    <span aria-hidden="true" className="text-[var(--color-accent)]">
-                      •
-                    </span>
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {view === 'help' ? (
-            <div className="mt-5 space-y-3">
-              <SettingsMenuGroup>
-                <SettingsMenuRow
-                  label={t.support.general}
-                  icon={<ChatIcon size={17} />}
-                  onClick={() => openSupport('help')}
-                />
-                <SettingsMenuRow
-                  label={t.support.calculationError}
-                  icon={<DocumentIcon size={17} />}
-                  onClick={() => openSupport('calculation_error')}
-                />
-                <SettingsMenuRow
-                  label={t.support.reportBug}
-                  icon={<ShieldIcon size={17} />}
-                  onClick={() => openSupport('bug')}
-                />
-              </SettingsMenuGroup>
-              <p className="px-1 text-xs leading-5 text-[var(--text-helper)]">{t.support.hint}</p>
-            </div>
-          ) : null}
-
-          {view === 'about' ? (
-            <div className="mt-5 space-y-4 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] p-4 text-sm leading-6 text-[var(--text-secondary)]">
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.title}</h3>
-                <p>{t.about.intro}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.capabilitiesTitle}</h3>
-                <p>{t.about.capabilitiesBody}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.dataTitle}</h3>
-                <p>{t.about.dataBody}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.officialTitle}</h3>
-                <p>{t.about.officialBody}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.privacyTitle}</h3>
-                <p>{t.about.privacyBody}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.metricsTitle}</h3>
-                <p>{t.about.metricsBody}</p>
-              </section>
-              <section className="space-y-1.5">
-                <h3 className="text-sm font-semibold text-[var(--text-primary)]">{t.about.authorTitle}</h3>
-                <p>{t.about.authorBody}</p>
-              </section>
-              <p className="text-xs text-[var(--text-helper)]">
-                {t.about.version(appVersion)}
-              </p>
-            </div>
-          ) : null}
+          {view === 'privacy' ? <PrivacyView /> : null}
+          {view === 'help' ? <HelpView current={current} /> : null}
+          {view === 'about' ? <AboutView /> : null}
         </div>
 
         <div

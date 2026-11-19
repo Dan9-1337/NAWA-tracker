@@ -1,21 +1,22 @@
 import type {
   ApiError,
+  CohortOutcomesResult,
+  PrepCityDistribution,
   CreateResponseRequest,
   CreateResponseResult,
   CurrentResponseResult,
   DeleteResponseResult,
-  PublicStatisticsRequest,
-  PublicStatisticsResult,
   StatisticsResult,
   UpdateResponseRequest,
   UpdateResponseResult,
 } from '../../shared/contracts';
 import {
   apiErrorSchema,
+  cohortOutcomesResultSchema,
+  prepCityDistributionSchema,
   createResponseResultSchema,
   currentResponseResultSchema,
   deleteResponseResultSchema,
-  publicStatisticsResultSchema,
   statisticsResultSchema,
   updateResponseResultSchema,
 } from '../../shared/validation';
@@ -94,10 +95,14 @@ export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
 }
 
-export function deleteResponse(): Promise<DeleteResponseResult> {
-  return request('/api/responses', 'DELETE', {}, deleteResponseResultSchema);
+export function getCohortOutcomes(): Promise<CohortOutcomesResult> {
+  return request('/api/outcomes', 'POST', {}, cohortOutcomesResultSchema);
 }
 
-export function getPublicStatistics(input: PublicStatisticsRequest): Promise<PublicStatisticsResult> {
-  return request('/api/statistics/public', 'POST', input, publicStatisticsResultSchema);
+export function getPrepCityDistribution(): Promise<PrepCityDistribution> {
+  return request('/api/prep-cities', 'POST', {}, prepCityDistributionSchema);
+}
+
+export function deleteResponse(): Promise<DeleteResponseResult> {
+  return request('/api/responses', 'DELETE', {}, deleteResponseResultSchema);
 }

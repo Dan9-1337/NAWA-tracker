@@ -5,13 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { normalizeSearchText } from './lib/university-normalize.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const seedPath = join(root, 'shared/data/university-alias-seed-2026.json');
 const metadataPath = join(root, 'shared/universities-metadata.ts');
 const universitiesPath = join(root, 'shared/universities.ts');
-
-function loadJson(path) {
-  return JSON.parse(readFileSync(path, 'utf8'));
-}
 
 function parseUniversitiesFromTs(content) {
   const entries = [];
@@ -22,86 +17,56 @@ function parseUniversitiesFromTs(content) {
   return entries;
 }
 
-function parseMetadataShortNames(content) {
+function parseMetadata(content) {
   const map = new Map();
   const blockRe = /'([^']+)':\s*\{([^}]+)\}/g;
   for (const match of content.matchAll(blockRe)) {
-    const id = match[1];
-    const block = match[2];
-    const shortNames = block.match(/shortNames:\s*\[([^\]]+)\]/);
-    if (shortNames) {
-      map.set(id, [...shortNames[1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
+    const names = [];
+    for (const list of match[2].matchAll(/(?:shortNames|aliases|formerNames):\s*\[([^\]]+)\]/g)) {
+      names.push(...[...list[1].matchAll(/'([^']+)'/g)].map((m) => m[1]));
     }
+    map.set(match[1], names);
   }
   return map;
 }
 
-const args = new Set(process.argv.slice(2));
-const failOnWarn = args.has('--fail-on-warn');
-
-const seed = loadJson(seedPath);
+const failOnWarn = process.argv.slice(2).includes('--fail-on-warn');
 const universities = parseUniversitiesFromTs(readFileSync(universitiesPath, 'utf8'));
-const metadataShortNames = parseMetadataShortNames(readFileSync(metadataPath, 'utf8'));
+const metadata = parseMetadata(readFileSync(metadataPath, 'utf8'));
 
 const warnings = [];
 const errors = [];
 
-const aliasOwners = new Map();
-for (const row of seed) {
-  const aliases = [...(row.shortNames ?? []), ...(row.aliases ?? []), ...(row.formerNames ?? [])];
-  for (const alias of aliases) {
-    const key = normalizeSearchText(alias);
+const ids = new Set();
+for (const university of universities) {
+  if (ids.has(university.id)) errors.push(`duplicate university id ${university.id}`);
+  ids.add(university.id);
+  if (!['science', 'culture', 'health'].includes(university.ministry)) {
+    errors.push(`${university.id} has unknown ministry ${university.ministry}`);
+  }
+  if (!university.name.trim()) errors.push(`${university.id} has an empty name`);
+}
+
+for (const id of metadata.keys()) {
+  if (!ids.has(id)) errors.push(`search metadata references unknown university ${id}`);
+}
+
+const owners = new Map();
+for (const [id, names] of metadata.entries()) {
+  for (const name of names) {
+    const key = normalizeSearchText(name);
     if (!key) continue;
-    const owners = aliasOwners.get(key) ?? [];
-    owners.push({ seedKey: row.key, alias });
-    aliasOwners.set(key, owners);
+    const list = owners.get(key) ?? new Set();
+    list.add(id);
+    owners.set(key, list);
   }
 }
-
-for (const [key, owners] of aliasOwners.entries()) {
-  const uniqueIds = new Set(owners.map((o) => o.seedKey));
-  if (uniqueIds.size > 1) {
-    warnings.push(`alias "${key}" maps to multiple universities: ${owners.map((o) => o.seedKey).join(', ')}`);
-  }
-}
-
-const allShortNames = new Map();
-for (const [id, shortNames] of metadataShortNames.entries()) {
-  for (const sn of shortNames) {
-    const key = normalizeSearchText(sn);
-    if (!allShortNames.has(key)) allShortNames.set(key, []);
-    allShortNames.get(key).push(id);
-  }
-}
-
-for (const row of seed) {
-  const aliases = [...(row.aliases ?? []), ...(row.formerNames ?? [])];
-  for (const alias of aliases) {
-    const key = normalizeSearchText(alias);
-    const shortOwners = allShortNames.get(key);
-    if (shortOwners && shortOwners.length === 1 && shortOwners[0] !== row.key) {
-      warnings.push(
-        `alias "${alias}" equals another university's short name (${shortOwners[0]})`,
-      );
-    }
-  }
-}
-
-const mediumConfidence = seed.filter((row) => row.confidence === 'medium');
-if (mediumConfidence.length > 0) {
-  warnings.push(`${mediumConfidence.length} seed entries still have medium confidence`);
-}
-
-const appIds = new Set(universities.map((u) => u.id));
-const seedKeys = new Set(seed.map((s) => s.key));
-for (const id of appIds) {
-  if (!seedKeys.has(id)) errors.push(`app university ${id} missing from seed`);
-}
-for (const key of seedKeys) {
-  if (!appIds.has(key)) warnings.push(`seed entry ${key} has no matching app university`);
+for (const [key, list] of owners.entries()) {
+  if (list.size > 1) warnings.push(`search term "${key}" maps to several universities: ${[...list].join(', ')}`);
 }
 
 console.log('University catalog validation');
+console.log(`  universities: ${universities.length}`);
 console.log(`  warnings: ${warnings.length}`);
 console.log(`  errors: ${errors.length}`);
 for (const w of warnings.slice(0, 20)) console.warn(`WARN: ${w}`);

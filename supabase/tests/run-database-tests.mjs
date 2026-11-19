@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 
 import pg from 'pg';
 
+import { testFiles } from './test-files.mjs';
+
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
@@ -9,10 +11,6 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const testFiles = [
-  'supabase/tests/telegram_profiles.sql',
-  'supabase/tests/statistics.sql',
-];
 const { Pool } = pg;
 const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 

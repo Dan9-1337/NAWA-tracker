@@ -37,7 +37,9 @@ create schema if not exists extensions;
 grant usage on schema extensions to public;
 SQL
 
-psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 \
-  -f supabase/migrations/202608030001_schema.sql
+for migration in supabase/migrations/*.sql; do
+  echo "Applying ${migration}..."
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1 -f "$migration"
+done
 
-echo "Schema migration applied."
+echo "Migrations applied."

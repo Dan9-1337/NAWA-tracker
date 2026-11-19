@@ -2,6 +2,7 @@ import { productEventRequestSchema, productEventResultSchema } from '../shared/v
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
 import { assertSameOrigin } from './_lib/origin.js';
 import { assertRpcSucceeded } from './_lib/questionnaire.js';
+import { hashIdentity } from './_lib/identity.js';
 import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
 
@@ -14,11 +15,13 @@ type ProductEventsRequest = {
 type ProductEventsDependencies = {
   getClient: () => ReturnType<typeof getSupabaseAdmin>;
   assertSameOrigin: (request: ProductEventsRequest) => void;
+  hashIdentity: (identity: VerifiedTelegramIdentity) => string;
   requireTelegramIdentity: (request: ProductEventsRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: ProductEventsDependencies = {
   getClient: getSupabaseAdmin,
+  hashIdentity,
   assertSameOrigin,
   requireTelegramIdentity,
 };
@@ -37,9 +40,9 @@ export function createProductEventsHandler(overrides: Partial<ProductEventsDepen
       const input = parseJsonBody(request, productEventRequestSchema);
       const client = dependencies.getClient();
       const result = await client.from('product_events').insert({
-        telegram_user_id: identity.user.id,
+        identity_hash: dependencies.hashIdentity(identity),
         event_name: input.eventName,
-        payload: input.payload ?? {},
+        payload: 'payload' in input ? input.payload : {},
       });
       assertRpcSucceeded(result.error);
       response.status(200).json(productEventResultSchema.parse({ logged: true }));

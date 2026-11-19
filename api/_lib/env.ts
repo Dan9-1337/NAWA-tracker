@@ -6,12 +6,14 @@ const nonEmptySecret = z.string().min(32);
 
 /** Matches scripts/write-local-env.mjs — must never be used in production. */
 const LOCAL_DEV_BOT_TOKEN_PREFIX = 'local-dev-telegram-bot-token-';
+const LOCAL_DEV_IDENTITY_PEPPER_PREFIX = 'local-dev-identity-pepper-';
 
 const serverEnvironmentSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: nonEmptySecret,
   TELEGRAM_BOT_TOKEN: nonEmptySecret,
-  IP_HASH_SALT: nonEmptySecret,
+  IDENTITY_PEPPER: nonEmptySecret,
+  TELEGRAM_WEBHOOK_SECRET: nonEmptySecret.optional(),
   APP_PUBLIC_URL: z.string().url(),
   NODE_ENV: z.enum(['development', 'test', 'production']).optional(),
   VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
@@ -22,7 +24,8 @@ export type ServerEnv = {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   telegramBotToken: string;
-  ipHashSalt: string;
+  identityPepper: string;
+  telegramWebhookSecret: string | undefined;
   appPublicUrl: string;
   appOrigin: string;
   appHostname: string;
@@ -62,7 +65,8 @@ export function loadServerEnv(
 
   if (
     isProduction &&
-    result.data.TELEGRAM_BOT_TOKEN.startsWith(LOCAL_DEV_BOT_TOKEN_PREFIX)
+    (result.data.TELEGRAM_BOT_TOKEN.startsWith(LOCAL_DEV_BOT_TOKEN_PREFIX) ||
+      result.data.IDENTITY_PEPPER.startsWith(LOCAL_DEV_IDENTITY_PEPPER_PREFIX))
   ) {
     throw new Error('Invalid server environment');
   }
@@ -88,7 +92,8 @@ export function loadServerEnv(
     supabaseUrl: supabaseUrl.toString().replace(/\/$/, ''),
     supabaseServiceRoleKey: result.data.SUPABASE_SERVICE_ROLE_KEY,
     telegramBotToken: result.data.TELEGRAM_BOT_TOKEN,
-    ipHashSalt: result.data.IP_HASH_SALT,
+    identityPepper: result.data.IDENTITY_PEPPER,
+    telegramWebhookSecret: result.data.TELEGRAM_WEBHOOK_SECRET,
     appPublicUrl: publicUrl.toString().replace(/\/$/, ''),
     appOrigin: publicUrl.origin,
     appHostname: publicUrl.hostname,

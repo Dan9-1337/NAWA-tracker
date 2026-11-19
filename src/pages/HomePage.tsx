@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { MiniAppShell } from '../components/MiniAppShell';
 import { SettingsSheet } from '../components/SettingsSheet';
 import { TelegramGate } from '../components/TelegramGate';
 import { CreateProfileFlow } from '../features/CreateProfileFlow';
-import { NawaRadarSheet } from '../features/dashboard/NawaRadarSheet';
 import { ProfileDashboard } from '../features/ProfileDashboard';
 import {
   statisticsStateFromResult,
@@ -19,13 +18,12 @@ import {
   getStatistics,
   updateResponse,
 } from '../lib/api-client';
-import { clearStatsSnapshot } from '../lib/stats-snapshot';
-import { clearUserEngagement } from '../lib/user-engagement';
-import { clearPassportDates } from '../lib/passport-stages';
 import { clearWizardDraft } from '../lib/draft';
 import { formatClockTime, formatShortDayTime, updatedStampKind } from '../lib/format';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
+import { useOnlineStatus } from '../lib/useOnlineStatus';
+import { useRequestGuard } from '../lib/useRequestGuard';
 
 type Mutation = 'create' | 'update' | 'delete';
 
@@ -43,53 +41,39 @@ type HomeState =
   | { mode: 'create'; pending: boolean; actionError?: string }
   | AuthenticatedState;
 
+function LoadingState({ error }: { error: string | null }) {
+  const { t } = useI18n();
+
+  return (
+    <section aria-busy={!error}>
+      {error ? (
+        <div role="alert" className="space-y-2">
+          <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">{error}</p>
+          <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.home.loadErrorHint}</p>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status" aria-live="polite">
+          {t.home.loading}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function HomePage() {
   const { t, locale } = useI18n();
   const [state, setState] = useState<HomeState>(() =>
     getTelegramWebApp() ? { mode: 'loading', error: null } : { mode: 'gate' },
   );
-  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine);
+  const online = useOnlineStatus();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [radarOpen, setRadarOpen] = useState(false);
   const [editRequestNonce, setEditRequestNonce] = useState(0);
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
-  const epoch = useRef(0);
-  const mutation = useRef<Mutation | null>(null);
-  const mounted = useRef(true);
-
-  function beginEpoch() {
-    epoch.current += 1;
-    return epoch.current;
-  }
-
-  function isCurrent(id: number) {
-    return mounted.current && epoch.current === id;
-  }
-
-  function acquireMutation(next: Mutation) {
-    if (mutation.current) return false;
-    mutation.current = next;
-    return true;
-  }
-
-  function releaseMutation(active: Mutation) {
-    if (mutation.current === active) mutation.current = null;
-  }
+  const { begin: beginEpoch, isCurrent, acquire: acquireMutation, release: releaseMutation, isBusy } =
+    useRequestGuard<Mutation>();
 
   useEffect(() => {
-    mounted.current = true;
-    const onOnline = () => setOffline(false);
-    const onOffline = () => setOffline(true);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
     if (getTelegramWebApp()) void loadCurrentSession();
-    return () => {
-      mounted.current = false;
-      mutation.current = null;
-      epoch.current += 1;
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
-    };
   }, []);
 
   async function loadStatistics(id: number) {
@@ -110,7 +94,7 @@ export function HomePage() {
   }
 
   async function loadCurrentSession() {
-    if (mutation.current) return;
+    if (isBusy()) return;
     const id = beginEpoch();
     setState({ mode: 'loading', error: null });
     try {
@@ -193,16 +177,11 @@ export function HomePage() {
     try {
       await deleteResponse();
       clearWizardDraft();
-      clearStatsSnapshot();
-      clearUserEngagement();
-      clearPassportDates();
       setSettingsOpen(false);
       setState({ mode: 'create', pending: false });
-    } catch (error) {
+    } finally {
       releaseMutation('delete');
-      throw error;
     }
-    releaseMutation('delete');
   }
 
   useMiniAppChrome(
@@ -225,20 +204,7 @@ export function HomePage() {
     }
 
     if (state.mode === 'loading') {
-      return (
-        <section aria-busy={!state.error}>
-          {state.error ? (
-            <div role="alert" className="space-y-2">
-              <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">{state.error}</p>
-              <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.home.loadErrorHint}</p>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status" aria-live="polite">
-              {t.home.loading}
-            </p>
-          )}
-        </section>
-      );
+      return <LoadingState error={state.error} />;
     }
 
     if (state.mode === 'create') {
@@ -247,7 +213,7 @@ export function HomePage() {
           onSubmit={create}
           disabled={state.pending}
           actionError={state.actionError ?? null}
-          chromeSuspended={settingsOpen || radarOpen}
+          chromeSuspended={settingsOpen}
         />
       );
     }
@@ -259,18 +225,12 @@ export function HomePage() {
         onSubmit={update}
         disabled={state.pending !== null}
         actionError={state.actionError}
-        chromeSuspended={settingsOpen || radarOpen}
+        chromeSuspended={settingsOpen}
         editRequestNonce={editRequestNonce}
         onStatsUpdatedAt={setStatsUpdatedAt}
       />
     );
   })();
-
-  const radarData =
-    state.mode === 'authenticated' &&
-    (state.statistics.status === 'success' || state.statistics.status === 'suppressed')
-      ? state.statistics.data
-      : null;
 
   return (
     <MiniAppShell
@@ -278,27 +238,21 @@ export function HomePage() {
       subtitle={statsSubtitle}
       onOpenSettings={
         !settingsOpen &&
-        !radarOpen &&
         (state.mode === 'authenticated' || state.mode === 'create' || state.mode === 'gate')
           ? () => setSettingsOpen(true)
           : undefined
       }
-      onOpenRadar={
-        !settingsOpen && !radarOpen && radarData && state.mode === 'authenticated'
-          ? () => setRadarOpen(true)
-          : undefined
-      }
-      suspendActionBar={settingsOpen || radarOpen}
+      suspendActionBar={settingsOpen}
     >
-      {offline ? (
+      {!online ? (
         <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm" role="status">
           {t.home.offline}
         </p>
       ) : null}
       <div
-        aria-hidden={settingsOpen || radarOpen}
+        aria-hidden={settingsOpen}
         className={
-          settingsOpen || radarOpen ? 'pointer-events-none space-y-4' : 'space-y-4'
+          settingsOpen ? 'pointer-events-none space-y-4' : 'space-y-4'
         }
       >
         {content}
@@ -314,14 +268,6 @@ export function HomePage() {
         }
         onDelete={state.mode === 'authenticated' ? removeProfile : undefined}
       />
-      {radarData && state.mode === 'authenticated' ? (
-        <NawaRadarSheet
-          open={radarOpen}
-          onClose={() => setRadarOpen(false)}
-          data={radarData}
-          rankingCountry={state.current.rankingCountry}
-        />
-      ) : null}
     </MiniAppShell>
   );
 }

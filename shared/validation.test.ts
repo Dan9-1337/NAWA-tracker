@@ -8,12 +8,16 @@ import {
 } from './validation';
 
 const validForm = {
+  intakeYear: 2026,
   hasPolishCitizenship: false,
   rankingCountry: 'UA',
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   targetUniversity: 'science-096',
+  studyField: '0613',
+  gradeBasis: 'final_certificate',
+  applicantKind: 'school_leaver',
   averageGrade: 85,
   maximumGrade: 100,
   polishSchoolLevel: 'none',
@@ -32,6 +36,7 @@ describe('responseFormInputSchema', () => {
       'merit_review_positive',
       'merit_review_negative',
       'scholarship_awarded',
+      'scholarship_not_awarded',
     ]);
   });
 
@@ -107,7 +112,7 @@ describe('responseFormInputSchema', () => {
     ).toBeTruthy();
   });
 
-  it('requires targetUniversity for direct_studies and rejects mismatched track universities', () => {
+  it('requires targetUniversity on both routes and rejects mismatched track universities', () => {
     expect(() =>
       responseFormInputSchema.parse({ ...validForm, targetUniversity: undefined }),
     ).toThrow();
@@ -120,14 +125,27 @@ describe('responseFormInputSchema', () => {
         studyRoute: 'preparatory_course',
         targetUniversity: 'science-096',
       }),
-    ).toThrow();
+    ).not.toThrow();
     expect(() =>
       responseFormInputSchema.parse({
         ...validForm,
         studyRoute: 'preparatory_course',
         targetUniversity: undefined,
       }),
-    ).not.toThrow();
+    ).toThrow();
+  });
+
+  it('accepts students in Poland only with an average of at least 4.75 on the 2-5 scale', () => {
+    const student = { ...validForm, applicantKind: 'student_in_poland', maximumGrade: 5, polishSchoolLevel: 'none' };
+    expect(() => responseFormInputSchema.parse({ ...student, averageGrade: 4.75 })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...student, averageGrade: 4.7 })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...student, averageGrade: 9, maximumGrade: 10 })).toThrow();
+  });
+
+  it('only accepts the known grade bases and applicant kinds', () => {
+    expect(() => responseFormInputSchema.parse({ ...validForm, gradeBasis: 'half_year' })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...validForm, gradeBasis: 'semester' })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...validForm, applicantKind: 'graduate' })).toThrow();
   });
 
   it('allows stored direct_studies profiles without targetUniversity until the user saves again', () => {
@@ -210,5 +228,35 @@ describe('request schemas', () => {
 
   it('accepts an empty statistics request', () => {
     expect(statisticsRequestSchema.parse({})).toEqual({});
+  });
+});
+
+describe('study field and prep-course city', () => {
+  it('requires a known study field', () => {
+    expect(() => responseFormInputSchema.parse({ ...validForm, studyField: '0613' })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...validForm, studyField: 'other' })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...validForm, studyField: '0912' })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...validForm, studyField: '' })).toThrow();
+    const { studyField: _omitted, ...withoutField } = validForm;
+    expect(() => responseFormInputSchema.parse(withoutField)).toThrow();
+  });
+
+  const awarded = {
+    ...validForm,
+    studyRoute: 'preparatory_course',
+    currentStatus: 'scholarship_awarded',
+  };
+
+  it('accepts a prep-course city only for awarded preparatory-course applicants', () => {
+    expect(() => responseFormInputSchema.parse({ ...awarded, prepCourseCity: 'Łódź' })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...awarded, prepCourseCity: 'other' })).not.toThrow();
+    expect(() => responseFormInputSchema.parse({ ...awarded, prepCourseCity: 'Atlantis' })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...awarded, studyRoute: 'direct_studies', prepCourseCity: 'Łódź' })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...awarded, currentStatus: 'submitted', prepCourseCity: 'Łódź' })).toThrow();
+    expect(() => responseFormInputSchema.parse({ ...awarded, currentStatus: 'scholarship_not_awarded', prepCourseCity: 'Łódź' })).toThrow();
+  });
+
+  it('keeps the city optional when reporting an award', () => {
+    expect(() => responseFormInputSchema.parse(awarded)).not.toThrow();
   });
 });

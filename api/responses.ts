@@ -1,4 +1,5 @@
 import type { CreateResponseResult, DeleteResponseResult, UpdateResponseResult } from '../shared/contracts.js';
+import { currentIntakeYear } from '../shared/season.js';
 import {
   createResponseRequestSchema,
   createResponseResultSchema,
@@ -6,7 +7,7 @@ import {
   updateResponseRequestSchema,
   updateResponseResultSchema,
 } from '../shared/validation.js';
-import { profileExists, profileNotFound } from './_lib/errors.js';
+import { invalidIntakeYear, profileExists, profileNotFound } from './_lib/errors.js';
 import {
   assertMethod,
   parseJsonBody,
@@ -21,6 +22,8 @@ import {
   parseUpdateMutationResult,
   type RpcClient,
 } from './_lib/questionnaire.js';
+import { hashIdentity } from './_lib/identity.js';
+import { createSupabaseSubscriptionStore } from './_lib/subscriptions.js';
 import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
 
@@ -32,21 +35,25 @@ type ResponsesRequest = {
 
 export type ResponsesHandlerDependencies = {
   getClient: () => RpcClient;
-  deleteProfile: (telegramUserId: number) => Promise<number>;
+  /** Removes every intake year of the profile and, if present, the opt-in bot subscription. */
+  deleteProfile: (identityHash: string, telegramUserId: number) => Promise<number>;
+  hashIdentity: (identity: VerifiedTelegramIdentity) => string;
   assertSameOrigin: (request: ResponsesRequest) => void;
   requireTelegramIdentity: (request: ResponsesRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: ResponsesHandlerDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
-  deleteProfile: async (telegramUserId) => {
+  deleteProfile: async (identityHash, telegramUserId) => {
     const client = getSupabaseAdmin();
-    const deleteResult = await client.from('responses').delete().eq('telegram_user_id', telegramUserId).select('id');
+    const deleteResult = await client.from('responses').delete().eq('identity_hash', identityHash).select('id');
     if (deleteResult.error) {
       throw deleteResult.error;
     }
+    await createSupabaseSubscriptionStore(() => client).remove(telegramUserId);
     return deleteResult.data?.length ?? 0;
   },
+  hashIdentity,
   assertSameOrigin,
   requireTelegramIdentity,
 };
@@ -74,10 +81,10 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
         dependencies.assertSameOrigin(request);
         const identity = dependencies.requireTelegramIdentity(request);
         const input = parseJsonBody(request, createResponseRequestSchema);
+        if (input.response.intakeYear !== currentIntakeYear) throw invalidIntakeYear();
         const client = dependencies.getClient();
-        const createResult = await client.rpc('create_response_for_telegram_user', {
-          p_telegram_user_id: identity.user.id,
-          p_telegram_username: identity.user.username ?? null,
+        const createResult = await client.rpc('create_response_for_identity', {
+          p_identity_hash: dependencies.hashIdentity(identity),
           ...normalizeQuestionnaire(input.response),
         });
         assertCreateSucceeded(createResult.error);
@@ -94,10 +101,10 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
         dependencies.assertSameOrigin(request);
         const identity = dependencies.requireTelegramIdentity(request);
         const input = parseJsonBody(request, updateResponseRequestSchema);
+        if (input.response.intakeYear !== currentIntakeYear) throw invalidIntakeYear();
         const client = dependencies.getClient();
         const updateResult = await client.rpc('update_current_response', {
-          p_telegram_user_id: identity.user.id,
-          p_telegram_username: identity.user.username ?? null,
+          p_identity_hash: dependencies.hashIdentity(identity),
           ...normalizeQuestionnaire(input.response),
         });
         assertRpcSucceeded(updateResult.error);
@@ -113,7 +120,7 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
       if (request.method === 'DELETE') {
         dependencies.assertSameOrigin(request);
         const identity = dependencies.requireTelegramIdentity(request);
-        const deletedCount = await dependencies.deleteProfile(identity.user.id);
+        const deletedCount = await dependencies.deleteProfile(dependencies.hashIdentity(identity), identity.user.id);
         if (deletedCount === 0) {
           throw profileNotFound();
         }

@@ -1,16 +1,20 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { StatisticsResult } from '../../../shared/contracts';
-import { fineBuckets, makeStatisticsResult, emptyCountryContext, emptyGlobalBenchmark } from '../../../shared/test-statistics';
+import { fineBuckets, makeStatisticsResult } from '../../../shared/test-statistics';
 import { StatisticsPanel } from './StatisticsPanel';
 
 const profile = {
+  intakeYear: 2026,
   hasPolishCitizenship: false,
   rankingCountry: 'UA',
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director' as const,
   studyRoute: 'direct_studies' as const,
   targetUniversity: 'science-096',
+  studyField: '0613',
+  gradeBasis: 'final_certificate' as const,
+  applicantKind: 'school_leaver' as const,
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'none' as const,
@@ -52,32 +56,32 @@ describe('StatisticsPanel', () => {
     expect(screen.getByText(/6\. z 30/)).toBeInTheDocument();
     expect(screen.getByText('Wyżej niż 65% grupy')).toBeInTheDocument();
     expect(screen.getByText('Pokaż pełny rozkład wyników')).toBeInTheDocument();
-    expect(screen.getByText('Ogólny benchmark Dyrektora NAWA')).toBeInTheDocument();
-    expect(screen.getByText('Jak wygląda Twoja grupa')).toBeInTheDocument();
     expect(screen.getAllByText('Rozkład wyników w Twojej grupie').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows what changed before hero on returning visits with changes', () => {
+  it('names the pooled country group when the own country is too small', () => {
     render(
       <StatisticsPanel
-        state={{ status: 'success', data: statisticsWithGrowth }}
-        profile={profile}
+        state={{ status: 'success', data: groupStatistics }}
+        profile={{ ...profile, rankingCountry: 'GE', schoolCountry: 'GE' }}
         userScore={83.8}
-        previousSnapshot={{
-          groupResponseCount: 14,
-          lowerScorePercentage: 65,
-          medianScore: 76,
-          rankPosition: 6,
-          sameTrackCount: 14,
-          sameCountryCount: 14,
-          cohortScores: null,
-          fetchedAt: '2026-07-20T10:00:00.000Z',
-        }}
       />,
     );
 
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
-    expect(headings.indexOf('Od ostatniej wizyty')).toBeLessThan(headings.indexOf('Twój wynik'));
+    expect(screen.getByText(/w grupie: Europa Wschodnia i Azja Środkowa/)).toBeInTheDocument();
+    expect(screen.getByText(/6\. z 12/)).toBeInTheDocument();
+  });
+
+  it('says so when the comparison falls back to all countries', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: { ...groupStatistics, cohortScope: 'track', cohortGroupId: null } }}
+        profile={{ ...profile, rankingCountry: 'GE', schoolCountry: 'GE' }}
+        userScore={83.8}
+      />,
+    );
+
+    expect(screen.getByText(/porównujemy Cię ze wszystkimi krajami/)).toBeInTheDocument();
   });
 
   it('renders terminal merit-negative screen with result hero', () => {
@@ -105,6 +109,19 @@ describe('StatisticsPanel', () => {
     const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
     expect(headings.indexOf('Stypendium przyznane')).toBeLessThan(headings.indexOf('Twój wynik'));
   });
+
+  it('renders the not-awarded outcome before the result hero', () => {
+    render(
+      <StatisticsPanel
+        state={{ status: 'success', data: detailedStatistics }}
+        profile={{ ...profile, currentStatus: 'scholarship_not_awarded' }}
+        userScore={83.8}
+      />,
+    );
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((node) => node.textContent);
+    expect(headings.indexOf('Ocena pozytywna, ale bez miejsca')).toBeLessThan(headings.indexOf('Twój wynik'));
+  });
 });
 
 const suppressedStatistics = makeStatisticsResult({
@@ -126,40 +143,21 @@ const detailedStatistics: StatisticsResult = {
   rankTotal: 30,
   trackWideMedian: 80,
   scoreBuckets: fineBuckets([2, 4, 8, 10, 6]),
-  globalBenchmark: {
-    ...emptyGlobalBenchmark,
-    sampleSize: 36,
-    representedCountryCount: 4,
-    median: 80,
-    scoreDelta: 2.5,
-    lowerScorePercentage: 58,
-    scoreBuckets: fineBuckets([2, 3, 4, 5, 4, 3, 3, 3, 3, 2, 2, 1, 1, 0, 0, 0]),
-    detailedCountriesCount: 2,
-  },
-  countryContext: {
-    ...emptyCountryContext,
-    countryMedian: 82.5,
-    countrySampleSize: 30,
-    countryShareOfTrack: 30 / 36,
-    medianDeltaVsGlobal: 2.5,
-    distributionStable: true,
-    nearbyScoreCount: 5,
-  },
+  cohortScope: 'country',
 };
 
-const statisticsWithGrowth: StatisticsResult = {
-  ...detailedStatistics,
-  groupResponseCount: 14,
-  growth7d: {
-    newResponsesTotal: 25,
-    newResponsesInGroup: 14,
-    medianThen: 76,
-    medianNow: 76.05,
-    percentileThen: 65,
-    percentileNow: 65,
-    trackNewResponses: 20,
-    trackMedianThen: 79,
-    trackMedianNow: 80,
-    statusUpdatesInGroup: 3,
-  },
+const groupStatistics: StatisticsResult = {
+  ...makeStatisticsResult({ detailsAvailable: true }),
+  totalValidResponses: 40,
+  sameTrackCount: 36,
+  sameCountryCount: null,
+  groupResponseCount: 12,
+  medianScore: 82.5,
+  lowerScorePercentage: 55,
+  rankPosition: 6,
+  rankTotal: 12,
+  trackWideMedian: 80,
+  scoreBuckets: fineBuckets([1, 2, 4, 3, 2]),
+  cohortScope: 'group',
+  cohortGroupId: 'east',
 };

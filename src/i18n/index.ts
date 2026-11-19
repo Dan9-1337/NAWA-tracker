@@ -1,16 +1,27 @@
 import { en } from './en';
+import { be } from './be';
 import { pl } from './pl';
 import { ru } from './ru';
+import { uk } from './uk';
+import { getTelegramLanguageCode } from '../lib/telegram';
 import type { Locale, Messages } from './types';
 
 export type { Locale, Messages } from './types';
 
 export const LOCALE_STORAGE_KEY = 'nawa-locale';
 
-export const messages: Record<Locale, Messages> = { pl, en, ru };
+export const messages: Record<Locale, Messages> = { pl, en, ru, uk, be };
+
+export const localeOrder: readonly Locale[] = ['pl', 'en', 'ru', 'uk', 'be'];
 
 export function isLocale(value: string): value is Locale {
-  return value === 'pl' || value === 'en' || value === 'ru';
+  return (localeOrder as readonly string[]).includes(value);
+}
+
+/** Maps an IETF language tag ("uk-UA", "be", ...) to a supported locale. */
+export function localeFromLanguageTag(tag: string | null | undefined): Locale | null {
+  const prefix = tag?.toLowerCase().split(/[-_]/)[0];
+  return prefix && isLocale(prefix) ? prefix : null;
 }
 
 export function resolveInitialLocale(): Locale {
@@ -18,11 +29,11 @@ export function resolveInitialLocale(): Locale {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (stored && isLocale(stored)) return stored;
   }
+  const fromTelegram = localeFromLanguageTag(getTelegramLanguageCode());
+  if (fromTelegram) return fromTelegram;
   if (typeof navigator !== 'undefined') {
-    const lang = navigator.language.toLowerCase();
-    if (lang.startsWith('pl')) return 'pl';
-    if (lang.startsWith('ru')) return 'ru';
-    if (lang.startsWith('en')) return 'en';
+    const fromBrowser = localeFromLanguageTag(navigator.language);
+    if (fromBrowser) return fromBrowser;
   }
   return 'pl';
 }

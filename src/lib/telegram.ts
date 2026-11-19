@@ -1,6 +1,17 @@
 import WebApp from '@twa-dev/sdk';
+import type { CountryCode } from '../../shared/countries';
+import { parseStartCountry } from '../../shared/start-param';
 
 export type ColorScheme = 'light' | 'dark';
+
+/** Colours of the native Telegram chrome that the app paints itself so it matches the page. */
+export type TelegramChromeColors = {
+  background: string;
+  header: string;
+  bottomBar: string;
+  mainButton: string;
+  mainButtonText: string;
+};
 
 export type TelegramThemeParams = {
   bg_color?: string;
@@ -16,14 +27,6 @@ export type TelegramThemeParams = {
   section_header_text_color?: string;
   subtitle_text_color?: string;
   destructive_text_color?: string;
-};
-
-export type StoryShareParams = {
-  text?: string;
-  widgetLink?: {
-    url: string;
-    name?: string;
-  };
 };
 
 export type TelegramWebAppBridge = {
@@ -69,9 +72,9 @@ export type TelegramWebAppBridge = {
   disableClosingConfirmation: () => void;
   onThemeChanged: (handler: () => void) => void;
   offThemeChanged: (handler: () => void) => void;
-  applyChromeColors: () => void;
-  shareToStory: (mediaUrl: string, params?: StoryShareParams) => void;
+  applyChromeColors: (colors: TelegramChromeColors) => void;
   openTelegramLink: (url: string) => void;
+  openLink: (url: string) => void;
 };
 
 type ClickHandler = () => void;
@@ -181,12 +184,10 @@ function createDevBridge(initData: string): TelegramWebAppBridge {
       themeChangedHandlers.delete(handler);
     },
     applyChromeColors: noop,
-    shareToStory: (mediaUrl, params) => {
-      if (import.meta.env.DEV) {
-        console.info('[dev] shareToStory', mediaUrl, params);
-      }
-    },
     openTelegramLink: (url) => {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    },
+    openLink: (url) => {
       window.open(url, '_blank', 'noopener,noreferrer');
     },
   };
@@ -238,27 +239,25 @@ function createTelegramBridge(initData: string): TelegramWebAppBridge {
     disableClosingConfirmation: () => WebApp.disableClosingConfirmation(),
     onThemeChanged: (handler) => WebApp.onEvent('themeChanged', handler),
     offThemeChanged: (handler) => WebApp.offEvent('themeChanged', handler),
-    applyChromeColors: () => {
-      const bg = WebApp.themeParams.bg_color;
-      const header = WebApp.themeParams.header_bg_color ?? bg;
-      if (bg) WebApp.setBackgroundColor(bg);
-      if (header) WebApp.setHeaderColor(header);
-    },
-    shareToStory: (mediaUrl, params) => {
-      const webApp = WebApp as typeof WebApp & {
-        shareToStory?: (url: string, storyParams?: { text?: string; widget_link?: { url: string; name?: string } }) => void;
-      };
-      if (typeof webApp.shareToStory !== 'function') return;
-      webApp.shareToStory(mediaUrl, {
-        text: params?.text,
-        widget_link: params?.widgetLink
-          ? { url: params.widgetLink.url, name: params.widgetLink.name }
-          : undefined,
-      });
+    applyChromeColors: (colors) => {
+      WebApp.setBackgroundColor(colors.background as `#${string}`);
+      WebApp.setHeaderColor(colors.header as `#${string}`);
+      // Bottom bar colour is Bot API 7.10; main button params are 6.10.
+      if (WebApp.isVersionAtLeast('7.10')) WebApp.setBottomBarColor(colors.bottomBar);
+      if (WebApp.isVersionAtLeast('6.10')) {
+        WebApp.MainButton.setParams({ color: colors.mainButton, text_color: colors.mainButtonText });
+      }
     },
     openTelegramLink: (url) => {
       if (typeof WebApp.openTelegramLink === 'function') {
         WebApp.openTelegramLink(url);
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    },
+    openLink: (url) => {
+      if (typeof WebApp.openLink === 'function') {
+        WebApp.openLink(url);
         return;
       }
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -308,10 +307,39 @@ export function getTelegramUserId(): string | null {
   }
 }
 
+/** The Telegram user's interface language (IETF tag such as "uk"), when the app runs inside Telegram. */
+export function getTelegramLanguageCode(): string | null {
+  const initData = getTelegramInitData();
+  if (!initData) return null;
+  try {
+    const userRaw = new URLSearchParams(initData).get('user');
+    if (!userRaw) return null;
+    const parsed: unknown = JSON.parse(userRaw);
+    if (parsed != null && typeof parsed === 'object' && 'language_code' in parsed) {
+      const code = (parsed as { language_code: unknown }).language_code;
+      if (typeof code === 'string' && code.length > 0) return code;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The deep-link payload: `start_param` from signed initData (Mini App opened through a `startapp` link),
+ * or `?c=<country>` when the bot opened the app from an inline button.
+ */
+export function getTelegramStartCountry(): CountryCode | null {
+  const initData = getTelegramInitData();
+  const fromInitData = initData ? parseStartCountry(new URLSearchParams(initData).get('start_param')) : null;
+  if (fromInitData) return fromInitData;
+  if (typeof window === 'undefined') return null;
+  return parseStartCountry(new URLSearchParams(window.location.search).get('c'));
+}
+
 export function initializeTelegramWebApp(): void {
   bridge?.ready();
   bridge?.expand();
-  bridge?.applyChromeColors();
 }
 
 export function getDevChromeState() {

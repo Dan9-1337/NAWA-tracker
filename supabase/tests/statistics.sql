@@ -2,16 +2,22 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-truncate table public.user_statistics_snapshots, public.responses restart identity cascade;
+create function pg_temp.h(bigint) returns text language sql immutable as $$ select lpad(to_hex($1), 64, '0') $$;
+
+
+truncate table public.responses restart identity cascade;
 
 select plan(31);
 
 do $$
 begin
-  perform public.create_response_for_telegram_user(
-    820000001, 'stats_target',
+  perform public.create_response_for_identity(
+    pg_temp.h(820000001),
+    2026,
     false, 'UA', 'UA',
     'nawa_director', 'direct_studies', 'science-096',
+    '0613', null,
+    'final_certificate', 'school_leaver',
     50, 100, 'none',
     'submitted', current_date
   );
@@ -19,13 +25,12 @@ end;
 $$;
 
 insert into public.responses (
-  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 )
 select
-  820000000 + value,
-  'stats_peer_' || value,
+  pg_temp.h(820000000 + value),
   false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   value, 100, value, 'none', round(value * 0.9, 2),
@@ -40,79 +45,82 @@ select
 from generate_series(10, 80, 10) as value;
 
 select is(
-  (public.get_current_statistics(820000001)->>'detailsAvailable')::boolean,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'detailsAvailable')::boolean,
   false,
   'details are suppressed when every comparison group has fewer than ten responses'
 );
-select is(public.get_current_statistics(820000001)->>'medianScore', null, 'suppressed statistics disclose no median');
-select is(public.get_current_statistics(820000001)->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
-select is(public.get_current_statistics(820000001)->>'sameCountryCount', null, 'country count below ten is suppressed');
+select is(public.get_current_statistics(pg_temp.h(820000001), 2026)->>'medianScore', null, 'suppressed statistics disclose no median');
+select is(public.get_current_statistics(pg_temp.h(820000001), 2026)->>'lowerScorePercentage', null, 'suppressed statistics disclose no percentile');
+select is(public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount', null, 'country count below ten is suppressed');
 
 insert into public.responses (
-  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  820000090, 'stats_peer_90', false, 'UA', 'UA',
+  pg_temp.h(820000090), false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
 );
 
 select is(
-  (public.get_current_statistics(820000001)->>'groupResponseCount')::integer,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'groupResponseCount')::integer,
   10,
   'the selected group count includes all valid matching responses'
 );
 select is(
-  (public.get_current_statistics(820000001)->>'medianScore')::numeric,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'medianScore')::numeric,
   45::numeric,
   'median score uses orientation scores for nawa_director responses'
 );
 select is(
-  (public.get_current_statistics(820000001)->>'lowerScorePercentage')::numeric,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'lowerScorePercentage')::numeric,
   40::numeric,
   'percentile counts only strictly lower orientation scores'
 );
 select is(
-  (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
   10,
   'country count is returned at the privacy threshold'
 );
 
 insert into public.responses (
-  telegram_user_id, telegram_username, has_polish_citizenship, ranking_country, school_country,
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
   scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
   polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
 ) values (
-  820000999, 'stats_suspicious', false, 'UA', 'UA',
+  pg_temp.h(820000999), false, 'UA', 'UA',
   'nawa_director', 'direct_studies',
   0, 100, 0, 'none', 0, 'submitted', current_date, true
 );
 select is(
-  (public.get_current_statistics(820000001)->>'totalValidResponses')::integer,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'totalValidResponses')::integer,
   10,
   'suspicious responses are excluded from aggregate counts'
 );
 select is(
-  (public.get_current_statistics(820000001)->>'groupResponseCount')::integer,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'groupResponseCount')::integer,
   10,
   'suspicious responses are excluded from comparison groups'
 );
 
 update public.responses
 set ranking_country = 'DE'
-where telegram_user_id in (820000070, 820000080, 820000090);
+where identity_hash in (pg_temp.h(820000070), pg_temp.h(820000080), pg_temp.h(820000090));
 select is(
-  (public.get_current_statistics(820000001)->>'sameCountryCount')::integer,
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
   null,
   'country count is suppressed independently after fallback'
 );
 
 select lives_ok(
   $$select public.update_current_response(
-      820000001, 'stats_target',
+      pg_temp.h(820000001),
+      2026,
       false, 'UA', 'UA',
       'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
       50, 100, 'none',
       'formal_review_positive', current_date
     )$$,
@@ -121,9 +129,12 @@ select lives_ok(
 
 with mutation as (
   select public.update_current_response(
-    820000001, 'stats_target',
+    pg_temp.h(820000001),
+    2026,
     false, 'UA', 'UA',
     'nawa_director', 'direct_studies', 'science-096',
+    '0613', null,
+    'final_certificate', 'school_leaver',
     50, 100, 'none',
     'merit_review_positive', current_date - 1
   ) as result
@@ -134,22 +145,25 @@ select ok(
 )
 from mutation;
 select is(
-  (select is_suspicious from public.responses where telegram_user_id = 820000001),
+  (select is_suspicious from public.responses where identity_hash = pg_temp.h(820000001)),
   true,
   'backdated status changes mark a response suspicious'
 );
 select lives_ok(
   $$select public.update_current_response(
-      820000001, 'stats_target',
+      pg_temp.h(820000001),
+      2026,
       false, 'UA', 'UA',
       'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
       51, 100, 'none',
       'merit_review_positive', current_date
     )$$,
   'ordinary update after suspicious flag still succeeds'
 );
 select is(
-  (select is_suspicious from public.responses where telegram_user_id = 820000001),
+  (select is_suspicious from public.responses where identity_hash = pg_temp.h(820000001)),
   true,
   'suspicious status remains set after a later ordinary update'
 );
@@ -166,32 +180,11 @@ insert into valid_statistics values (
     "lowerScorePercentage": 40,
     "rankPosition": 5,
     "rankTotal": 10,
-    "gradesScore": null,
-    "polishSchoolBonus": null,
     "trackWideMedian": null,
     "scoreBuckets": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
     "cohortScores": null,
-    "growth7d": null,
-    "history": [],
-    "groupProgress": null,
-    "reportedMeritOutcomes": null,
-    "globalBenchmark": {
-      "sampleSize": null,
-      "representedCountryCount": null,
-      "median": null,
-      "scoreDelta": null,
-      "lowerScorePercentage": null,
-      "scoreBuckets": null,
-      "detailedCountriesCount": null
-    },
-    "countryContext": {
-      "countryMedian": null,
-      "countrySampleSize": 0,
-      "countryShareOfTrack": null,
-      "medianDeltaVsGlobal": null,
-      "distributionStable": null,
-      "nearbyScoreCount": null
-    }
+    "cohortScope": "track",
+    "cohortGroupId": null
   }'::jsonb
 );
 select is(
@@ -210,32 +203,11 @@ select is(
     "lowerScorePercentage": null,
     "rankPosition": null,
     "rankTotal": null,
-    "gradesScore": null,
-    "polishSchoolBonus": null,
     "trackWideMedian": null,
     "scoreBuckets": null,
     "cohortScores": null,
-    "growth7d": null,
-    "history": [],
-    "groupProgress": null,
-    "reportedMeritOutcomes": null,
-    "globalBenchmark": {
-      "sampleSize": null,
-      "representedCountryCount": null,
-      "median": null,
-      "scoreDelta": null,
-      "lowerScorePercentage": null,
-      "scoreBuckets": null,
-      "detailedCountriesCount": null
-    },
-    "countryContext": {
-      "countryMedian": null,
-      "countrySampleSize": 0,
-      "countryShareOfTrack": null,
-      "medianDeltaVsGlobal": null,
-      "distributionStable": null,
-      "nearbyScoreCount": null
-    }
+    "cohortScope": null,
+    "cohortGroupId": null
   }'::jsonb),
   '{
     "detailsAvailable": false,
@@ -247,32 +219,11 @@ select is(
     "lowerScorePercentage": null,
     "rankPosition": null,
     "rankTotal": null,
-    "gradesScore": null,
-    "polishSchoolBonus": null,
     "trackWideMedian": null,
     "scoreBuckets": null,
     "cohortScores": null,
-    "growth7d": null,
-    "history": [],
-    "groupProgress": null,
-    "reportedMeritOutcomes": null,
-    "globalBenchmark": {
-      "sampleSize": null,
-      "representedCountryCount": null,
-      "median": null,
-      "scoreDelta": null,
-      "lowerScorePercentage": null,
-      "scoreBuckets": null,
-      "detailedCountriesCount": null
-    },
-    "countryContext": {
-      "countryMedian": null,
-      "countrySampleSize": 0,
-      "countryShareOfTrack": null,
-      "medianDeltaVsGlobal": null,
-      "distributionStable": null,
-      "nearbyScoreCount": null
-    }
+    "cohortScope": null,
+    "cohortGroupId": null
   }'::jsonb,
   'statistics assertion accepts suppressed nullable fields'
 );
@@ -281,15 +232,8 @@ select throws_ok($$select public.assert_statistics_result('[]'::jsonb)$$, 'P0001
 select throws_ok($$select public.assert_statistics_result((select result - 'scoreBuckets' from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject missing keys');
 select throws_ok($$select public.assert_statistics_result((select result || '{"extra":1}'::jsonb from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject extra keys');
 
-select ok(
-  jsonb_array_length(public.get_current_statistics(820000001)->'history') >= 1,
-  'get_current_statistics records a daily history snapshot'
-);
-
-select ok(
-  public.get_current_statistics(820000001)->'growth7d' ? 'newResponsesTotal',
-  'get_current_statistics includes seven-day growth metrics'
-);
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', '"planet"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject unknown cohort scopes');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'detailed statistics must name their cohort scope');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{totalValidResponses}', '1.5') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be integers');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be nonnegative');
 select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '9') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'disclosed country counts must meet the privacy threshold');
@@ -298,7 +242,7 @@ select throws_ok($$select public.assert_statistics_result((select jsonb_set(resu
 
 create temporary table response_before_failed_statistics(result jsonb) on commit drop;
 insert into response_before_failed_statistics
-select to_jsonb(r) from public.responses r where telegram_user_id = 820000001;
+select to_jsonb(r) from public.responses r where identity_hash = pg_temp.h(820000001);
 
 create or replace function public.get_response_statistics(p_response_id uuid)
 returns jsonb
@@ -312,9 +256,12 @@ $$;
 
 select throws_ok(
   $$select public.update_current_response(
-      820000001, 'stats_target',
+      pg_temp.h(820000001),
+      2026,
       false, 'DE', 'DE',
       'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
       9, 10, 'none',
       'merit_review_positive', current_date
     )$$,
@@ -323,7 +270,7 @@ select throws_ok(
   'malformed non-null update statistics fail inside the transaction'
 );
 select is(
-  (select to_jsonb(r) from public.responses r where telegram_user_id = 820000001),
+  (select to_jsonb(r) from public.responses r where identity_hash = pg_temp.h(820000001)),
   (select result from response_before_failed_statistics),
   'malformed statistics roll back every update change'
 );

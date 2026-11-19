@@ -1,4 +1,5 @@
-export const MIN_DETAILED_COHORT = 10;
+import { MIN_COHORT_SIZE } from '../../shared/product-rules';
+
 export const QUALITATIVE_COHORT_MAX = 29;
 
 export type MedianBand = 'below' | 'around' | 'above';
@@ -23,7 +24,7 @@ export function formatPercentileValue(lowerScorePercentage: number, groupSize: n
   if (groupSize > QUALITATIVE_COHORT_MAX) {
     return Math.round(lowerScorePercentage);
   }
-  if (groupSize >= MIN_DETAILED_COHORT) {
+  if (groupSize >= MIN_COHORT_SIZE) {
     return Math.round(lowerScorePercentage / 5) * 5;
   }
   return Math.round(lowerScorePercentage);

@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { fineBuckets, emptyCountryContext, emptyGlobalBenchmark } from './test-statistics';
+import { fineBuckets } from './test-statistics';
 import {
   apiErrorSchema,
   createResponseRequestSchema,
   createResponseResultSchema,
   currentResponseRequestSchema,
   currentResponseResultSchema,
-  publicStatisticsRequestSchema,
-  publicStatisticsResultSchema,
   statisticsRequestSchema,
   statisticsResultSchema,
   updateResponseRequestSchema,
@@ -15,12 +13,16 @@ import {
 } from './validation';
 
 const validForm = {
+  intakeYear: 2026,
   hasPolishCitizenship: false,
   rankingCountry: 'UA',
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   targetUniversity: 'science-096',
+  studyField: '0613',
+  gradeBasis: 'final_certificate',
+  applicantKind: 'school_leaver',
   averageGrade: 85,
   maximumGrade: 100,
   polishSchoolLevel: 'none',
@@ -38,34 +40,10 @@ const validStatistics = {
   lowerScorePercentage: 40,
   rankPosition: 6,
   rankTotal: 10,
-  gradesScore: 76.5,
-  polishSchoolBonus: 0,
   trackWideMedian: 80,
   scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
-  cohortScores: [95, 90, 88, 85],
-  growth7d: null,
-  history: [],
-  groupProgress: null,
-  reportedMeritOutcomes: null,
-  globalBenchmark: {
-    ...emptyGlobalBenchmark,
-    sampleSize: 18,
-    representedCountryCount: 3,
-    median: 80,
-    scoreDelta: 2.5,
-    lowerScorePercentage: 55,
-    scoreBuckets: fineBuckets([1, 2, 3, 2, 2, 1, 1, 1, 1, 1, 1, 2]),
-    detailedCountriesCount: 1,
-  },
-  countryContext: {
-    ...emptyCountryContext,
-    countryMedian: 82.5,
-    countrySampleSize: 10,
-    countryShareOfTrack: 10 / 18,
-    medianDeltaVsGlobal: 2.5,
-    distributionStable: false,
-    nearbyScoreCount: 3,
-  },
+  cohortScope: 'country',
+  cohortGroupId: null,
 } as const;
 
 describe('API request contracts', () => {
@@ -86,18 +64,6 @@ describe('API request contracts', () => {
     expect(currentResponseRequestSchema.parse({})).toEqual({});
     expect(statisticsRequestSchema.parse({})).toEqual({});
   });
-
-  it('accepts public statistics preview payloads', () => {
-    const request = {
-      scholarshipTrack: 'nawa_director',
-      rankingCountry: 'UA',
-      averageGrade: 4.5,
-      maximumGrade: 5,
-      polishSchoolLevel: 'secondary',
-    } as const;
-
-    expect(publicStatisticsRequestSchema.parse(request)).toEqual(request);
-  });
 });
 
 describe('API response contracts', () => {
@@ -115,7 +81,6 @@ describe('API response contracts', () => {
   it('accepts current response and statistics envelopes', () => {
     expect(currentResponseResultSchema.parse({ response: validForm })).toEqual({ response: validForm });
     expect(statisticsResultSchema.parse(validStatistics)).toEqual(validStatistics);
-    expect(publicStatisticsResultSchema.parse(validStatistics)).toEqual(validStatistics);
   });
 
   it('accepts normalized API errors', () => {

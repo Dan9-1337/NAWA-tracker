@@ -1,8 +1,10 @@
 import { statisticsRequestSchema, statisticsResultSchema } from '../shared/validation.js';
+import { currentIntakeYear } from '../shared/season.js';
 import { unauthorized } from './_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
 import { assertSameOrigin } from './_lib/origin.js';
 import { assertRpcSucceeded, parseStatistics, type RpcClient } from './_lib/questionnaire.js';
+import { hashIdentity } from './_lib/identity.js';
 import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
 
@@ -15,11 +17,13 @@ type StatisticsRequest = {
 type StatisticsDependencies = {
   getClient: () => RpcClient;
   assertSameOrigin: (request: StatisticsRequest) => void;
+  hashIdentity: (identity: VerifiedTelegramIdentity) => string;
   requireTelegramIdentity: (request: StatisticsRequest) => VerifiedTelegramIdentity;
 };
 
 const defaultDependencies: StatisticsDependencies = {
   getClient: getSupabaseAdmin as () => RpcClient,
+  hashIdentity,
   assertSameOrigin,
   requireTelegramIdentity,
 };
@@ -35,7 +39,8 @@ export function createStatisticsHandler(overrides: Partial<StatisticsDependencie
       const identity = dependencies.requireTelegramIdentity(request);
       const client = dependencies.getClient();
       const statisticsResult = await client.rpc('get_current_statistics', {
-        p_telegram_user_id: identity.user.id,
+        p_identity_hash: dependencies.hashIdentity(identity),
+        p_intake_year: currentIntakeYear,
       });
       assertRpcSucceeded(statisticsResult.error);
       if (statisticsResult.data === null) throw unauthorized();

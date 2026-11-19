@@ -2,7 +2,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CreateResponseResult, ResponseFormInput, StatisticsResult } from '../../shared/contracts';
-import { emptyCountryContext, emptyGlobalBenchmark } from '../../shared/test-statistics';
 import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { ApiClientError } from '../lib/api-client';
 import type { TelegramWebAppBridge } from '../lib/telegram';
@@ -30,6 +29,7 @@ const api = vi.hoisted(() => ({
   deleteResponse: vi.fn(),
   getCurrentResponse: vi.fn(),
   getStatistics: vi.fn(),
+  getCohortOutcomes: vi.fn(),
 }));
 
 vi.mock('../lib/api-client', async (importOriginal) => ({
@@ -38,12 +38,16 @@ vi.mock('../lib/api-client', async (importOriginal) => ({
 }));
 
 const currentResponse: ResponseFormInput = {
+  intakeYear: 2026,
   hasPolishCitizenship: false,
   rankingCountry: 'UA',
   schoolCountry: 'UA',
   scholarshipTrack: 'nawa_director',
   studyRoute: 'direct_studies',
   targetUniversity: 'science-096',
+  studyField: '0613',
+  gradeBasis: 'final_certificate',
+  applicantKind: 'school_leaver',
   averageGrade: 4.5,
   maximumGrade: 5,
   polishSchoolLevel: 'none',
@@ -62,17 +66,10 @@ function statistics(totalValidResponses: number): StatisticsResult {
     lowerScorePercentage: null,
     rankPosition: null,
     rankTotal: null,
-    gradesScore: null,
-    polishSchoolBonus: null,
     trackWideMedian: null,
     scoreBuckets: null,
-    cohortScores: null,
-    growth7d: null,
-    history: [],
-    groupProgress: null,
-    reportedMeritOutcomes: null,
-    globalBenchmark: emptyGlobalBenchmark,
-    countryContext: emptyCountryContext,
+    cohortScope: null,
+    cohortGroupId: null,
   };
 }
 
@@ -84,6 +81,17 @@ beforeEach(async () => {
 
   const telegram = await import('../lib/telegram');
   vi.mocked(telegram.getTelegramWebApp).mockReturnValue(telegramTestState.webApp);
+  api.getCohortOutcomes.mockResolvedValue({
+    ownCountry: 'UA',
+    scope: null,
+    groupId: null,
+    awardedCount: 0,
+    notAwardedCount: 0,
+    awardedRate: null,
+    awardedBandLow: null,
+    awardedBandHigh: null,
+    notAwardedBandHigh: null,
+  });
 });
 
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {
@@ -122,13 +130,57 @@ describe('HomePage', () => {
   it('loads an authenticated profile and statistics', async () => {
     api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
     api.getStatistics.mockResolvedValue(statistics(12));
+    const user = userEvent.setup();
     render(<HomePage />);
 
+    expect(await screen.findByTestId('score-value')).toHaveTextContent('81,00');
+    expect(screen.getByRole('tab', { name: 'Wynik' })).toHaveAttribute('aria-selected', 'true');
+    expect(api.getStatistics).toHaveBeenCalled();
+
+    await user.click(screen.getByRole('tab', { name: 'Rezultaty' }));
     await waitFor(() => {
       expect(screen.getByText('Status wniosku')).toBeInTheDocument();
       expect(screen.getAllByText('Wniosek złożony').length).toBeGreaterThanOrEqual(1);
     });
-    expect(api.getStatistics).toHaveBeenCalled();
+
+    await user.click(screen.getByRole('tab', { name: 'Sezon' }));
+    expect(screen.getByRole('heading', { name: 'Sezon' })).toBeInTheDocument();
+    expect(screen.getByText('Ocena').closest('li')).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('previews a different average on the tape without saving it', async () => {
+    api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+    api.getStatistics.mockResolvedValue(statistics(12));
+    const user = userEvent.setup();
+    render(<HomePage />);
+
+    expect(await screen.findByTestId('score-value')).toHaveTextContent('81,00');
+
+    await user.click(screen.getByRole('button', { name: 'Zwiększ średnią' }));
+    expect(screen.getByTestId('score-value')).toHaveTextContent('81,90');
+    expect(screen.getByText('Zapisany wynik: 81,00')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Wróć do zapisanej' }));
+    expect(screen.getByTestId('score-value')).toHaveTextContent('81,00');
+    expect(api.updateResponse).not.toHaveBeenCalled();
+  });
+
+  it('accepts a typed average and rejects values outside the scale', async () => {
+    api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+    api.getStatistics.mockResolvedValue(statistics(12));
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await screen.findByTestId('score-value');
+
+    const input = screen.getByLabelText('Średnia do symulacji');
+    await user.clear(input);
+    await user.type(input, '4,2');
+    expect(input).toHaveValue('4,2');
+    expect(screen.getByTestId('score-value')).toHaveTextContent('75,60');
+
+    await user.clear(input);
+    await user.type(input, '7');
+    expect(screen.getByRole('alert')).toHaveTextContent('Wpisz liczbę od 0 do 5');
   });
 
   it('creates a profile through the wizard flow', async () => {
@@ -146,8 +198,9 @@ describe('HomePage', () => {
     await clickMain(user);
 
     for (let step = 0; step < 3; step += 1) {
-      if (screen.queryByLabelText('Gdzie marzysz o studiach?')) {
-        await pickSearchableOption(user, 'Gdzie marzysz o studiach?', /Uniwersytet Warszawski/i);
+      if (screen.queryByLabelText('Uczelnia we wniosku NAWA')) {
+        await pickSearchableOption(user, 'Kierunek studiów', /Tworzenie i analiza oprogramowania/i);
+        await pickSearchableOption(user, 'Uczelnia we wniosku NAWA', /Uniwersytet Warszawski/i);
       }
       if (screen.queryByLabelText('Kraj obywatelstwa')) {
         await pickSearchableOption(user, 'Kraj obywatelstwa', 'Ukraina');
@@ -171,8 +224,7 @@ describe('HomePage', () => {
 
     await waitFor(() => {
       expect(api.createResponse).toHaveBeenCalled();
-      expect(screen.getByText('Status wniosku')).toBeInTheDocument();
-      expect(screen.getAllByText('Wniosek złożony').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId('score-value')).toBeInTheDocument();
     });
   });
 });

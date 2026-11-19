@@ -78,7 +78,7 @@ export function ResultPreviewCard() {
       </div>
 
       <p className="mt-3 text-xs font-medium leading-5 text-[var(--text-secondary)]">
-        <span className="text-[var(--color-accent)]">●</span> {t.start.previewLive}
+        <span className="text-[var(--color-accent-ink)]">●</span> {t.start.previewLive}
       </p>
     </div>
   );

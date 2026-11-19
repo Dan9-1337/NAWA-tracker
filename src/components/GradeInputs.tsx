@@ -12,6 +12,7 @@ type GradeInputsProps = {
   maximumHint?: string | null;
   maximumReadOnly?: boolean;
   averageExceedsWarning?: string | null;
+  averageRequiredError?: string | null;
 };
 
 function normalizeAverage(value: number | null): number | null {
@@ -34,6 +35,7 @@ export function GradeInputs({
   maximumHint,
   maximumReadOnly = false,
   averageExceedsWarning,
+  averageRequiredError,
 }: GradeInputsProps) {
   const { t } = useI18n();
   const [averageRaw, setAverageRaw] = useState(() => formatInputValue(averageGrade));
@@ -41,6 +43,7 @@ export function GradeInputs({
 
   const averageInvalid =
     averageGrade != null && maximumGrade != null && maximumGrade > 0 && averageGrade > maximumGrade;
+  const averageMissing = averageGrade == null && Boolean(averageRequiredError);
 
   return (
     <>
@@ -80,7 +83,7 @@ export function GradeInputs({
           inputMode="decimal"
           placeholder={t.labels.averageGradePlaceholder}
           className={`min-h-11 w-full rounded-2xl border bg-[var(--tg-theme-section-bg-color)] px-4 py-3 text-base text-[var(--tg-theme-text-color)] ${
-            averageInvalid
+            averageInvalid || averageMissing
               ? 'border-[var(--tg-theme-destructive-text-color)]'
               : 'border-[var(--tg-theme-hint-color)]'
           }`}
@@ -94,6 +97,11 @@ export function GradeInputs({
             if (averageGrade != null) setAverageRaw(formatInputValue(averageGrade));
           }}
         />
+        {averageMissing ? (
+          <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
+            {averageRequiredError}
+          </p>
+        ) : null}
         {averageInvalid && averageExceedsWarning ? (
           <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
             {averageExceedsWarning}

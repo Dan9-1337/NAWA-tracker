@@ -1,0 +1,16 @@
+// Self-hosted (CSP only allows 'self'). Latin-ext covers Polish, Cyrillic covers Russian.
+import '@fontsource/oswald/latin-500.css';
+import '@fontsource/oswald/latin-ext-500.css';
+import '@fontsource/oswald/cyrillic-500.css';
+import '@fontsource/oswald/latin-600.css';
+import '@fontsource/oswald/latin-ext-600.css';
+import '@fontsource/oswald/cyrillic-600.css';
+import '@fontsource/golos-text/latin-400.css';
+import '@fontsource/golos-text/latin-ext-400.css';
+import '@fontsource/golos-text/cyrillic-400.css';
+import '@fontsource/golos-text/latin-500.css';
+import '@fontsource/golos-text/latin-ext-500.css';
+import '@fontsource/golos-text/cyrillic-500.css';
+import '@fontsource/golos-text/latin-600.css';
+import '@fontsource/golos-text/latin-ext-600.css';
+import '@fontsource/golos-text/cyrillic-600.css';

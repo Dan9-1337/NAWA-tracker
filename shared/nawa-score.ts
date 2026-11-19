@@ -1,4 +1,4 @@
-import type { PolishSchoolLevel } from './contracts';
+import type { ApplicantKind, PolishSchoolLevel } from './contracts';
 import type { ScoreBreakdown } from './contracts';
 
 export const nawaOrientationThreshold = 60;
@@ -24,16 +24,24 @@ export function calculateNawaOrientationScore(
   maximumGrade: number,
   polishSchoolLevel: PolishSchoolLevel,
   rankingCountry: string,
+  applicantKind: ApplicantKind = 'school_leaver',
 ): number {
-  return getScoreBreakdown(averageGrade, maximumGrade, polishSchoolLevel, rankingCountry).total;
+  return getScoreBreakdown(averageGrade, maximumGrade, polishSchoolLevel, rankingCountry, applicantKind).total;
 }
 
+/** Mirrors `public.compute_orientation_score` in SQL; keep the two in step (see nawa-score.test.ts). */
 export function getScoreBreakdown(
   averageGrade: number,
   maximumGrade: number,
   polishSchoolLevel: PolishSchoolLevel,
   rankingCountry: string,
+  applicantKind: ApplicantKind = 'school_leaver',
 ): ScoreBreakdown {
+  // Students in Poland with an average >= 4.75 (scale 2-5) are assigned the maximum (Ogłoszenie 2.7).
+  if (applicantKind === 'student_in_poland') {
+    return { gradesScore: 100, polishSchoolBonus: 0, total: 100 };
+  }
+
   if (maximumGrade <= 0) {
     return { gradesScore: 0, polishSchoolBonus: 0, total: 0 };
   }

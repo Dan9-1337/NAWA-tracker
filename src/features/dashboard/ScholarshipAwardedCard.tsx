@@ -1,8 +1,6 @@
-import { StatusTimeline } from '../../components/StatusTimeline';
 import { DashboardCard } from '../../components/DashboardCard';
 import { useI18n } from '../../i18n/context';
 import { formatDate } from '../../lib/format';
-import { getSequentialStatusOptions } from '../../../shared/status-options';
 
 type ScholarshipAwardedCardProps = {
   statusChangedAt: string;
@@ -28,15 +26,6 @@ export function ScholarshipAwardedCard({ statusChangedAt }: ScholarshipAwardedCa
         </div>
       </dl>
 
-      <p className="text-xs leading-5 text-[var(--text-helper)]">{t.dashboard.terminal.scholarshipAwardedNote}</p>
-
-      <StatusTimeline
-        savedStatus="scholarship_awarded"
-        selectedStatus="scholarship_awarded"
-        options={getSequentialStatusOptions('scholarship_awarded')}
-        onChange={() => undefined}
-        showHints={false}
-      />
     </DashboardCard>
   );
 }

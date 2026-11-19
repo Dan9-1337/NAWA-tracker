@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
+import { getStudyField, OTHER_STUDY_FIELD } from '../../shared/study-fields';
 import { getUniversityById } from '../../shared/universities';
 import { CountryFlag } from '../components/CountryFlag';
 import { useI18n } from '../i18n/context';
@@ -16,6 +17,10 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
   const { t, locale } = useI18n();
   const rankingCountry = formatCountryLabel(draft.rankingCountry, locale);
   const schoolCountry = formatCountryLabel(draft.schoolCountry, locale);
+  const studyFieldName =
+    draft.studyField === OTHER_STUDY_FIELD
+      ? t.studyFields.other
+      : (getStudyField(draft.studyField)?.name[locale] ?? null);
   const universityName =
     draft.targetUniversity != null ? (getUniversityById(draft.targetUniversity)?.name ?? draft.targetUniversity) : null;
 
@@ -31,7 +36,6 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         onEdit={onEditSection ? () => onEditSection('application') : undefined}
         editLabel={t.wizard.editSection}
       >
-        <Row label={t.labels.scholarshipTrack} value={t.choices.scholarshipTrack[draft.scholarshipTrack]} />
         <Row
           label={t.labels.rankingCountry}
           value={rankingCountry}
@@ -43,6 +47,7 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
           leading={<CountryFlag code={draft.schoolCountry} size={18} />}
         />
         <Row label={t.labels.studyRoute} value={t.choices.studyRoute[draft.studyRoute]} />
+        {studyFieldName ? <Row label={t.labels.studyField} value={studyFieldName} /> : null}
         {universityName ? <Row label={t.labels.targetUniversity} value={universityName} /> : null}
       </SummaryBlock>
 
@@ -51,6 +56,10 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
         onEdit={onEditSection ? () => onEditSection('grades') : undefined}
         editLabel={t.wizard.editSection}
       >
+        <Row label={t.labels.applicantKind} value={t.choices.applicantKind[draft.applicantKind]} />
+        {draft.applicantKind === 'school_leaver' ? (
+          <Row label={t.labels.gradeBasis} value={t.choices.gradeBasis[draft.gradeBasis]} />
+        ) : null}
         <Row
           label={t.labels.averageGrade}
           value={`${formatGrade(draft.averageGrade, locale)} / ${formatGrade(draft.maximumGrade, locale)}`}
@@ -65,6 +74,12 @@ export function ConfirmSummary({ draft, onEditSection }: ConfirmSummaryProps) {
 
       <SummaryBlock title={t.labels.currentStatus}>
         <Row label={t.labels.currentStatus} value={t.choices.currentStatus[draft.currentStatus]} />
+        {draft.prepCourseCity ? (
+          <Row
+            label={t.labels.prepCourseCity}
+            value={draft.prepCourseCity === 'other' ? t.cities.other : draft.prepCourseCity}
+          />
+        ) : null}
         <Row label={t.labels.statusChangedAt} value={formatDate(draft.statusChangedAt, locale)} />
       </SummaryBlock>
     </section>

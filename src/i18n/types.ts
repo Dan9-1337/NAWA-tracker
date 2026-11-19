@@ -8,6 +8,6 @@ type DeepString<T> = T extends (...args: infer A) => infer R
       ? { [K in keyof T]: DeepString<T[K]> }
       : string;
 
-export type Locale = 'pl' | 'en' | 'ru';
+export type Locale = 'pl' | 'en' | 'ru' | 'uk' | 'be';
 
 export type Messages = DeepString<typeof pl>;

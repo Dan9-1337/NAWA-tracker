@@ -12,7 +12,8 @@ import { resolve } from 'node:path';
 
 const FIXED_LOCAL = {
   TELEGRAM_BOT_TOKEN: 'local-dev-telegram-bot-token-0000000001',
-  IP_HASH_SALT: 'local-dev-ip-hash-salt-000000000001',
+  IDENTITY_PEPPER: 'local-dev-identity-pepper-0000000001',
+  TELEGRAM_WEBHOOK_SECRET: 'local-dev-webhook-secret-00000000001',
   APP_PUBLIC_URL: 'http://localhost:3000',
 };
 
@@ -46,7 +47,8 @@ function signTelegramInitData(userId, username, botToken) {
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => `${key}=${value}`)
     .join('\n');
-  const secretKey = createHmac('sha256', botToken).update('WebAppData').digest();
+  // Telegram's scheme: the constant "WebAppData" is the key, the bot token the message.
+  const secretKey = createHmac('sha256', 'WebAppData').update(botToken).digest();
   const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
   params.set('hash', hash);
   return params.toString();
@@ -114,7 +116,8 @@ const lines = [
   `TELEGRAM_BOT_TOKEN=${FIXED_LOCAL.TELEGRAM_BOT_TOKEN}`,
   `SUPABASE_URL=${apiUrl}`,
   `SUPABASE_SERVICE_ROLE_KEY=${serviceRoleKey}`,
-  `IP_HASH_SALT=${FIXED_LOCAL.IP_HASH_SALT}`,
+  `IDENTITY_PEPPER=${FIXED_LOCAL.IDENTITY_PEPPER}`,
+  `TELEGRAM_WEBHOOK_SECRET=${FIXED_LOCAL.TELEGRAM_WEBHOOK_SECRET}`,
   `APP_PUBLIC_URL=${FIXED_LOCAL.APP_PUBLIC_URL}`,
   '',
   '# Test-only connection to the local Supabase Postgres instance.',

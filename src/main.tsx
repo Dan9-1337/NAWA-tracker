@@ -1,3 +1,4 @@
+import './fonts';
 import './index.css';
 import { bootstrapApplication } from './bootstrap';
 

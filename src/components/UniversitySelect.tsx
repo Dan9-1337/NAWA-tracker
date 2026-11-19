@@ -3,9 +3,7 @@ import type { ScholarshipTrack } from '../../shared/contracts';
 import { universitySelectionCounts } from '../../shared/universities-metadata';
 import { getUniversitySearchIndex } from '../../shared/university-search/index';
 import { searchUniversities } from '../../shared/university-search/search';
-import type { SearchResult } from '../../shared/university-search/types';
 import { universitiesForScholarshipTrack } from '../../shared/universities';
-import { trackUniversitySearchEvent } from '../lib/product-events';
 import {
   formatUniversitySearchResult,
   highlightSearchMatch,
@@ -33,7 +31,7 @@ export function UniversitySelect({
   onChange,
   error,
 }: UniversitySelectProps) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
 
   const trackUniversities = useMemo(
     () => universitiesForScholarshipTrack(scholarshipTrack),
@@ -111,45 +109,8 @@ export function UniversitySelect({
       options={baseOptions}
       filterOptions={filterOptions}
       emptyState={emptyState}
-      onSearchNoResults={(query) =>
-        trackUniversitySearchEvent('university_search_no_results', {
-          query,
-          track: scholarshipTrack,
-          resultCount: 0,
-          locale,
-        })
-      }
-      onSearchSelected={(query, selectedId, resultCount) =>
-        trackUniversitySearchEvent('university_search_selected', {
-          query,
-          selectedId,
-          track: scholarshipTrack,
-          resultCount,
-          locale,
-        })
-      }
-      onSearchAbandoned={(query, resultCount) =>
-        trackUniversitySearchEvent('university_search_abandoned', {
-          query,
-          track: scholarshipTrack,
-          resultCount,
-          locale,
-        })
-      }
       onChange={onChange}
       error={error}
     />
   );
-}
-
-export function findUniversitySearchResult(
-  track: ScholarshipTrack,
-  query: string,
-): readonly SearchResult[] {
-  const universities = universitiesForScholarshipTrack(track);
-  const index = getUniversitySearchIndex(universities);
-  return searchUniversities(index, query, {
-    enableFuzzy: true,
-    selectionCounts: universitySelectionCounts,
-  });
 }

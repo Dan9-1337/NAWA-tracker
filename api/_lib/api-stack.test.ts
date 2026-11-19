@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadServerEnv } from './env';
 import { HttpError, normalizeError } from './errors';
 import { assertMethod, parseJsonBody, sendError } from './http';
-import { getClientIp, hashIp } from './ip';
 import { assertSameOrigin } from './origin';
 import { z } from 'zod';
 
@@ -11,7 +10,7 @@ const validEnvironment = {
   SUPABASE_URL: 'https://project.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-that-is-at-least-32-characters',
   TELEGRAM_BOT_TOKEN: 'telegram-bot-token-that-is-at-least-32-characters',
-  IP_HASH_SALT: 'ip-hash-salt-that-is-at-least-32-characters',
+  IDENTITY_PEPPER: 'identity-pepper-that-is-at-least-32-characters',
   APP_PUBLIC_URL: 'https://tracker.example',
   NODE_ENV: 'test',
 } as const;
@@ -32,7 +31,20 @@ describe('server environment', () => {
       telegramBotToken: validEnvironment.TELEGRAM_BOT_TOKEN,
       appOrigin: 'https://tracker.example',
       isProduction: false,
+      identityPepper: validEnvironment.IDENTITY_PEPPER,
     });
+  });
+
+  it('requires an identity pepper and rejects the known local-dev pepper in production', () => {
+    const { IDENTITY_PEPPER: _omitted, ...withoutPepper } = validEnvironment;
+    expect(() => loadServerEnv(withoutPepper)).toThrow('Invalid server environment');
+    expect(() =>
+      loadServerEnv({
+        ...validEnvironment,
+        IDENTITY_PEPPER: 'local-dev-identity-pepper-0000000001',
+        VERCEL_ENV: 'production',
+      }),
+    ).toThrow('Invalid server environment');
   });
 
   it('rejects missing or unsafe security configuration without echoing values', () => {
@@ -91,25 +103,6 @@ describe('request boundaries', () => {
     expect(() =>
       assertSameOrigin({ headers: { origin: 'https://tracker.example.evil.test' } }, 'https://tracker.example'),
     ).toThrow(HttpError);
-  });
-
-  it('extracts a transient client IP from Vercel forwarding headers', () => {
-    vi.stubEnv('VERCEL', '1');
-    vi.stubEnv('VERCEL_ENV', 'preview');
-
-    expect(
-      getClientIp({
-        headers: {
-          'x-vercel-forwarded-for': '203.0.113.9',
-          'x-forwarded-for': '198.51.100.4',
-        },
-        socket: { remoteAddress: '127.0.0.1' },
-      }),
-    ).toBe('203.0.113.9');
-  });
-
-  it('canonicalizes equivalent IPv6 forms before hashing', () => {
-    expect(hashIp('2001:0db8:0:0:0:0:0:1')).toBe(hashIp('2001:db8::1'));
   });
 
   it('returns only generic client errors for unexpected failures', () => {

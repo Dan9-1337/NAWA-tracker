@@ -225,7 +225,7 @@ export function SearchableSelect({
                               ) : null}
                             </span>
                             {active ? (
-                              <span className="shrink-0 text-[var(--color-accent)]" aria-hidden="true">
+                              <span className="shrink-0 text-[var(--color-accent-ink)]" aria-hidden="true">
                                 ✓
                               </span>
                             ) : null}

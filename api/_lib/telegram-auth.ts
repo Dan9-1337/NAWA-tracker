@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { loadServerEnv } from './env.js';
-import { HttpError, unauthorized } from './errors.js';
+import { unauthorized } from './errors.js';
 
 export type TelegramWebAppUser = {
   id: number;
@@ -63,6 +63,15 @@ export function buildTelegramDataCheckString(params: URLSearchParams): string {
     .join('\n');
 }
 
+/**
+ * The bot token signed with the constant "WebAppData" used as the key, as Telegram documents it
+ * (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app). Key and message are not
+ * interchangeable: with them swapped, no genuine Mini App payload would verify.
+ */
+function telegramSecretKey(botToken: string): Buffer {
+  return createHmac('sha256', 'WebAppData').update(botToken).digest();
+}
+
 export function signTelegramInitData(
   fields: Record<string, string>,
   botToken: string,
@@ -73,7 +82,7 @@ export function signTelegramInitData(
     auth_date: String(nowSeconds),
   });
   const dataCheckString = buildTelegramDataCheckString(params);
-  const secretKey = createHmac('sha256', botToken).update('WebAppData').digest();
+  const secretKey = telegramSecretKey(botToken);
   const hash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
   params.set('hash', hash);
   return params.toString();
@@ -91,7 +100,7 @@ export function verifyTelegramInitData(
 
   params.delete('hash');
   const dataCheckString = buildTelegramDataCheckString(params);
-  const secretKey = createHmac('sha256', botToken).update('WebAppData').digest();
+  const secretKey = telegramSecretKey(botToken);
   const calculatedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
 
   const received = Buffer.from(receivedHash, 'hex');
@@ -151,6 +160,3 @@ export function requireTelegramIdentity(
   );
 }
 
-export function invalidTelegramInitData(): HttpError {
-  return unauthorized();
-}

@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
-
 import { z } from 'zod';
 
 import type { ResponseFormInput } from '../../shared/contracts.js';
 import {
-  responseFormInputSchema,
+  cohortOutcomesResultSchema,
+  prepCityDistributionSchema,
   responseFormStoredSchema,
   statisticsResultSchema,
 } from '../../shared/validation.js';
@@ -27,12 +26,17 @@ const updateMutationResultSchema = z
   .strict();
 
 const responseFields = [
+  'intakeYear',
   'hasPolishCitizenship',
   'rankingCountry',
   'schoolCountry',
   'scholarshipTrack',
   'studyRoute',
   'targetUniversity',
+  'studyField',
+  'prepCourseCity',
+  'gradeBasis',
+  'applicantKind',
   'averageGrade',
   'maximumGrade',
   'polishSchoolLevel',
@@ -50,17 +54,10 @@ const statisticsFields = [
   'lowerScorePercentage',
   'rankPosition',
   'rankTotal',
-  'gradesScore',
-  'polishSchoolBonus',
   'trackWideMedian',
   'scoreBuckets',
-  'cohortScores',
-  'growth7d',
-  'history',
-  'groupProgress',
-  'reportedMeritOutcomes',
-  'globalBenchmark',
-  'countryContext',
+  'cohortScope',
+  'cohortGroupId',
 ] as const;
 
 function projectFields(value: unknown, fields: readonly string[]): Record<string, unknown> {
@@ -78,12 +75,17 @@ function projectFields(value: unknown, fields: readonly string[]): Record<string
 
 export function normalizeQuestionnaire(response: ResponseFormInput) {
   return {
+    p_intake_year: response.intakeYear,
     p_has_polish_citizenship: response.hasPolishCitizenship,
     p_ranking_country: response.rankingCountry,
     p_school_country: response.schoolCountry,
     p_scholarship_track: response.scholarshipTrack,
     p_study_route: response.studyRoute,
     p_target_university: response.targetUniversity ?? null,
+    p_study_field: response.studyField,
+    p_prep_course_city: response.prepCourseCity ?? null,
+    p_grade_basis: response.gradeBasis,
+    p_applicant_kind: response.applicantKind,
     p_average_grade: response.averageGrade,
     p_maximum_grade: response.maximumGrade,
     p_polish_school_level: response.polishSchoolLevel ?? null,
@@ -92,12 +94,32 @@ export function normalizeQuestionnaire(response: ResponseFormInput) {
   };
 }
 
-export function fingerprintQuestionnaire(response: ResponseFormInput): string {
-  return createHash('sha256').update(JSON.stringify(normalizeQuestionnaire(response)), 'utf8').digest('hex');
-}
-
 export function parseCurrentResponse(value: unknown): ResponseFormInput {
   return responseFormStoredSchema.parse(projectFields(value, responseFields));
+}
+
+export function parseCohortOutcomes(value: unknown) {
+  return cohortOutcomesResultSchema.parse(
+    projectFields(value, [
+      'ownCountry',
+      'scope',
+      'groupId',
+      'awardedCount',
+      'notAwardedCount',
+      'awardedRate',
+      'awardedBandLow',
+      'awardedBandHigh',
+      'notAwardedBandHigh',
+    ]),
+  );
+}
+
+export function parsePrepCityDistribution(value: unknown) {
+  const projected = projectFields(value, ['studyField', 'level', 'groupCode', 'total', 'cities', 'otherCount']);
+  if (Array.isArray(projected.cities)) {
+    projected.cities = projected.cities.map((entry) => projectFields(entry, ['city', 'count']));
+  }
+  return prepCityDistributionSchema.parse(projected);
 }
 
 export function parseStatistics(value: unknown) {

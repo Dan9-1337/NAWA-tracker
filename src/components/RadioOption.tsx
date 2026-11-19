@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 type RadioOptionProps = {
   name: string;
   value: string;

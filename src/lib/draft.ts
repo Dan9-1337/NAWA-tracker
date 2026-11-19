@@ -1,4 +1,4 @@
-import type { ApplicationStatus, PolishSchoolLevel, ResponseFormInput, ScholarshipTrack, StudyRoute } from '../../shared/contracts';
+import type { ApplicantKind, ApplicationStatus, GradeBasis, PolishSchoolLevel, ResponseFormInput, ScholarshipTrack, StudyRoute } from '../../shared/contracts';
 import { getTelegramUserId } from './telegram';
 
 export const DRAFT_STORAGE_KEY_PREFIX = 'nawa-wizard-draft';
@@ -16,6 +16,12 @@ export type WizardDraft = {
   scholarshipTrack: ScholarshipTrack;
   studyRoute: StudyRoute;
   targetUniversity: string;
+  /** ISCED-F code or "other"; empty until picked. */
+  studyField: string;
+  /** Only set while reporting an award on the preparatory-course path. */
+  prepCourseCity: string;
+  gradeBasis: GradeBasis;
+  applicantKind: ApplicantKind;
   averageGrade: number | null;
   maximumGrade: number | null;
   polishSchoolLevel: PolishSchoolLevel;
@@ -40,6 +46,10 @@ export function responseToDraft(value: ResponseFormInput): WizardDraft {
     scholarshipTrack: value.scholarshipTrack,
     studyRoute: value.studyRoute,
     targetUniversity: value.targetUniversity ?? '',
+    studyField: value.studyField,
+    prepCourseCity: value.prepCourseCity ?? '',
+    gradeBasis: value.gradeBasis,
+    applicantKind: value.applicantKind,
     averageGrade: value.averageGrade,
     maximumGrade: value.maximumGrade,
     polishSchoolLevel: value.polishSchoolLevel ?? 'none',
@@ -52,6 +62,10 @@ function normalizeWizardDraft(draft: WizardDraft): WizardDraft {
   return {
     ...draft,
     targetUniversity: draft.targetUniversity ?? '',
+    studyField: draft.studyField ?? '',
+    prepCourseCity: draft.prepCourseCity ?? '',
+    gradeBasis: draft.gradeBasis ?? 'final_certificate',
+    applicantKind: draft.applicantKind ?? 'school_leaver',
   };
 }
 
@@ -91,10 +105,6 @@ export function loadWizardSession(): WizardSession | null {
   } catch {
     return null;
   }
-}
-
-export function loadWizardDraft(): WizardDraft | null {
-  return loadWizardSession()?.draft ?? null;
 }
 
 export function saveWizardSession(session: WizardSession): void {

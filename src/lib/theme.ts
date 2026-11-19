@@ -11,71 +11,71 @@ type TypographyTokens = {
 };
 
 export type SemanticColors = {
+  /** Tape-yellow fill. Never used as text on the page background. */
   accent: string;
+  /** Accent for text and icons: ink on light, tape-yellow on dark. */
+  accentInk: string;
   median: string;
   positive: string;
   reliability: string;
 };
 
-/** Catppuccin Latte — light surfaces with calm graphite cards. */
+/** Ruler palette (light): paper ground, ink text, tape-yellow accent. */
 export const LIGHT_THEME: TelegramThemeParams = {
-  bg_color: '#eff1f5',
-  text_color: '#4c4f69',
-  hint_color: '#8c8fa1',
-  link_color: '#04a5e5',
-  button_color: '#04a5e5',
-  button_text_color: '#ffffff',
-  secondary_bg_color: '#e6e9ef',
-  section_bg_color: '#dce0e8',
-  subtitle_text_color: '#5c5f77',
-  destructive_text_color: '#d20f39',
+  bg_color: '#f2f3f0',
+  text_color: '#14161a',
+  hint_color: '#6b7079',
+  link_color: '#14161a',
+  button_color: '#14161a',
+  button_text_color: '#ffc72c',
+  secondary_bg_color: '#ffffff',
+  section_bg_color: '#e6e8e2',
+  subtitle_text_color: '#555a64',
+  destructive_text_color: '#c8102e',
 };
 
 export const LIGHT_TYPOGRAPHY: TypographyTokens = {
-  secondary: '#5c5f77',
-  helper: '#6c6f85',
-  disabled: '#8c8fa1',
+  secondary: '#555a64',
+  helper: '#5f646d',
+  disabled: '#6b7079',
 };
 
 export const LIGHT_SEMANTIC: SemanticColors = {
-  accent: '#04a5e5',
-  median: '#8839ef',
-  positive: '#5a8f5c',
-  reliability: '#df8e1d',
+  accent: '#ffc72c',
+  accentInk: '#14161a',
+  median: '#14161a',
+  positive: '#1e7a3c',
+  reliability: '#8a5a00',
 };
 
-/** Catppuccin Mocha — dark purple base with atmospheric washes. */
+/** Ruler palette (dark): graphite ground, paper text, tape-yellow accent. */
 export const DARK_THEME: TelegramThemeParams = {
-  bg_color: '#1e1e2e',
-  text_color: '#cdd6f4',
-  hint_color: '#7f849c',
-  link_color: '#89dceb',
-  button_color: '#89dceb',
-  button_text_color: '#11111b',
-  secondary_bg_color: '#313244',
-  section_bg_color: '#313244',
-  subtitle_text_color: '#bac2de',
-  header_bg_color: '#181825',
-  destructive_text_color: '#f38ba8',
+  bg_color: '#121316',
+  text_color: '#f2f3f0',
+  hint_color: '#8a9099',
+  link_color: '#ffc72c',
+  button_color: '#ffc72c',
+  button_text_color: '#14161a',
+  secondary_bg_color: '#1d1f24',
+  section_bg_color: '#272a30',
+  subtitle_text_color: '#b4b9c2',
+  header_bg_color: '#0c0d0f',
+  destructive_text_color: '#ff6b7f',
 };
 
 export const DARK_TYPOGRAPHY: TypographyTokens = {
-  secondary: '#bac2de',
-  helper: '#a6adc8',
-  disabled: '#7f849c',
+  secondary: '#b4b9c2',
+  helper: '#a0a6af',
+  disabled: '#8a9099',
 };
 
 export const DARK_SEMANTIC: SemanticColors = {
-  accent: '#89dceb',
-  median: '#cba6f7',
-  positive: '#94b894',
-  reliability: '#f9e2af',
+  accent: '#ffc72c',
+  accentInk: '#ffc72c',
+  median: '#f2f3f0',
+  positive: '#7ed957',
+  reliability: '#ffc72c',
 };
-
-export const THEME_PALETTES = {
-  light: { theme: LIGHT_THEME, typography: LIGHT_TYPOGRAPHY, semantic: LIGHT_SEMANTIC },
-  dark: { theme: DARK_THEME, typography: DARK_TYPOGRAPHY, semantic: DARK_SEMANTIC },
-} as const;
 
 function setCssVar(name: string, value: string | undefined) {
   if (!value) return;
@@ -133,6 +133,7 @@ function withReadableTextColors(theme: TelegramThemeParams, typography: Typograp
 
 function applySemanticColors(semantic: SemanticColors): void {
   setCssVar('--color-accent', semantic.accent);
+  setCssVar('--color-accent-ink', semantic.accentInk);
   setCssVar('--color-median', semantic.median);
   setCssVar('--color-positive', semantic.positive);
   setCssVar('--color-reliability', semantic.reliability);
@@ -142,7 +143,15 @@ function applySemanticColors(semantic: SemanticColors): void {
 export function applyTelegramTheme(params: TelegramThemeParams = {}): void {
   const preference = getStoredThemePreference();
   const base = resolveBaseTheme(preference, params);
-  const merged = preference ? { ...base } : { ...base, ...params };
+  // The brand palette stays constant; Telegram only supplies the page background and text colours.
+  const merged: TelegramThemeParams = preference
+    ? { ...base }
+    : {
+        ...base,
+        bg_color: params.bg_color ?? base.bg_color,
+        text_color: params.text_color ?? base.text_color,
+        header_bg_color: params.header_bg_color ?? base.header_bg_color,
+      };
   const typography = typographyForTheme(merged);
   const semantic = semanticForTheme(merged);
   const theme = withReadableTextColors(merged, typography);
@@ -158,16 +167,25 @@ export function applyTelegramTheme(params: TelegramThemeParams = {}): void {
   setCssVar('--tg-theme-section-bg-color', theme.section_bg_color);
   setCssVar('--tg-theme-subtitle-text-color', theme.subtitle_text_color);
   setCssVar('--tg-theme-header-bg-color', theme.header_bg_color ?? theme.bg_color);
-  setCssVar('--tg-theme-accent-text-color', theme.accent_text_color ?? semantic.accent);
+  setCssVar('--tg-theme-accent-text-color', theme.accent_text_color ?? semantic.accentInk);
   setCssVar('--tg-theme-destructive-text-color', theme.destructive_text_color ?? '#e53935');
   setCssVar('--text-primary', theme.text_color);
   setCssVar('--text-secondary', typography.secondary);
   setCssVar('--text-helper', typography.helper);
   setCssVar('--text-disabled', typography.disabled);
-  setCssVar('--section-divider-color', dark ? 'rgba(205, 214, 244, 0.12)' : 'rgba(76, 79, 105, 0.14)');
+  setCssVar('--section-divider-color', dark ? 'rgba(242, 243, 240, 0.14)' : 'rgba(20, 22, 26, 0.14)');
   applySemanticColors(semantic);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+
+  // The native main button is always the tape-yellow fill with ink text, on both themes.
+  getTelegramWebApp()?.applyChromeColors({
+    background: theme.bg_color ?? LIGHT_THEME.bg_color!,
+    header: theme.header_bg_color ?? theme.bg_color ?? LIGHT_THEME.bg_color!,
+    bottomBar: theme.bg_color ?? LIGHT_THEME.bg_color!,
+    mainButton: DARK_THEME.button_color!,
+    mainButtonText: DARK_THEME.button_text_color!,
+  });
 }
 
 export function getStoredThemePreference(): ThemePreference | null {
@@ -198,7 +216,6 @@ export function initializeTheme(): void {
   const onThemeChanged = () => {
     if (getStoredThemePreference()) return;
     applyTelegramTheme(app.themeParams);
-    app.applyChromeColors();
   };
 
   app.onThemeChanged(onThemeChanged);

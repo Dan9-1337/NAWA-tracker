@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   getUniversityById,
   isUniversityAllowedForTrack,
-  isUniversityId,
   universities,
   universitiesForScholarshipTrack,
 } from './universities';
@@ -23,7 +22,7 @@ describe('universities catalog', () => {
   });
 
   it('looks up universities and validates track membership', () => {
-    expect(isUniversityId('science-096')).toBe(true);
+    expect(getUniversityById('science-096')).toBeDefined();
     expect(getUniversityById('science-096')?.name).toBe('Uniwersytet Warszawski');
     expect(isUniversityAllowedForTrack('science-096', 'nawa_director')).toBe(true);
     expect(isUniversityAllowedForTrack('science-096', 'culture_minister')).toBe(false);

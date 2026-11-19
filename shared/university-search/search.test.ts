@@ -102,12 +102,17 @@ describe('university search', () => {
 
   it('submits stable university ID through wizard mapping', () => {
     const draft = {
+      intakeYear: 2026,
       hasPolishCitizenship: false,
       rankingCountry: 'PL',
       schoolCountry: 'PL',
       scholarshipTrack: 'nawa_director' as const,
       studyRoute: 'direct_studies' as const,
       targetUniversity: 'science-049',
+      studyField: '0613',
+      prepCourseCity: '',
+      gradeBasis: 'final_certificate' as const,
+      applicantKind: 'school_leaver' as const,
       averageGrade: 4,
       maximumGrade: 5,
       polishSchoolLevel: 'secondary' as const,

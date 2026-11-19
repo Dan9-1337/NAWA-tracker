@@ -4,10 +4,6 @@ import { createKeepAliveHandler } from './keep-alive.js';
 
 const CRON_SECRET = 'cron-secret-that-is-at-least-32-characters';
 
-type Request = {
-  method?: string;
-  headers: Record<string, string | string[] | undefined>;
-};
 
 function createResponse() {
   const json = vi.fn();

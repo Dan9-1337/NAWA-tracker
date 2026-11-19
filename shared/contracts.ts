@@ -13,10 +13,23 @@ export const applicationStatuses = [
   'merit_review_positive',
   'merit_review_negative',
   'scholarship_awarded',
+  'scholarship_not_awarded',
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
-export const terminalApplicationStatuses = ['merit_review_negative', 'scholarship_awarded'] as const;
+export const terminalApplicationStatuses = [
+  'merit_review_negative',
+  'scholarship_awarded',
+  'scholarship_not_awarded',
+] as const;
+
+/** Which document the declared average comes from (Ogłoszenie 13/2026, pkt 2.6). */
+export const gradeBases = ['final_certificate', 'half_year'] as const;
+export type GradeBasis = (typeof gradeBases)[number];
+
+/** Students in Poland with an average >= 4.75 (scale 2-5) are assigned 100 points. */
+export const applicantKinds = ['school_leaver', 'student_in_poland'] as const;
+export type ApplicantKind = (typeof applicantKinds)[number];
 
 export type ScoreBreakdown = {
   gradesScore: number;
@@ -25,13 +38,24 @@ export type ScoreBreakdown = {
 };
 
 export type ResponseFormInput = {
+  /** The intake (nabór) this record belongs to, e.g. 2026 for Ogłoszenie 13/2026. */
+  intakeYear: number;
   hasPolishCitizenship: boolean;
   rankingCountry: string;
   schoolCountry: string;
   scholarshipTrack: ScholarshipTrack;
   studyRoute: StudyRoute;
-  /** Required for direct_studies; partner university with a NAWA framework agreement. */
+  /** Partner university with a NAWA framework agreement; required on both study routes. */
   targetUniversity?: string;
+  /** ISCED-F detailed field code (see shared/study-fields.ts) or "other". */
+  studyField: string;
+  /**
+   * City the preparatory course was assigned to (shared/prep-course-cities.ts) or "other". Only for
+   * `preparatory_course` applicants whose outcome is `scholarship_awarded`.
+   */
+  prepCourseCity?: string;
+  gradeBasis: GradeBasis;
+  applicantKind: ApplicantKind;
   averageGrade: number;
   maximumGrade: number;
   polishSchoolLevel?: PolishSchoolLevel;
@@ -39,59 +63,8 @@ export type ResponseFormInput = {
   statusChangedAt: string;
 };
 
-export type StatisticsGrowth7d = {
-  newResponsesTotal: number;
-  newResponsesInGroup: number;
-  medianThen: number | null;
-  medianNow: number | null;
-  percentileThen: number | null;
-  percentileNow: number | null;
-  trackNewResponses: number;
-  trackMedianThen: number | null;
-  trackMedianNow: number | null;
-  statusUpdatesInGroup: number;
-};
-
-export type GlobalBenchmark = {
-  sampleSize: number | null;
-  representedCountryCount: number | null;
-  median: number | null;
-  scoreDelta: number | null;
-  lowerScorePercentage: number | null;
-  scoreBuckets: number[] | null;
-  detailedCountriesCount: number | null;
-};
-
-export type CountryContextStats = {
-  countryMedian: number | null;
-  countrySampleSize: number;
-  countryShareOfTrack: number | null;
-  medianDeltaVsGlobal: number | null;
-  distributionStable: boolean | null;
-  nearbyScoreCount: number | null;
-};
-
-export type StatisticsHistoryPoint = {
-  recordedAt: string;
-  lowerScorePercentage: number | null;
-  groupResponseCount: number;
-  rankPosition: number | null;
-};
-
-export type GroupProgress = {
-  submitted: number;
-  formalPositive: number;
-  meritPositive: number;
-  scholarshipAwarded: number;
-};
-
-export type ReportedMeritOutcomeStats = {
-  positiveCount: number;
-  negativeCount: number;
-  lowestReportedPositiveScore: number | null;
-  highestReportedNegativeScore: number | null;
-  boundaryState: 'insufficient_data' | 'positive_only' | 'interval' | 'overlapping_results';
-};
+export const cohortScopes = ['country', 'group', 'track'] as const;
+export type CohortScope = (typeof cohortScopes)[number];
 
 export type StatisticsResult = {
   detailsAvailable: boolean;
@@ -103,29 +76,51 @@ export type StatisticsResult = {
   lowerScorePercentage: number | null;
   rankPosition: number | null;
   rankTotal: number | null;
-  gradesScore: number | null;
-  polishSchoolBonus: number | null;
   trackWideMedian: number | null;
   /** Sixteen fine bucket counts for the cohort score distribution (low → high). */
   scoreBuckets: number[] | null;
-  cohortScores: number[] | null;
-  growth7d: StatisticsGrowth7d | null;
-  history: StatisticsHistoryPoint[];
-  groupProgress: GroupProgress | null;
-  reportedMeritOutcomes: ReportedMeritOutcomeStats | null;
-  globalBenchmark: GlobalBenchmark;
-  countryContext: CountryContextStats;
+  /** Which tier of country -> country group -> track the comparison cohort resolved to. */
+  cohortScope: CohortScope | null;
+  /** Id of the pooled country group when `cohortScope` is 'group'. */
+  cohortGroupId: string | null;
 };
 
-export type PublicStatisticsRequest = {
-  scholarshipTrack: ScholarshipTrack;
-  rankingCountry: string;
-  averageGrade: number;
-  maximumGrade: number;
-  polishSchoolLevel?: PolishSchoolLevel;
+/**
+ * Outcomes reported by people in the caller's cohort. Disclosed from three awarded responses;
+ * scores are rounded outward to 5-point bands so no applicant's own score is exposed.
+ */
+export type CohortOutcomesResult = {
+  ownCountry: string;
+  /** Null until some tier of the ladder has enough awarded responses to disclose. */
+  scope: CohortScope | null;
+  groupId: string | null;
+  awardedCount: number;
+  notAwardedCount: number;
+  /** Awarded / (awarded + not awarded) among merit-positive responses. */
+  awardedRate: number | null;
+  awardedBandLow: number | null;
+  awardedBandHigh: number | null;
+  /** Upper band of scores that passed merit but got no seat; needs three such reports. */
+  notAwardedBandHigh: number | null;
 };
 
-export type PublicStatisticsResult = StatisticsResult;
+export const fieldLevels = ['detailed', 'narrow', 'broad', 'all'] as const;
+export type FieldLevel = (typeof fieldLevels)[number];
+
+/**
+ * Where reporters in the caller's study field were sent for the preparatory course. `level` is how far the field
+ * had to be widened to reach the disclosure floor (null: nothing can be shown yet). Cities below the floor are
+ * merged into `otherCount`.
+ */
+export type PrepCityDistribution = {
+  studyField: string;
+  level: FieldLevel | null;
+  /** ISCED-F code of the group at `level`: 4, 3 or 2 digits, null for "all". */
+  groupCode: string | null;
+  total: number;
+  cities: Array<{ city: string; count: number }>;
+  otherCount: number;
+};
 
 export type CreateResponseRequest = {
   response: ResponseFormInput;

@@ -23,6 +23,10 @@ export function profileExists(): HttpError {
   return new HttpError(409, 'PROFILE_EXISTS', 'Ten profil Telegram ma już ankietę.');
 }
 
+export function invalidIntakeYear(): HttpError {
+  return new HttpError(400, 'INVALID_INTAKE_YEAR', 'Nieprawidłowy rocznik naboru.');
+}
+
 export function profileNotFound(): HttpError {
   return new HttpError(404, 'PROFILE_NOT_FOUND', 'Nie znaleziono ankiety dla tego konta Telegram.');
 }

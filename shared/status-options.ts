@@ -1,11 +1,27 @@
 import type { ApplicationStatus } from './contracts';
 
+/**
+ * Forward moves only: anyone may jump straight to a later stage (people join after the results are out).
+ * A negative merit review ends the ladder; the two seat decisions can be corrected into each other.
+ */
 const nextStatusesByCurrent: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
-  submitted: ['formal_review_positive'],
-  formal_review_positive: ['merit_review_positive', 'merit_review_negative'],
-  merit_review_positive: ['scholarship_awarded'],
+  submitted: [
+    'formal_review_positive',
+    'merit_review_positive',
+    'merit_review_negative',
+    'scholarship_awarded',
+    'scholarship_not_awarded',
+  ],
+  formal_review_positive: [
+    'merit_review_positive',
+    'merit_review_negative',
+    'scholarship_awarded',
+    'scholarship_not_awarded',
+  ],
+  merit_review_positive: ['scholarship_awarded', 'scholarship_not_awarded'],
   merit_review_negative: [],
-  scholarship_awarded: [],
+  scholarship_awarded: ['scholarship_not_awarded'],
+  scholarship_not_awarded: ['scholarship_awarded'],
 };
 
 export function getAllowedNextStatuses(current: ApplicationStatus): readonly ApplicationStatus[] {
@@ -14,9 +30,9 @@ export function getAllowedNextStatuses(current: ApplicationStatus): readonly App
 
 /**
  * Statuses selectable when updating from `current`:
- * always includes `current`, plus the next allowed steps.
+ * always includes `current`, plus every allowed later stage.
  */
-export function getSequentialStatusOptions(current: ApplicationStatus): ApplicationStatus[] {
+export function getStatusOptions(current: ApplicationStatus): ApplicationStatus[] {
   const next = nextStatusesByCurrent[current] ?? [];
   const seen = new Set<ApplicationStatus>();
   const options: ApplicationStatus[] = [];

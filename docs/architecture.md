@@ -13,9 +13,13 @@ NAWA Tracker is a **Telegram Mini App only** scholarship questionnaire with priv
 | Database | Supabase PostgreSQL | `responses` rows, aggregate statistics RPCs |
 | Bot | Telegram Bot (BotFather) | Menu button / direct link into the Mini App |
 
-Identity is **not anonymous**: each `responses` row stores `telegram_user_id` (unique). Optional `telegram_username` is stored for support only.
+Identity is **pseudonymous, not anonymous**: each `responses` row is keyed by `identity_hash = HMAC-SHA256(IDENTITY_PEPPER, telegram id)`, computed by the API (`api/_lib/identity.ts`). The database never stores the Telegram id or username, so a database export alone cannot be resolved to Telegram accounts. Whoever holds the pepper can still recompute hashes, so the product promises pseudonymity, never anonymity.
 
 Authentication is **native Mini App**: every protected API call carries Telegram `initData`. The server verifies the HMAC using `TELEGRAM_BOT_TOKEN` and rejects expired payloads. There are no HttpOnly session cookies, recovery codes, or Cloudflare Turnstile challenges.
+
+## Decisions
+
+The reasoning behind the big choices (Mini App only, pseudonymous identity, the cohort ladder, banded outcomes, one live track, opt-in bot) is recorded in [`docs/adr/`](adr/README.md).
 
 ## System boundaries
 
@@ -39,7 +43,10 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses` | PUT | initData + Origin | Update owned profile |
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
-| `/api/statistics/public` | POST | initData + Origin | Cohort preview from draft questionnaire values |
+| `/api/outcomes` | POST | initData + Origin | Award score band of the caller's cohort (≥ 3 awarded, 5-point bands) |
+| `/api/prep-cities` | POST | initData + Origin | Preparatory-course cities reported in the caller's study field (≥ 3 per city, widening field → group → area → all) |
+| `/api/bot` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook: `/start` (with `c_<ISO>` or `subscribe` payload), `/subscribe`, `/stop`, `/help`, and `my_chat_member` (blocked bot) |
+| `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`results_soon`, `results_out`, `intake_open`) |
 | `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
 
 Removed from the anonymous POC: `/api/session/restore`, `/api/session/logout`, `/api/recovery/rotate`.
@@ -50,27 +57,37 @@ Removed from the anonymous POC: `/api/session/restore`, `/api/session/logout`, `
 
 Questionnaire fields plus:
 
-- `telegram_user_id bigint not null unique` — primary identity
-- `telegram_username text` — optional, non-unique
+- `identity_hash text not null` — 64 hex characters (check constraint rejects raw ids); unique together with `intake_year`
+- `intake_year`, `grade_basis` (`final_certificate` | `half_year`), `applicant_kind` (`school_leaver` | `student_in_poland`, the latter scored 100)
 - `is_suspicious boolean` — sticky flag from implausible status transitions
+- `study_field text not null default 'other'` — ISCED-F detailed code (`^[0-9]{4}$`) or `other`; the default only covers rows created before the field existed (`shared/study-fields.ts`)
+- `prep_course_city text` — optional; only allowed on the preparatory route with outcome `scholarship_awarded`; values from `shared/prep-course-cities.ts` or `other`
 
 ### Statistics
 
-`compute_country_statistics` compares declared grades (or NAWA orientation score for `nawa_director`) within scholarship track and ranking citizenship country. Detailed aggregates require k-anonymity: cohort size ≥ 10 non-suspicious responses; otherwise `detailsAvailable: false`.
+`compute_country_statistics` compares the NAWA orientation score within the active intake year (`season_config`) through the cohort ladder: country (≥ 10 non-suspicious responses) → country group (`country_groups`, unlisted countries fall into `world-other`) → whole track. The result names the tier (`cohortScope`, `cohortGroupId`); with fewer than 10 responses on every tier `detailsAvailable` is `false`.
 
 ### RPCs (service_role)
 
-- `create_response_for_telegram_user` — insert once; existing profile or unique violation → `profile_exists`
-- `get_current_response(telegram_user_id)`
-- `update_current_response(telegram_user_id, …)`
-- `get_current_statistics(telegram_user_id)`
-- `get_public_statistics` — session-free cohort preview (rate-limited per IP hash)
+- `create_response_for_identity` — insert once per `(identity_hash, intake_year)`; existing profile or unique violation → `profile_exists`
+- `get_current_response(identity_hash, intake_year)`
+- `update_current_response(identity_hash, intake_year, …)` — allows correcting one final outcome to another
+- `get_current_statistics(identity_hash, intake_year)`
+- `get_prep_city_distribution(identity_hash, intake_year)` — cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
+- `get_cohort_outcomes(identity_hash, intake_year)` — walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
+- `compute_orientation_score` — the single SQL implementation of the published formula (mirrors `shared/nawa-score.ts`; parity is tested)
+
+### `bot_subscriptions`
+
+`telegram_user_id`, `chat_id`, `locale`, `last_reminder`. The only table with a real Telegram id; opt-in, no answers, service-role only. Removed on `/stop`, when Telegram reports the bot blocked, when a send fails with 403 or "chat not found", and by `DELETE /api/responses`.
 
 ## Security and privacy
 
-**Stored:** questionnaire answers, `telegram_user_id`, optional `telegram_username`, suspicious flag, timestamps.
+**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name plus, for status updates only, the two status values; never free text, enforced by the API schema and a payload size check).
 
-**Not stored:** recovery tokens, session tokens, raw IP addresses (IP hashes used transiently for public-stats rate limits).
+**Not stored:** Telegram id, Telegram username, name, email, phone, search queries, recovery or session tokens, raw IP addresses (IP hashes used transiently for public-stats rate limits).
+
+**Deleting** a profile in Settings removes every intake year of that account.
 
 **Client requirements:** Mini App must be opened inside Telegram so `initData` is present. Opening the hosted URL in a normal browser shows a gate screen, not the full product.
 
@@ -78,13 +95,81 @@ Questionnaire fields plus:
 
 ## Questionnaire scope
 
-Three tracks: `nawa_director`, `health_minister`, `culture_minister`. Two study routes: `preparatory_course`, `direct_studies`. Ten application statuses from `submitted` through terminal award outcomes. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
+Only `nawa_director` is writable (the API rejects other tracks); `health_minister` and `culture_minister` stay in the enums for later. Two study routes: `preparatory_course`, `direct_studies`. Six application statuses: `submitted` → `formal_review_positive` → `merit_review_positive` → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
+
+## Season rollover
+
+Records are keyed by `(identity_hash, intake_year)` and every statistic is scoped to `season_config.active_intake_year`. When
+NAWA publishes a new call:
+
+1. Add its dates to `seasons` in `shared/season.ts` (the reminder cron derives `intake_open`, `results_soon` and
+   `results_out` from them) and add its copy where the Season tab mentions dates.
+2. Change `currentIntakeYear` in `shared/season.ts` **and** `update public.season_config set active_intake_year = <year>` in
+   the same release; the API rejects any other year (`INVALID_INTAKE_YEAR`).
+3. Past years stay in the database as an archive and drop out of live cohorts automatically. People who applied before simply
+   create a new record for the new year.
 
 ## Scheduled jobs
 
 Supabase free-tier projects pause after roughly seven days without database activity. A Vercel Cron job calls `GET /api/cron/keep-alive` once per day (`0 12 * * *` UTC). The handler verifies `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in Vercel; the platform attaches it automatically) and runs a lightweight `responses` read via the existing service-role client.
 
 ## Architecture changelog
+
+### 2026-11-26 — Study field and preparatory-course city
+
+- Migration `202611260001`: `responses.study_field` and `prep_course_city` with check constraints; `create_response_for_identity`, `update_current_response` and `get_current_response` take and return the two new values (17-argument signature); new `get_prep_city_distribution` RPC and `POST /api/prep-cities`.
+- The wizard asks for the field (ISCED-F detailed list with search, about 60 entries, 5 languages) in the application step; the status reporter asks for the city when an award is reported on the preparatory route; the Outcomes tab shows the field-by-city card to preparatory-route applicants.
+- Decision record: [ADR 0007](adr/0007-study-field-and-prep-course-city.md).
+
+### 2026-11-26 — Dead-code cleanup and single-source thresholds
+
+- Migration `202611250001`: dropped the never-called public what-if statistics (`get_public_statistics`, `submission_limits`, `POST /api/statistics/public`, `IP_HASH_SALT`, the concurrency test); removed the always-null `gradesScore` and `polishSchoolBonus` from the statistics payload (now 14 keys).
+- The privacy thresholds (cohort of 10, 3 awarded, 5-point bands) have one definition per side: `public.min_cohort_size()`, `outcome_min_awarded()`, `outcome_band_width()` in SQL and `shared/product-rules.ts` in TypeScript; `migration-contracts.test.ts` fails if they drift apart.
+- Spaghetti refactors (behaviour unchanged, covered by tests): `ProfileDashboard` lost its status editor (`StatusReporter`), the Telegram bottom-button rules (`dashboard-chrome.ts`, pure and tested) and the duplicated save guard (`useGuardedSubmit`); `SettingsSheet` is now a shell around `components/settings/*` views; `ResultHeroCard` is a frame with `DetailedPosition` / `SmallCohortNotice` bodies instead of a `variant` flag; the wizard's consistency rules live in `lib/draft-rules.ts` and each step is its own component under `features/wizard/`; `HomePage` uses `useRequestGuard` and `useOnlineStatus`; `CreateProfileFlow` renders `StartScreen`. `tsconfig.json` now enforces `noUnusedLocals` and `noUnusedParameters`.
+- A latent bug fixed on the way: the "calculation error" support report ignored `applicantKind`, so a student in Poland would have been reported with the wrong score.
+- The Vercel CLI is no longer a dev dependency (about 135 MB of `node_modules` and 100 KB of lockfile); use `npx vercel@45`.
+
+### 2026-11-25 — Forward status jumps, PGlite tests, season helpers
+
+- Migration `202611240001`: `status_rank` and a looser `is_allowed_status_transition`: any later stage is allowed, going back is not (people joining after the results can report the outcome in one step). The UI offers exactly those options (`shared/status-options.ts`, `getStatusOptions`).
+- `npm run test:db:pglite` runs migrations, the SQL tests and the seed on PGlite without Docker; CI runs it next to the unit tests and still runs real pgTAP on PostgreSQL.
+- `isIntakeOpen` and `calendarPhase` accept a season; a season with unannounced dates is never open (`shared/season.ts`).
+- The test setup no longer needs `NODE_OPTIONS=--no-experimental-webstorage` on Node 25+.
+
+### 2026-11-24 — Bot webhook, reminders and country links
+
+- Migration `202611230001`: `bot_subscriptions`.
+- `POST /api/bot` verifies the webhook secret in constant time, ignores everything except private-chat commands and `my_chat_member`, and never echoes user input (country payloads are validated against the country list).
+- `GET /api/cron/reminders` plans reminders from `shared/season.ts` (`shared/reminders.ts`): one reminder per subscriber at a time, never a backlog, expiring after a window; capped at 200 sends per run.
+- The Mini App reads `start_param` (`c_UA`) or `?c=UA` and preselects the country of citizenship; Settings gained "Reminders in the bot" and "Invite people from my country".
+- Bot texts live in `shared/bot-messages.ts` (pl, en, ru, uk, be).
+
+### 2026-11-23 — Ukrainian and Belarusian
+
+- Locales: `pl`, `en`, `ru`, `uk`, `be` (`src/i18n/*.ts`; the `Messages` type is derived from `pl`, and `src/i18n/locales.test.ts` checks key parity, function arity, and that Ukrainian/Belarusian carry no Russian-only spellings).
+- The initial locale is the stored choice, then the Telegram user's `language_code`, then the browser language, then Polish.
+- Belarusian uses the official orthography (narkamaŭka, Cyrillic). Both new translations were machine-drafted and need a native-speaker review before release.
+- About 1,100 lines of unused UI copy were removed from every locale before translating.
+
+### 2026-11-22 — Pseudonymous identity
+
+- Migration `202611220001`: `identity_hash` replaces `telegram_user_id` and `telegram_username` in `responses` and `product_events`; RPCs take `p_identity_hash`; `create_response_for_telegram_user` became `create_response_for_identity`.
+- New server secret `IDENTITY_PEPPER` (the local-dev value is rejected in production). Changing it orphans stored profiles.
+- Product events carry no free text; university search queries are no longer logged.
+
+### 2026-11-20 — Season model, cohort ladder, slim statistics
+
+- Migration `202611200001`: records per `(account, intake year)`, `grade_basis`, `applicant_kind`, `scholarship_not_awarded`, terminal corrections, dropped unused review/audit/snapshot tables.
+- Migration `202611210001`: `season_config`, `country_groups`, the cohort ladder, `get_cohort_outcomes` (replaces `get_country_outcomes`), and a 16-key statistics payload (growth, history, benchmark, country context, group progress and reported-merit blocks were removed with their functions).
+- Removed passport, badges, milestones, radar, allocation estimates, the university alias pipeline and search-query logging.
+- Official Anders totals live in `shared/anders-history.ts` (2021, 2023, 2024; NAWA publishes no per-country limits or cut-offs).
+
+### 2026-11-19 — Ruler redesign and country outcomes
+
+- Dashboard split into Score / Outcomes / Season tabs (`src/features/{score,outcomes,season}`).
+- New `get_country_outcomes` RPC (migration `202611190001`) and `POST /api/outcomes`; the API re-validates the k ≥ 10 floor and strips unknown fields.
+- CI now applies every file in `supabase/migrations/` in order.
+- Fonts (Oswald, Golos Text) are self-hosted through `@fontsource/*` because the CSP only allows `'self'`.
 
 ### 2026-08-09 — Supabase keep-alive cron
 

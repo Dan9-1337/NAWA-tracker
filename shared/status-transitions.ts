@@ -17,6 +17,11 @@ export function isSuspiciousStatusTransition(
 ): boolean {
   if (previousStatus === nextStatus) return false;
 
+  // Correcting one final outcome to another (a mis-tap) is allowed server-side.
+  if (isTerminalApplicationStatus(previousStatus) && isTerminalApplicationStatus(nextStatus)) {
+    return false;
+  }
+
   if (isTerminalApplicationStatus(previousStatus) && !isTerminalApplicationStatus(nextStatus)) {
     return true;
   }
@@ -28,6 +33,3 @@ export function isSuspiciousStatusTransition(
   return false;
 }
 
-export function isBackdatedStatusChange(previousStatusChangedAt: string, nextStatusChangedAt: string): boolean {
-  return nextStatusChangedAt < previousStatusChangedAt;
-}

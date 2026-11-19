@@ -1,5 +1,6 @@
 import type { ScholarshipTrack } from '../../shared/contracts';
 import { useI18n } from '../i18n/context';
+import { formatScore } from '../lib/format';
 import {
   bucketFillOpacity,
   displayBinCount,
@@ -83,8 +84,34 @@ function DensityStripChart({
   );
 }
 
+/** Score numbers under the strip, every 10 points inside the shown range, so a bar can be read as a score range. */
+function DensityStripAxis({ from, to }: { from: number; to: number }) {
+  const ticks: number[] = [];
+  for (let tick = Math.ceil(from / 10) * 10; tick <= to; tick += 10) ticks.push(tick);
+
+  return (
+    <div
+      className="relative mt-1 h-4 text-[0.6875rem] tabular-nums text-[var(--text-helper)]"
+      aria-hidden="true"
+    >
+      {ticks.map((tick) => {
+        const percent = scoreToAxisPercent(tick, from, to);
+        return (
+          <span
+            key={tick}
+            className={`absolute ${percent >= 100 ? '-translate-x-full' : percent <= 0 ? '' : '-translate-x-1/2'}`}
+            style={{ left: `${percent}%` }}
+          >
+            {tick}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DensityStrip({ variant, ...props }: DensityStripProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const layout = getDensityStripLayout(props);
 
   if (variant === 'mini') {
@@ -92,6 +119,7 @@ export function DensityStrip({ variant, ...props }: DensityStripProps) {
       <div aria-hidden="true">
         <p className="mb-1.5 text-[0.6875rem] text-[var(--text-helper)]">{t.dashboard.hero.densityHint}</p>
         <DensityStripChart {...layout} youLabel={t.stats.chartYouLabel} />
+        <DensityStripAxis from={layout.merged.from} to={layout.merged.to} />
 
         <div className="mt-2 flex items-center justify-between gap-3 text-[0.6875rem] text-[var(--text-helper)]">
           <span className="inline-flex items-center gap-1.5">
@@ -107,17 +135,11 @@ export function DensityStrip({ variant, ...props }: DensityStripProps) {
     );
   }
 
-  const binLabels = [
-    t.stats.densityBinLow,
-    t.stats.densityBinBelowAvg,
-    t.stats.densityBinAboveAvg,
-    t.stats.densityBinHigh,
-  ];
   const ariaLabel = [
     t.stats.densityTitle,
     t.stats.densityCaption,
-    props.medianScore != null ? t.stats.chartMedian(props.medianScore.toFixed(1)) : null,
-    t.stats.chartYou(props.userScore.toFixed(1)),
+    props.medianScore != null ? t.stats.chartMedian(formatScore(props.medianScore, locale)) : null,
+    t.stats.chartYou(formatScore(props.userScore, locale)),
   ]
     .filter(Boolean)
     .join('. ');
@@ -140,13 +162,7 @@ export function DensityStrip({ variant, ...props }: DensityStripProps) {
         <DensityStripChart {...layout} youLabel={t.stats.chartYouLabel} />
       </div>
 
-      <div className="density-strip__labels" aria-hidden="true">
-        {binLabels.map((label) => (
-          <span key={label} className="density-strip__label">
-            {label}
-          </span>
-        ))}
-      </div>
+      <DensityStripAxis from={layout.merged.from} to={layout.merged.to} />
     </div>
   );
 }

@@ -1,34 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
-import { getSequentialStatusOptions } from '../../shared/status-options';
-import { isSuspiciousStatusTransition, isTerminalApplicationStatus } from '../../shared/status-transitions';
-import { StatusDateInput } from '../components/StatusDateInput';
-import { ChevronIcon } from '../components/icons';
-import { StatusProgressStepper } from '../components/StatusProgressStepper';
-import { StatusTimeline } from '../components/StatusTimeline';
+import { nawaSystemUrl, season2026 } from '../../shared/season';
+import { getStatusOptions } from '../../shared/status-options';
+import { DashboardTabs, type DashboardTab } from '../components/DashboardTabs';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
-import { formatDate } from '../lib/format';
 import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
-import {
-  loadStatsSnapshot,
-  saveStatsSnapshot,
-  snapshotFromStatistics,
-  type StatsSnapshot,
-} from '../lib/stats-snapshot';
-import { touchUserEngagement } from '../lib/user-engagement';
 import { trackProductEvent } from '../lib/product-events';
 import { getTelegramWebApp } from '../lib/telegram';
-import { useMiniAppChrome } from '../lib/useMiniAppChrome';
+import { useGuardedSubmit } from '../lib/useGuardedSubmit';
+import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
+import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
 import { ConfirmSummary } from './ConfirmSummary';
+import { buildDashboardChrome } from './dashboard-chrome';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
   toResponseInput,
   type WizardStep,
 } from './ResponseWizardSteps';
+import { OutcomesScreen } from './outcomes/OutcomesScreen';
+import { ScoreScreen } from './score/ScoreScreen';
+import { SeasonScreen } from './season/SeasonScreen';
 import { StatisticsPanel, type StatisticsState } from './statistics/StatisticsPanel';
+import { StatusReporter } from './StatusReporter';
 import { useWizardSteps } from './useWizardSteps';
 
 type View = 'dashboard' | 'edit-wizard' | 'edit-confirm';
@@ -54,10 +50,12 @@ export function ProfileDashboard({
   editRequestNonce = 0,
   onStatsUpdatedAt,
 }: ProfileDashboardProps) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const [view, setView] = useState<View>('dashboard');
+  const [tab, setTab] = useState<DashboardTab>('score');
   const [currentStatus, setCurrentStatus] = useState(current.currentStatus);
   const [statusChangedAt, setStatusChangedAt] = useState(current.statusChangedAt);
+  const [prepCourseCity, setPrepCourseCity] = useState(current.prepCourseCity ?? '');
   const [editDraft, setEditDraft] = useState<WizardDraft>(() => responseToDraft(current));
   const {
     stepIndex: editStepIndex,
@@ -67,40 +65,39 @@ export function ProfileDashboard({
     jumpToSection: jumpToEditStep,
     resetToStart: resetEditSteps,
   } = useWizardSteps();
-  const [pending, setPending] = useState(false);
+  const { pending, run: runGuarded } = useGuardedSubmit();
   const [statusConfirmation, setStatusConfirmation] = useState(false);
-  const [recentlyUpdatedStatus, setRecentlyUpdatedStatus] = useState(false);
   const [cohortWarning, setCohortWarning] = useState(false);
   const [statusEditorOpen, setStatusEditorOpen] = useState(false);
-  const [previousSnapshot, setPreviousSnapshot] = useState<StatsSnapshot | null>(() => loadStatsSnapshot());
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
-  const inFlight = useRef(false);
   const lastProcessedStatisticsRef = useRef<unknown>(null);
 
   useEffect(() => {
     setCurrentStatus(current.currentStatus);
     setStatusChangedAt(current.statusChangedAt);
+    setPrepCourseCity(current.prepCourseCity ?? '');
     setEditDraft(responseToDraft(current));
   }, [current]);
 
   useEffect(() => {
     if (statistics.status !== 'success' && statistics.status !== 'suppressed') return;
-    // Guard against reprocessing the same payload (e.g. React StrictMode's double effect
-    // invocation), which would otherwise compare a freshly saved snapshot against itself
-    // and report "no changes" on a user's very first visit.
+    // Guard against stamping the same payload twice (e.g. React StrictMode's double effect invocation).
     if (lastProcessedStatisticsRef.current === statistics.data) return;
     lastProcessedStatisticsRef.current = statistics.data;
-
-    const snapshot = snapshotFromStatistics(statistics.data);
-    const previous = loadStatsSnapshot();
-    setPreviousSnapshot(previous);
-    setStatsUpdatedAt(snapshot.fetchedAt);
-    saveStatsSnapshot(snapshot);
+    setStatsUpdatedAt(new Date().toISOString());
   }, [statistics]);
 
   useEffect(() => {
     onStatsUpdatedAt?.(statsUpdatedAt);
   }, [onStatsUpdatedAt, statsUpdatedAt]);
+
+  // A new view, wizard step or tab starts at its top.
+  useScrollToTopOnChange(view, editStepIndex, tab);
+
+  // The saved-status confirmation sits at the top of the dashboard, so bring it into view.
+  useEffect(() => {
+    if (statusConfirmation) scrollAppToTop();
+  }, [statusConfirmation]);
 
   useEffect(() => {
     if (!statusConfirmation) return undefined;
@@ -108,10 +105,13 @@ export function ProfileDashboard({
     return () => window.clearTimeout(id);
   }, [statusConfirmation]);
 
-  const statusOptions = useMemo(() => getSequentialStatusOptions(current.currentStatus), [current.currentStatus]);
-  const suspicious = isSuspiciousStatusTransition(current.currentStatus, currentStatus);
-  const statusDirty = currentStatus !== current.currentStatus || statusChangedAt !== current.statusChangedAt;
-  const terminalStatus = isTerminalApplicationStatus(current.currentStatus);
+  const statusOptions = useMemo(() => getStatusOptions(current.currentStatus), [current.currentStatus]);
+  const statusDirty =
+    currentStatus !== current.currentStatus ||
+    statusChangedAt !== current.statusChangedAt ||
+    prepCourseCity !== (current.prepCourseCity ?? '');
+  // Final outcomes can still be corrected (awarded <-> not awarded); others have nothing left to report.
+  const canReportStatus = statusOptions.length > 1;
 
   const userOrientationScore = useMemo(() => {
     if (current.scholarshipTrack !== 'nawa_director') return null;
@@ -120,62 +120,42 @@ export function ProfileDashboard({
       current.maximumGrade,
       current.polishSchoolLevel ?? 'none',
       current.rankingCountry,
+      current.applicantKind,
     );
   }, [current]);
 
   const submitStatus = useCallback(async () => {
-    if (disabled || inFlight.current || !statusDirty) return;
-    inFlight.current = true;
-    setPending(true);
-    try {
-      await onSubmit({ ...current, currentStatus, statusChangedAt });
-      void trackProductEvent('status_updated', { from: current.currentStatus, to: currentStatus });
-      touchUserEngagement({
-        countrySampleSize: null,
-        statusUpdated: true,
+    if (disabled || !statusDirty) return;
+    await runGuarded(async () => {
+      const { prepCourseCity: _previous, ...rest } = current;
+      const keepsCity =
+        current.studyRoute === 'preparatory_course' && currentStatus === 'scholarship_awarded' && prepCourseCity !== '';
+      await onSubmit({
+        ...rest,
+        currentStatus,
+        statusChangedAt,
+        ...(keepsCity ? { prepCourseCity } : {}),
       });
+      void trackProductEvent({ name: 'status_updated', from: current.currentStatus, to: currentStatus });
       setStatusConfirmation(true);
-      setRecentlyUpdatedStatus(
-        currentStatus === 'formal_review_positive' || currentStatus === 'merit_review_positive',
-      );
       setStatusEditorOpen(false);
-      getTelegramWebApp()?.haptic.notification('success');
-    } catch {
-      getTelegramWebApp()?.haptic.notification('error');
-    } finally {
-      setPending(false);
-      inFlight.current = false;
-    }
-  }, [current, currentStatus, disabled, onSubmit, statusChangedAt, statusDirty]);
+    });
+  }, [current, currentStatus, disabled, onSubmit, prepCourseCity, runGuarded, statusChangedAt, statusDirty]);
 
   const submitEdit = useCallback(async () => {
-    if (disabled || inFlight.current) return;
+    if (disabled) return;
     const next = toResponseInput(editDraft);
-    const changedCohort = cohortFieldsChanged(current, next);
-    if (changedCohort.length > 0 && !cohortWarning) {
+    if (cohortFieldsChanged(current, next).length > 0 && !cohortWarning) {
       setCohortWarning(true);
       return;
     }
-
-    inFlight.current = true;
-    setPending(true);
-    try {
+    await runGuarded(async () => {
       await onSubmit(next);
-      touchUserEngagement({
-        countrySampleSize: null,
-        profileUpdated: true,
-      });
       setView('dashboard');
       setCohortWarning(false);
       setStatusConfirmation(true);
-      getTelegramWebApp()?.haptic.notification('success');
-    } catch {
-      getTelegramWebApp()?.haptic.notification('error');
-    } finally {
-      setPending(false);
-      inFlight.current = false;
-    }
-  }, [cohortWarning, current, disabled, editDraft, onSubmit]);
+    });
+  }, [cohortWarning, current, disabled, editDraft, onSubmit, runGuarded]);
 
   const jumpToEditSection = useCallback(
     (section: WizardStep) => {
@@ -183,6 +163,16 @@ export function ProfileDashboard({
       jumpToEditStep(section);
     },
     [jumpToEditStep],
+  );
+
+  const openEditAt = useCallback(
+    (section: WizardStep) => {
+      setEditDraft(responseToDraft(current));
+      setCohortWarning(false);
+      setView('edit-wizard');
+      jumpToEditStep(section);
+    },
+    [current, jumpToEditStep],
   );
 
   const startEdit = useCallback(() => {
@@ -200,67 +190,69 @@ export function ProfileDashboard({
     setCohortWarning(false);
   }, []);
 
-  useMiniAppChrome(
-    chromeSuspended
-      ? {}
-      : view === 'dashboard'
-      ? {
-          main: {
-            text: t.form.submitUpdate,
-            visible: statusDirty,
-            enabled: !disabled && statusDirty && !pending,
-            loading: pending,
-            onClick: submitStatus,
-          },
-          closingConfirmation: statusDirty,
-        }
-      : view === 'edit-wizard'
-        ? {
-            main: {
-              text: t.wizard.next,
-              visible: true,
-              enabled: !disabled && canAdvanceWizardStep(editCurrentStep, editDraft),
-              onClick: () => goEditNext(editDraft, () => setView('edit-confirm')),
-            },
-            back: {
-              visible: true,
-              onClick: () => goEditBack(() => setView('dashboard')),
-            },
-            closingConfirmation: true,
-          }
-        : {
-            main: {
-              text: cohortWarning ? t.form.cohortChangeConfirm : t.form.submitUpdate,
-              visible: true,
-              enabled: !disabled && !pending,
-              loading: pending,
-              onClick: submitEdit,
-            },
-            secondary: {
-              text: cohortWarning ? t.form.cohortChangeCancel : t.wizard.editStep,
-              visible: true,
-              enabled: !pending,
-              onClick: () => {
-                if (cohortWarning) {
-                  cancelCohortWarning();
-                  return;
-                }
-                setView('edit-wizard');
-              },
-            },
-            back: {
-              visible: true,
-              onClick: () => {
-                if (cohortWarning) {
-                  cancelCohortWarning();
-                  return;
-                }
-                setView('edit-wizard');
-              },
-            },
-            closingConfirmation: true,
-          },
-  );
+  const leaveConfirmStep = () => {
+    if (cohortWarning) {
+      cancelCohortWarning();
+      return;
+    }
+    setView('edit-wizard');
+  };
+
+  function chromeConfig(): MiniAppChromeConfig {
+    if (chromeSuspended) return {};
+    if (view === 'dashboard') {
+      return buildDashboardChrome({
+        t,
+        tab,
+        disabled,
+        pending,
+        statusDirty,
+        canReportStatus,
+        statusEditorOpen,
+        seasonYear: season2026.year,
+        actions: {
+          submitStatus: () => void submitStatus(),
+          openStatusEditor: () => setStatusEditorOpen(true),
+          showOutcomes: () => setTab('outcomes'),
+          openOfficialSystem: () => getTelegramWebApp()?.openLink(nawaSystemUrl),
+        },
+      });
+    }
+    if (view === 'edit-wizard') {
+      return {
+        main: {
+          text: t.wizard.next,
+          visible: true,
+          enabled: !disabled && canAdvanceWizardStep(editCurrentStep, editDraft),
+          onClick: () => goEditNext(editDraft, () => setView('edit-confirm')),
+        },
+        back: {
+          visible: true,
+          onClick: () => goEditBack(() => setView('dashboard')),
+        },
+        closingConfirmation: true,
+      };
+    }
+    return {
+      main: {
+        text: cohortWarning ? t.form.cohortChangeConfirm : t.form.submitUpdate,
+        visible: true,
+        enabled: !disabled && !pending,
+        loading: pending,
+        onClick: submitEdit,
+      },
+      secondary: {
+        text: cohortWarning ? t.form.cohortChangeCancel : t.wizard.editStep,
+        visible: true,
+        enabled: !pending,
+        onClick: leaveConfirmStep,
+      },
+      back: { visible: true, onClick: leaveConfirmStep },
+      closingConfirmation: true,
+    };
+  }
+
+  useMiniAppChrome(chromeConfig());
 
   useEffect(() => {
     if (view === 'edit-wizard' || view === 'edit-confirm') {
@@ -286,85 +278,66 @@ export function ProfileDashboard({
     );
   }
 
+  const statusReporter = canReportStatus ? (
+    <StatusReporter
+      savedStatus={current.currentStatus}
+      status={currentStatus}
+      statusChangedAt={statusChangedAt}
+      options={statusOptions}
+      dirty={statusDirty}
+      open={statusEditorOpen}
+      onOpenChange={setStatusEditorOpen}
+      onStatusChange={(status) => {
+        setStatusConfirmation(false);
+        setCurrentStatus(status);
+      }}
+      onDateChange={(value) => {
+        setStatusConfirmation(false);
+        setStatusChangedAt(value);
+      }}
+      showCity={current.studyRoute === 'preparatory_course'}
+      prepCourseCity={prepCourseCity}
+      onCityChange={(city) => {
+        setStatusConfirmation(false);
+        setPrepCourseCity(city);
+      }}
+    />
+  ) : null;
+
   return (
     <div className="space-y-3">
+      <DashboardTabs value={tab} onChange={setTab} />
+
       {statusConfirmation ? (
         <p className="text-sm text-[var(--tg-theme-success-text-color)]" role="status" aria-live="polite">
           ✓ {t.form.statusSaved}
         </p>
       ) : null}
 
-      <StatisticsPanel
-        state={statistics}
-        profile={current}
-        userScore={userOrientationScore}
-        previousSnapshot={previousSnapshot}
-        recentlyUpdatedStatus={recentlyUpdatedStatus}
-      />
+      <div role="tabpanel" id={`dashboard-panel-${tab}`} aria-labelledby={`dashboard-tab-${tab}`} className="space-y-3">
+        {tab === 'score' ? (
+          <>
+            <ScoreScreen current={current} onEditSection={openEditAt} />
+            <StatisticsPanel
+              state={statistics}
+              profile={current}
+              userScore={userOrientationScore}
+            />
+          </>
+        ) : null}
 
-      {!terminalStatus && !statusEditorOpen ? (
-        <button
-          type="button"
-          className="mt-6 flex w-full flex-col gap-0 rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-3.5 py-3 text-left transition-opacity hover:opacity-90 active:opacity-70"
-          onClick={() => setStatusEditorOpen(true)}
-        >
-          <span className="flex items-center justify-between gap-3">
-            <span className="min-w-0">
-              <span className="block text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-                {t.labels.currentStatus}
-              </span>
-              <span className="mt-1 block text-sm font-semibold leading-snug">{t.choices.currentStatus[currentStatus]}</span>
-              <span className="mt-0.5 block text-xs text-[var(--tg-theme-subtitle-text-color)]">
-                {t.form.statusUpdatedShort} {formatDate(statusChangedAt, locale)}
-              </span>
-            </span>
-            <span className="disclosure-row__chevron">
-              <ChevronIcon />
-            </span>
-          </span>
-          <StatusProgressStepper status={currentStatus} />
-        </button>
-      ) : !terminalStatus ? (
-        <section className="mt-6 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]">
-              {t.labels.currentStatus}
-            </h2>
-            {!statusDirty ? (
-              <button
-                type="button"
-                className="min-h-11 text-sm font-medium text-[var(--tg-theme-link-color)]"
-                onClick={() => setStatusEditorOpen(false)}
-              >
-                {t.form.collapseStatus}
-              </button>
-            ) : null}
-          </div>
-          <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.wizard.statusDescription}</p>
-          <StatusTimeline
-            savedStatus={current.currentStatus}
-            selectedStatus={currentStatus}
-            options={statusOptions}
-            onChange={(status) => {
-              setStatusConfirmation(false);
-              setCurrentStatus(status);
-            }}
-            showHints
-          />
-          <StatusDateInput
-            value={statusChangedAt}
-            onChange={(value) => {
-              setStatusConfirmation(false);
-              setStatusChangedAt(value);
-            }}
-          />
-          {suspicious ? (
-            <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="alert">
-              {t.form.suspiciousTransitionWarning}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
+        {tab === 'outcomes' ? (
+          <>
+            <OutcomesScreen
+              userScore={userOrientationScore}
+              showPrepCities={current.studyRoute === 'preparatory_course'}
+            />
+            {statusReporter}
+          </>
+        ) : null}
+
+        {tab === 'season' ? <SeasonScreen status={current.currentStatus} /> : null}
+      </div>
 
       {actionError ? (
         <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">

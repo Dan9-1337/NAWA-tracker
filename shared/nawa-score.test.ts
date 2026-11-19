@@ -45,3 +45,14 @@ describe('calculateNawaOrientationScore', () => {
     expect(nawaOrientationThreshold).toBe(60);
   });
 });
+
+describe('parity with public.compute_orientation_score (supabase/tests/season_model.sql)', () => {
+  it.each([
+    [4.5, 5, 'secondary', 'UA', 'school_leaver', 91],
+    [4.5, 5, 'secondary', 'BY', 'school_leaver', 81],
+    [3.0, 5, 'primary', 'UA', 'school_leaver', 59],
+    [4.75, 5, 'none', 'UA', 'student_in_poland', 100],
+  ] as const)('%s/%s %s %s %s -> %s', (avg, max, level, country, kind, expected) => {
+    expect(calculateNawaOrientationScore(avg, max, level, country, kind)).toBe(expected);
+  });
+});

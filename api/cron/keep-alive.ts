@@ -1,4 +1,4 @@
-import { HttpError } from '../_lib/errors.js';
+import { assertCronAuthorized } from '../_lib/cron-auth.js';
 import { assertMethod, sendError, type HttpResponse } from '../_lib/http.js';
 import { assertRpcSucceeded } from '../_lib/questionnaire.js';
 import { getSupabaseAdmin } from '../_lib/supabase-admin.js';
@@ -12,23 +12,6 @@ type KeepAliveDependencies = {
   getClient: () => ReturnType<typeof getSupabaseAdmin>;
   getCronSecret: () => string | undefined;
 };
-
-function assertCronAuthorized(
-  request: KeepAliveRequest,
-  getCronSecret: () => string | undefined,
-): void {
-  const cronSecret = getCronSecret();
-  if (!cronSecret || cronSecret.length < 32) {
-    throw new HttpError(500, 'INTERNAL_ERROR', 'Wystąpił nieoczekiwany błąd.');
-  }
-
-  const rawHeader = request.headers.authorization ?? request.headers.Authorization;
-  const header = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
-  const expected = `Bearer ${cronSecret}`;
-  if (!header || header !== expected) {
-    throw new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.');
-  }
-}
 
 const defaultDependencies: KeepAliveDependencies = {
   getClient: getSupabaseAdmin,

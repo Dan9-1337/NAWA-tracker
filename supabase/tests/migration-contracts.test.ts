@@ -3,8 +3,38 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { MIN_COHORT_SIZE, OUTCOME_BAND_WIDTH, OUTCOME_MIN_AWARDED } from '../../shared/product-rules';
+
 const migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202608030001_schema.sql'),
+  'utf8',
+);
+const cohortMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611210001_cohort_ladder.sql'),
+  'utf8',
+);
+const seasonMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611200001_season_model.sql'),
+  'utf8',
+);
+const privacyMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611220001_privacy_identity.sql'),
+  'utf8',
+);
+const botMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611230001_bot_subscriptions.sql'),
+  'utf8',
+);
+const forwardMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611240001_forward_status_jumps.sql'),
+  'utf8',
+);
+const cleanupMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611250001_cleanup_and_thresholds.sql'),
+  'utf8',
+);
+const fieldMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611260001_study_field_and_prep_city.sql'),
   'utf8',
 );
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
@@ -109,7 +139,6 @@ describe('mutation statistics migration contract', () => {
     expect(definition).toContain('p_status_changed_at < v_response.status_changed_at');
     expect(definition).not.toContain('positive_decision');
     expect(definition).not.toContain('negative_decision');
-    expect(definition).not.toContain('scholarship_not_awarded');
   });
 
   it('stores partner university for direct studies', () => {
@@ -127,6 +156,250 @@ describe('mutation statistics migration contract', () => {
     );
     expect(migration).toContain(
       'revoke all on function public.assert_statistics_result(jsonb) from public, anon, authenticated, service_role;',
+    );
+  });
+});
+
+describe('cohort ladder migration contract', () => {
+  it('discloses outcomes only from three awarded responses, rounded to 5-point bands', () => {
+    const definition = functionDefinition('get_cohort_outcomes', cohortMigration);
+
+    expect(definition).toContain('c_min_awarded constant integer := 3');
+    expect(definition).toContain('c_band constant numeric := 5');
+    expect(definition).toContain('v_awarded >= c_min_awarded');
+    expect(definition).toContain('not r.is_suspicious');
+    expect(definition).toContain('r.intake_year = p_intake_year');
+    expect(definition).toContain("r.current_status = 'scholarship_awarded'");
+    expect(definition).toContain("r.current_status = 'scholarship_not_awarded'");
+    // min/max are only ever returned after rounding to a band
+    expect(definition).toContain('floor(v_low / c_band) * c_band');
+    expect(definition).toContain('ceil(v_high / c_band) * c_band');
+    expect(definition).not.toMatch(/'awardedMin'|'awardedMax'|'lowestScore'/);
+  });
+
+  it('walks country -> group -> track and is scoped to the caller', () => {
+    const definition = functionDefinition('get_cohort_outcomes', cohortMigration);
+
+    expect(definition).toContain("array['country', 'group', 'track']");
+    expect(definition).toMatch(/security definer/i);
+    expect(definition).toContain('r.telegram_user_id = p_telegram_user_id');
+    expect(cohortMigration).toContain(
+      'revoke all on function public.get_cohort_outcomes(bigint, integer) from public, anon, authenticated;',
+    );
+    expect(cohortMigration).toContain(
+      'grant execute on function public.get_cohort_outcomes(bigint, integer) to service_role;',
+    );
+  });
+
+  it('scopes cohort statistics to the active intake year and the country ladder', () => {
+    const definition = functionDefinition('compute_country_statistics', cohortMigration);
+
+    expect(definition).toContain('public.active_intake_year()');
+    expect(definition).toContain("v_scope := 'country'");
+    expect(definition).toContain("v_scope := 'group'");
+    expect(definition).toContain("v_scope := 'track'");
+    expect(definition).toContain('intake_year = v_year');
+  });
+
+  it('drops the statistics blocks nobody renders any more', () => {
+    for (const name of [
+      'get_country_outcomes(bigint)',
+      'enrich_statistics_result(bigint, jsonb, text, text, numeric, boolean)',
+      'compute_statistics_growth7d(text, text, numeric)',
+      'compute_track_benchmark(text, numeric, timestamp with time zone)',
+      'compute_country_context(jsonb, text, text, numeric)',
+      'compute_group_progress(text, text)',
+      'compute_reported_merit_outcomes(text, text)',
+    ]) {
+      expect(cohortMigration).toContain(`drop function public.${name};`);
+    }
+  });
+
+  it('keeps config and group tables away from API roles', () => {
+    expect(cohortMigration).toContain(
+      'revoke all on table public.season_config, public.country_groups from public, anon, authenticated;',
+    );
+  });
+});
+
+describe('season model migration contract', () => {
+  it('keys records by (telegram user, intake year) and records grade basis and applicant kind', () => {
+    expect(seasonMigration).toContain('add column intake_year integer not null');
+    expect(seasonMigration).toContain('add column grade_basis text not null');
+    expect(seasonMigration).toContain('add column applicant_kind text not null');
+    expect(seasonMigration).toContain('unique (telegram_user_id, intake_year)');
+    expect(seasonMigration).toContain('drop constraint responses_telegram_user_id_key');
+  });
+
+  it('adds the not-awarded outcome to the status check and transition function', () => {
+    expect(functionDefinition('is_allowed_status_transition', seasonMigration)).toContain(
+      "'scholarship_awarded', 'scholarship_not_awarded'",
+    );
+    expect(seasonMigration).toMatch(/responses_current_status_check check \(current_status in \([^)]*'scholarship_not_awarded'/);
+  });
+
+  it('allows correcting a final outcome instead of queueing a review nobody reads', () => {
+    const definition = functionDefinition('update_current_response', seasonMigration);
+
+    expect(definition).toContain("'scholarship_not_awarded'");
+    expect(definition).toContain('invalid_status_transition');
+    expect(definition).not.toContain('status_change_pending_review');
+    expect(definition).toContain('p_status_changed_at < v_response.status_changed_at');
+  });
+
+  it.each([
+    ['create_response_for_telegram_user', 'created'],
+    ['update_current_response', 'updated'],
+  ])('%s still returns in-transaction statistics', (name, successField) => {
+    const definition = functionDefinition(name, seasonMigration);
+
+    expect(definition).toContain(`'${successField}', true`);
+    expect(definition).toContain('public.assert_statistics_result(public.get_response_statistics(');
+  });
+
+  it('drops the unused review, audit, and snapshot tables', () => {
+    expect(seasonMigration).toContain('drop table public.status_change_requests;');
+    expect(seasonMigration).toContain('drop table public.response_audit_log;');
+    expect(seasonMigration).toContain('drop table public.user_statistics_snapshots;');
+  });
+
+  it('asks for the university on both study routes', () => {
+    expect(seasonMigration).toContain('drop constraint responses_target_university_route_check');
+  });
+
+  it('computes the orientation score in one SQL function with the student-in-Poland override', () => {
+    const definition = functionDefinition('compute_orientation_score', seasonMigration);
+
+    expect(definition).toContain("p_applicant_kind = 'student_in_poland' then 100");
+    expect(definition).toContain("p_ranking_country <> 'BY'");
+  });
+});
+
+describe('privacy identity migration contract', () => {
+  it('replaces the Telegram id and username with a hashed identity key', () => {
+    expect(privacyMigration).toContain('alter table public.responses drop column telegram_user_id;');
+    expect(privacyMigration).toContain('alter table public.responses drop column telegram_username;');
+    expect(privacyMigration).toContain('alter table public.product_events drop column telegram_user_id;');
+    expect(privacyMigration).toContain("check (identity_hash ~ '^[0-9a-f]{64}$')");
+    expect(privacyMigration).toContain('unique (identity_hash, intake_year)');
+  });
+
+  it('keeps free text out of product events', () => {
+    expect(privacyMigration).toContain("jsonb_typeof(payload) = 'object' and length(payload::text) <= 256");
+  });
+
+  it.each([
+    'create_response_for_identity',
+    'update_current_response',
+    'get_current_response',
+    'get_current_statistics',
+    'get_cohort_outcomes',
+  ])('%s is keyed by identity hash and takes no Telegram parameters', (name) => {
+    const definition = functionDefinition(name, privacyMigration);
+
+    expect(definition).toContain('p_identity_hash text');
+    expect(definition).not.toMatch(/telegram/i);
+  });
+});
+
+describe('bot subscriptions migration contract', () => {
+  it('is an opt-in table with only the Telegram id, chat, language and last reminder', () => {
+    expect(botMigration).toContain('create table public.bot_subscriptions');
+    expect(botMigration).toContain('telegram_user_id bigint primary key');
+    expect(botMigration).toContain("check (locale in ('pl', 'en', 'ru', 'uk', 'be'))");
+    expect(botMigration).not.toMatch(/grade|score|country|identity_hash/i);
+  });
+
+  it('is reachable only by the service role', () => {
+    expect(botMigration).toContain(
+      'revoke all on table public.bot_subscriptions from public, anon, authenticated;',
+    );
+    expect(botMigration).toContain(
+      'grant select, insert, update, delete on table public.bot_subscriptions to service_role;',
+    );
+  });
+});
+
+describe('forward status jumps migration contract', () => {
+  it('allows any later stage from a non-final status and nothing backwards', () => {
+    const definition = functionDefinition('is_allowed_status_transition', forwardMigration);
+
+    expect(definition).toContain("p_from in ('submitted', 'formal_review_positive', 'merit_review_positive')");
+    expect(definition).toContain('public.status_rank(p_to) > public.status_rank(p_from)');
+    expect(definition).not.toContain('p_from = p_to then false');
+  });
+
+  it('ranks the ladder with both merit outcomes and both seat decisions on the same step', () => {
+    const definition = functionDefinition('status_rank', forwardMigration);
+
+    expect(definition).toContain("when 'merit_review_positive' then 2");
+    expect(definition).toContain("when 'merit_review_negative' then 2");
+    expect(definition).toContain("when 'scholarship_awarded' then 3");
+    expect(definition).toContain("when 'scholarship_not_awarded' then 3");
+  });
+});
+
+describe('cleanup and thresholds migration contract', () => {
+  function constantReturnedBy(name: string): number {
+    const definition = functionDefinition(name, cleanupMigration);
+    const match = definition.match(/as \$\$ select (\d+)(?:::numeric)? \$\$/);
+    expect(match, `${name} returns a literal`).not.toBeNull();
+    return Number(match![1]);
+  }
+
+  it('keeps the privacy thresholds identical in SQL and TypeScript', () => {
+    expect(constantReturnedBy('min_cohort_size')).toBe(MIN_COHORT_SIZE);
+    expect(constantReturnedBy('outcome_min_awarded')).toBe(OUTCOME_MIN_AWARDED);
+    expect(constantReturnedBy('outcome_band_width')).toBe(OUTCOME_BAND_WIDTH);
+  });
+
+  it('uses the named thresholds instead of literals in the statistics and outcomes functions', () => {
+    for (const name of ['assert_statistics_result', 'compute_country_statistics']) {
+      const definition = functionDefinition(name, cleanupMigration);
+      expect(definition).toContain('public.min_cohort_size()');
+      expect(definition).not.toMatch(/(?:>=|<) 10\b/);
+    }
+    const outcomes = functionDefinition('get_cohort_outcomes', cleanupMigration);
+    expect(outcomes).toContain('public.outcome_min_awarded()');
+    expect(outcomes).toContain('public.outcome_band_width()');
+    expect(outcomes).not.toMatch(/c_\w+ constant \w+ := \d/);
+  });
+
+  it('drops the unused public statistics endpoint and its rate-limit table', () => {
+    expect(cleanupMigration).toContain('drop function public.get_public_statistics(text, text, numeric, numeric, text, text);');
+    expect(cleanupMigration).toContain('drop table public.submission_limits;');
+  });
+
+  it('serves a 14-key statistics payload', () => {
+    const assertion = functionDefinition('assert_statistics_result', cleanupMigration);
+    expect(assertion).toContain('jsonb_object_keys(p_statistics)) <> 14');
+    expect(assertion).not.toContain('gradesScore');
+    expect(assertion).not.toContain('polishSchoolBonus');
+    expect(functionDefinition('compute_country_statistics', cleanupMigration)).not.toContain('gradesScore');
+  });
+
+  it('keeps the threshold helpers away from API roles', () => {
+    for (const name of ['min_cohort_size()', 'outcome_min_awarded()', 'outcome_band_width()']) {
+      expect(cleanupMigration).toContain(`revoke all on function public.${name} from public, anon, authenticated, service_role;`);
+    }
+  });
+
+  it('takes the disclosure floor of the city view from the shared helper, not a literal', () => {
+    const distribution = functionDefinition('get_prep_city_distribution', fieldMigration);
+    expect(distribution).toContain('public.outcome_min_awarded()');
+    expect(distribution).not.toMatch(/c_min constant integer := \d/);
+  });
+
+  it('allows a prep-course city only for an awarded preparatory-route record', () => {
+    expect(fieldMigration).toMatch(/prep_course_city is null\s+or \(study_route = 'preparatory_course' and current_status = 'scholarship_awarded'\)/);
+  });
+
+  it('keeps the city view away from API roles other than service_role', () => {
+    expect(fieldMigration).toContain(
+      'revoke all on function public.get_prep_city_distribution(text, integer) from public, anon, authenticated;',
+    );
+    expect(fieldMigration).toContain(
+      'grant execute on function public.get_prep_city_distribution(text, integer) to service_role;',
     );
   });
 });

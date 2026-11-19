@@ -53,7 +53,7 @@ export function CardHeader({ title, titleId, icon, badge, titleClassName }: Card
     <div className="flex items-start gap-2.5">
       {icon ? (
         <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-accent)_12%,var(--tg-theme-secondary-bg-color))] text-[var(--color-accent)]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--color-accent)_12%,var(--tg-theme-secondary-bg-color))] text-[var(--color-accent-ink)]"
           aria-hidden="true"
         >
           {icon}
@@ -70,29 +70,9 @@ export function CardHeader({ title, titleId, icon, badge, titleClassName }: Card
           >
             {title}
           </h2>
-          {badge ? <div className="shrink-0">{badge}</div> : null}
+          {badge ? <div className="min-w-0 max-w-full">{badge}</div> : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-export function CardFootnote({ children }: { children: ReactNode }) {
-  return <p className="card-footnote">{children}</p>;
-}
-
-type DashboardSectionGroupProps = {
-  label: string;
-  footnote?: string;
-  children: ReactNode;
-};
-
-export function DashboardSectionGroup({ label, footnote, children }: DashboardSectionGroupProps) {
-  return (
-    <div className="dashboard-section-group space-y-3">
-      <h3 className="dashboard-section-group__label">{label}</h3>
-      <div className="space-y-3">{children}</div>
-      {footnote ? <CardFootnote>{footnote}</CardFootnote> : null}
     </div>
   );
 }

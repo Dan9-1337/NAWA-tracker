@@ -1,33 +1,45 @@
 import { z } from 'zod';
 import { isCountryCode } from './countries';
 import {
+  applicantKinds,
   applicationStatuses,
+  cohortScopes,
+  fieldLevels,
+  gradeBases,
   polishSchoolLevels,
   scholarshipTracks,
   studyRoutes,
   type ApiError,
   type CreateResponseRequest,
+  type CohortOutcomesResult,
+  type PrepCityDistribution,
   type CreateResponseResult,
   type CurrentResponseResult,
   type DeleteResponseResult,
-  type PublicStatisticsRequest,
-  type PublicStatisticsResult,
   type StatisticsResult,
   type UpdateResponseRequest,
   type UpdateResponseResult,
 } from './contracts';
+import { MIN_COHORT_SIZE, OUTCOME_BAND_WIDTH, OUTCOME_MIN_AWARDED } from './product-rules';
+import { isPrepCourseCity } from './prep-course-cities';
+import { isStudyFieldCode } from './study-fields';
 import { isUniversityAllowedForTrack } from './universities';
 
 const countryCodeSchema = z.string().trim().refine(isCountryCode, { message: 'invalid country code' });
 
 const responseFormObjectSchema = z
   .object({
+    intakeYear: z.number().int().min(2018).max(2100),
     hasPolishCitizenship: z.boolean(),
     rankingCountry: countryCodeSchema,
     schoolCountry: countryCodeSchema,
     scholarshipTrack: z.enum(scholarshipTracks),
     studyRoute: z.enum(studyRoutes),
     targetUniversity: z.string().trim().min(1).max(64).optional(),
+    studyField: z.string().trim().refine(isStudyFieldCode, { message: 'unknown study field' }),
+    prepCourseCity: z.string().trim().refine(isPrepCourseCity, { message: 'unknown city' }).optional(),
+    gradeBasis: z.enum(gradeBases),
+    applicantKind: z.enum(applicantKinds),
     averageGrade: z.number().min(0).max(1000),
     maximumGrade: z.number().positive().max(1000),
     polishSchoolLevel: z.enum(polishSchoolLevels).optional(),
@@ -90,20 +102,36 @@ function refineSharedQuestionnaireRules(
     });
   }
 
-  if (value.targetUniversity !== undefined) {
-    if (value.studyRoute !== 'direct_studies') {
+  if (
+    value.prepCourseCity !== undefined &&
+    (value.studyRoute !== 'preparatory_course' || value.currentStatus !== 'scholarship_awarded')
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['prepCourseCity'],
+      message: 'prepCourseCity is only for awarded preparatory-course applicants',
+    });
+  }
+
+  if (value.applicantKind === 'student_in_poland') {
+    if (value.maximumGrade !== 5 || value.averageGrade < 4.75) {
       ctx.addIssue({
         code: 'custom',
-        path: ['targetUniversity'],
-        message: 'targetUniversity is only allowed for direct_studies',
-      });
-    } else if (!isUniversityAllowedForTrack(value.targetUniversity, value.scholarshipTrack)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['targetUniversity'],
-        message: 'targetUniversity must be a partner university for the selected scholarship track',
+        path: ['averageGrade'],
+        message: 'students in Poland qualify with an average of at least 4.75 on the 2-5 scale',
       });
     }
+  }
+
+  if (
+    value.targetUniversity !== undefined &&
+    !isUniversityAllowedForTrack(value.targetUniversity, value.scholarshipTrack)
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['targetUniversity'],
+      message: 'targetUniversity must be a partner university for the selected scholarship track',
+    });
   }
 }
 
@@ -115,14 +143,12 @@ export const responseFormStoredSchema = responseFormObjectSchema.superRefine((va
 export const responseFormInputSchema = responseFormObjectSchema.superRefine((value, ctx) => {
   refineSharedQuestionnaireRules(value, ctx);
 
-  if (value.studyRoute === 'direct_studies') {
-    if (value.targetUniversity === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['targetUniversity'],
-        message: 'targetUniversity is required for direct_studies',
-      });
-    }
+  if (value.targetUniversity === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['targetUniversity'],
+      message: 'targetUniversity is required',
+    });
   }
 });
 
@@ -141,108 +167,27 @@ export const updateResponseRequestSchema = z
   .strict() satisfies z.ZodType<UpdateResponseRequest>;
 
 export const currentResponseRequestSchema = emptyRequestSchema;
+export const cohortOutcomesRequestSchema = emptyRequestSchema;
+export const prepCityRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
-
-export const statisticsGrowth7dSchema = z
-  .object({
-    newResponsesTotal: z.number().int().nonnegative(),
-    newResponsesInGroup: z.number().int().nonnegative(),
-    medianThen: z.number().min(0).nullable(),
-    medianNow: z.number().min(0).nullable(),
-    percentileThen: z.number().min(0).max(100).nullable(),
-    percentileNow: z.number().min(0).max(100).nullable(),
-    trackNewResponses: z.number().int().nonnegative(),
-    trackMedianThen: z.number().min(0).nullable(),
-    trackMedianNow: z.number().min(0).nullable(),
-    statusUpdatesInGroup: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const globalBenchmarkSchema = z
-  .object({
-    sampleSize: z.number().int().min(10).nullable(),
-    representedCountryCount: z.number().int().positive().nullable(),
-    median: z.number().min(0).nullable(),
-    scoreDelta: z.number().nullable(),
-    lowerScorePercentage: z.number().min(0).max(100).nullable(),
-    scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
-    detailedCountriesCount: z.number().int().nonnegative().nullable(),
-  })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (value.sampleSize != null && value.scoreBuckets != null) {
-      const bucketTotal = value.scoreBuckets.reduce((sum, count) => sum + count, 0);
-      if (bucketTotal !== value.sampleSize) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['scoreBuckets'],
-          message: 'global scoreBuckets must sum to sampleSize',
-        });
-      }
-    }
-  });
-
-export const countryContextStatsSchema = z
-  .object({
-    countryMedian: z.number().min(0).nullable(),
-    countrySampleSize: z.number().int().nonnegative(),
-    countryShareOfTrack: z.number().min(0).max(1).nullable(),
-    medianDeltaVsGlobal: z.number().nullable(),
-    distributionStable: z.boolean().nullable(),
-    nearbyScoreCount: z.number().int().nonnegative().nullable(),
-  })
-  .strict();
-
-export const statisticsHistoryPointSchema = z
-  .object({
-    recordedAt: z.string().min(1),
-    lowerScorePercentage: z.number().min(0).max(100).nullable(),
-    groupResponseCount: z.number().int().nonnegative(),
-    rankPosition: z.number().int().positive().nullable(),
-  })
-  .strict();
-
-export const groupProgressSchema = z
-  .object({
-    submitted: z.number().int().nonnegative(),
-    formalPositive: z.number().int().nonnegative(),
-    meritPositive: z.number().int().nonnegative(),
-    scholarshipAwarded: z.number().int().nonnegative(),
-  })
-  .strict();
-
-export const reportedMeritOutcomeStatsSchema = z
-  .object({
-    positiveCount: z.number().int().nonnegative(),
-    negativeCount: z.number().int().nonnegative(),
-    lowestReportedPositiveScore: z.number().min(0).nullable(),
-    highestReportedNegativeScore: z.number().min(0).nullable(),
-    boundaryState: z.enum(['insufficient_data', 'positive_only', 'interval', 'overlapping_results']),
-  })
-  .strict();
 
 export const statisticsResultSchema = z
   .object({
     detailsAvailable: z.boolean(),
     totalValidResponses: z.number().int().nonnegative(),
     sameTrackCount: z.number().int().nonnegative(),
-    sameCountryCount: z.number().int().min(10).nullable(),
+    sameCountryCount: z.number().int().min(MIN_COHORT_SIZE).nullable(),
     groupResponseCount: z.number().int().nonnegative(),
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
     rankPosition: z.number().int().positive().nullable(),
     rankTotal: z.number().int().positive().nullable(),
-    gradesScore: z.number().min(0).nullable(),
-    polishSchoolBonus: z.number().min(0).nullable(),
     trackWideMedian: z.number().min(0).nullable(),
     scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
-    cohortScores: z.array(z.number().min(0)).nullable(),
-    growth7d: statisticsGrowth7dSchema.nullable(),
-    history: z.array(statisticsHistoryPointSchema),
-    groupProgress: groupProgressSchema.nullable(),
-    reportedMeritOutcomes: reportedMeritOutcomeStatsSchema.nullable(),
-    globalBenchmark: globalBenchmarkSchema,
-    countryContext: countryContextStatsSchema,
+    /** Legacy: servers built before it was removed still send every score of the cohort. Ignored, never read. */
+    cohortScores: z.unknown().optional(),
+    cohortScope: z.enum(cohortScopes).nullable(),
+    cohortGroupId: z.string().min(2).max(32).nullable(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -258,10 +203,11 @@ export const statisticsResultSchema = z
 
     if (value.detailsAvailable) {
       if (
-        value.groupResponseCount < 10 ||
+        value.groupResponseCount < MIN_COHORT_SIZE ||
         value.medianScore === null ||
         value.lowerScorePercentage === null ||
-        value.scoreBuckets === null
+        value.scoreBuckets === null ||
+        value.cohortScope === null
       ) {
         ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require every detailed field' });
         return;
@@ -274,49 +220,87 @@ export const statisticsResultSchema = z
       value.groupResponseCount !== 0 ||
       value.medianScore !== null ||
       value.lowerScorePercentage !== null ||
-      value.scoreBuckets !== null
+      value.scoreBuckets !== null ||
+      value.cohortScope !== null ||
+      value.cohortGroupId !== null
     ) {
       ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'suppressed statistics cannot retain detailed fields' });
     }
   }) satisfies z.ZodType<StatisticsResult>;
 
-export const publicStatisticsRequestSchema = z
+const bandSchema = z
+  .number()
+  .min(0)
+  .max(100)
+  .refine((value) => value % OUTCOME_BAND_WIDTH === 0, {
+    message: `scores are disclosed as ${OUTCOME_BAND_WIDTH}-point bands`,
+  });
+
+export const cohortOutcomesResultSchema = z
   .object({
-    scholarshipTrack: z.enum(scholarshipTracks),
-    rankingCountry: countryCodeSchema,
-    averageGrade: z.number().min(0).max(1000),
-    maximumGrade: z.number().positive().max(1000),
-    polishSchoolLevel: z.enum(polishSchoolLevels).optional(),
+    ownCountry: countryCodeSchema,
+    scope: z.enum(cohortScopes).nullable(),
+    groupId: z.string().min(2).max(32).nullable(),
+    awardedCount: z.number().int().nonnegative(),
+    notAwardedCount: z.number().int().nonnegative(),
+    awardedRate: z.number().min(0).max(1).nullable(),
+    awardedBandLow: bandSchema.nullable(),
+    awardedBandHigh: bandSchema.nullable(),
+    notAwardedBandHigh: bandSchema.nullable(),
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.averageGrade > value.maximumGrade) {
-      ctx.addIssue({ code: 'custom', path: ['averageGrade'], message: 'averageGrade must not exceed maximumGrade' });
-    }
-    if (value.scholarshipTrack === 'nawa_director') {
-      if (value.polishSchoolLevel === undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['polishSchoolLevel'],
-          message: 'polishSchoolLevel is required for nawa_director',
-        });
-      } else if (value.rankingCountry === 'BY' && value.polishSchoolLevel !== 'none') {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['polishSchoolLevel'],
-          message: 'polishSchoolLevel bonus is not available for Belarus citizenship',
-        });
+    if (value.scope === null) {
+      if (value.awardedCount !== 0 || value.awardedBandLow !== null || value.awardedBandHigh !== null) {
+        ctx.addIssue({ code: 'custom', path: ['scope'], message: 'undisclosed outcomes cannot carry details' });
       }
-    } else if (value.polishSchoolLevel !== undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['polishSchoolLevel'],
-        message: 'polishSchoolLevel is only allowed for nawa_director',
-      });
+      return;
     }
-  }) satisfies z.ZodType<PublicStatisticsRequest>;
+    if (value.awardedCount < OUTCOME_MIN_AWARDED || value.awardedBandLow === null || value.awardedBandHigh === null) {
+      ctx.addIssue({ code: 'custom', path: ['awardedCount'], message: 'disclosed outcomes need enough awarded responses' });
+    } else if (value.awardedBandLow > value.awardedBandHigh) {
+      ctx.addIssue({ code: 'custom', path: ['awardedBandLow'], message: 'awardedBandLow must not exceed awardedBandHigh' });
+    }
+    if (value.notAwardedBandHigh !== null && value.notAwardedCount < OUTCOME_MIN_AWARDED) {
+      ctx.addIssue({ code: 'custom', path: ['notAwardedBandHigh'], message: 'not-awarded band needs enough reports' });
+    }
+  }) satisfies z.ZodType<CohortOutcomesResult>;
 
-export const publicStatisticsResultSchema = statisticsResultSchema satisfies z.ZodType<PublicStatisticsResult>;
+export const prepCityDistributionSchema = z
+  .object({
+    studyField: z.string().refine(isStudyFieldCode),
+    level: z.enum(fieldLevels).nullable(),
+    groupCode: z.string().regex(/^\d{2,4}$/).nullable(),
+    total: z.number().int().nonnegative(),
+    cities: z.array(
+      z
+        .object({
+          city: z.string().refine(isPrepCourseCity),
+          count: z.number().int().min(OUTCOME_MIN_AWARDED),
+        })
+        .strict(),
+    ),
+    otherCount: z.number().int().nonnegative(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const named = value.cities.reduce((sum, entry) => sum + entry.count, 0);
+    if (value.level === null) {
+      if (value.total !== 0 || value.cities.length > 0 || value.otherCount !== 0 || value.groupCode !== null) {
+        ctx.addIssue({ code: 'custom', path: ['level'], message: 'an undisclosed distribution cannot carry details' });
+      }
+      return;
+    }
+    if (value.total < OUTCOME_MIN_AWARDED) {
+      ctx.addIssue({ code: 'custom', path: ['total'], message: 'a disclosed distribution needs enough reports' });
+    }
+    if (named + value.otherCount !== value.total) {
+      ctx.addIssue({ code: 'custom', path: ['total'], message: 'cities and the other count must add up to the total' });
+    }
+    if (new Set(value.cities.map((entry) => entry.city)).size !== value.cities.length) {
+      ctx.addIssue({ code: 'custom', path: ['cities'], message: 'cities must be unique' });
+    }
+  }) satisfies z.ZodType<PrepCityDistribution>;
 
 export const createResponseResultSchema = z
   .object({
@@ -355,24 +339,31 @@ export const apiErrorSchema = z
   })
   .strict() satisfies z.ZodType<ApiError>;
 
-export const productEventNames = [
+/** Events without a payload. */
+export const plainProductEventNames = [
   'wizard_started',
   'wizard_completed',
   'score_viewed',
   'position_or_fallback_viewed',
-  'status_updated',
-  'dashboard_revisit',
-  'university_search_no_results',
-  'university_search_selected',
-  'university_search_abandoned',
 ] as const;
 
-export const productEventRequestSchema = z
-  .object({
-    eventName: z.enum(productEventNames),
-    payload: z.record(z.string(), z.unknown()).optional(),
-  })
-  .strict();
+export const productEventNames = [...plainProductEventNames, 'status_updated'] as const;
+
+/**
+ * Product analytics never carry free text: plain events have no payload, and the only payload is the
+ * status transition (two known enum values).
+ */
+export const productEventRequestSchema = z.union([
+  z.object({ eventName: z.enum(plainProductEventNames) }).strict(),
+  z
+    .object({
+      eventName: z.literal('status_updated'),
+      payload: z
+        .object({ from: z.enum(applicationStatuses), to: z.enum(applicationStatuses) })
+        .strict(),
+    })
+    .strict(),
+]);
 
 export const productEventResultSchema = z
   .object({

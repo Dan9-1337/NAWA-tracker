@@ -137,19 +137,3 @@ export function generateSearchAliases(university: University): readonly string[]
 
   return [...new Set(aliases.filter((a) => a.length > 0 && !isAmbiguousStandaloneAlias(a)))];
 }
-
-export function extractCityFromCanonicalName(name: string): string | undefined {
-  const patterns = [
-    /\bz\s+siedzib[aą]\s+w\s+(.+)$/i,
-    /\b(?:w|we)\s+(.+)$/i,
-    /\s([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)*)$/,
-  ];
-  for (const pattern of patterns) {
-    const match = name.match(pattern);
-    if (match?.[1]) {
-      const city = match[1].trim();
-      if (city.length > 2 && !city.toLowerCase().startsWith('im.')) return city;
-    }
-  }
-  return undefined;
-}

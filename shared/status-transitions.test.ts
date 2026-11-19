@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isBackdatedStatusChange, isSuspiciousStatusTransition, isTerminalApplicationStatus } from './status-transitions';
+import { isSuspiciousStatusTransition, isTerminalApplicationStatus } from './status-transitions';
 
 describe('isTerminalApplicationStatus', () => {
-  it('flags exactly the two terminal statuses', () => {
+  it('flags exactly the three terminal statuses', () => {
     expect(isTerminalApplicationStatus('merit_review_negative')).toBe(true);
     expect(isTerminalApplicationStatus('scholarship_awarded')).toBe(true);
+    expect(isTerminalApplicationStatus('scholarship_not_awarded')).toBe(true);
     expect(isTerminalApplicationStatus('submitted')).toBe(false);
     expect(isTerminalApplicationStatus('merit_review_positive')).toBe(false);
   });
@@ -20,9 +21,16 @@ describe('isSuspiciousStatusTransition', () => {
     expect(isSuspiciousStatusTransition('merit_review_negative', 'formal_review_positive')).toBe(true);
   });
 
-  it('flags skipping allowed steps', () => {
-    expect(isSuspiciousStatusTransition('submitted', 'scholarship_awarded')).toBe(true);
-    expect(isSuspiciousStatusTransition('submitted', 'merit_review_negative')).toBe(true);
+  it('flags going back to an earlier stage', () => {
+    expect(isSuspiciousStatusTransition('formal_review_positive', 'submitted')).toBe(true);
+    expect(isSuspiciousStatusTransition('merit_review_positive', 'formal_review_positive')).toBe(true);
+    expect(isSuspiciousStatusTransition('merit_review_negative', 'merit_review_positive')).toBe(true);
+  });
+
+  it('does not flag skipping stages forward (late joiners report the outcome directly)', () => {
+    expect(isSuspiciousStatusTransition('submitted', 'scholarship_awarded')).toBe(false);
+    expect(isSuspiciousStatusTransition('submitted', 'merit_review_negative')).toBe(false);
+    expect(isSuspiciousStatusTransition('formal_review_positive', 'scholarship_not_awarded')).toBe(false);
   });
 
   it('does not flag ordinary forward progress', () => {
@@ -30,16 +38,11 @@ describe('isSuspiciousStatusTransition', () => {
     expect(isSuspiciousStatusTransition('formal_review_positive', 'merit_review_positive')).toBe(false);
     expect(isSuspiciousStatusTransition('formal_review_positive', 'merit_review_negative')).toBe(false);
     expect(isSuspiciousStatusTransition('merit_review_positive', 'scholarship_awarded')).toBe(false);
-  });
-});
-
-describe('isBackdatedStatusChange', () => {
-  it('flags a new date earlier than the previous one', () => {
-    expect(isBackdatedStatusChange('2026-07-10', '2026-07-01')).toBe(true);
+    expect(isSuspiciousStatusTransition('merit_review_positive', 'scholarship_not_awarded')).toBe(false);
   });
 
-  it('does not flag the same or a later date', () => {
-    expect(isBackdatedStatusChange('2026-07-10', '2026-07-10')).toBe(false);
-    expect(isBackdatedStatusChange('2026-07-10', '2026-07-20')).toBe(false);
+  it('does not flag correcting one final outcome to another', () => {
+    expect(isSuspiciousStatusTransition('scholarship_awarded', 'scholarship_not_awarded')).toBe(false);
+    expect(isSuspiciousStatusTransition('scholarship_not_awarded', 'scholarship_awarded')).toBe(false);
   });
 });
