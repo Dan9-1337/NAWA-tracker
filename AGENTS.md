@@ -19,6 +19,7 @@ NAWA Tracker is a Telegram Mini App for scholarship questionnaires and community
 - Implementation agents (DeepSeek V4.1 Flash) follow the task and this file, implement only the assigned scope, and report changed files, verification results, and blockers.
 - Delegate in parallel only when file ownership does not overlap. If tasks depend on a shared contract or migration, settle that dependency first.
 - The orchestrator reviews the diff against the acceptance criteria and verifies the integrated result. Model assignments are workflow conventions, not runtime configuration.
+- Record the actual LLM model(s) and what each contributed (for example, specification, implementation, or review edits) in the task's `LLM contributions` handoff. For changes without a task, record this in the PR description or, if there is no PR, in the change summary. Use `None` if no LLM contributed; don't guess attribution for past work.
 
 ## Guardrails
 
