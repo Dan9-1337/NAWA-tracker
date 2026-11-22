@@ -6,9 +6,14 @@ import { describe, expect, it } from 'vitest';
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
-const docs = ['README.md', ...readdirSync(join(root, 'docs')).map((name) => `docs/${name}`)].filter((path) =>
-  path.endsWith('.md'),
-);
+const docs = [
+  'AGENTS.md',
+  'README.md',
+  'docs/adr/README.md',
+  'tasks/README.md',
+  'tasks/TEMPLATE.md',
+  ...readdirSync(join(root, 'docs')).map((name) => `docs/${name}`),
+].filter((path) => path.endsWith('.md'));
 const readme = read('README.md');
 const architecture = read('docs/architecture.md');
 

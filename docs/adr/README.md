@@ -3,6 +3,8 @@
 Short records of decisions that shape the product and are expensive to reverse. One file per decision; a record is
 never rewritten, it is superseded by a new one. Format: context, decision, consequences, alternatives.
 
+Use [implementation tasks](../../tasks/README.md) for work that implements a decision. Link the ADR from the task rather than copying the decision into it. An ADR being accepted does not mean that implementation is complete.
+
 | # | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-telegram-mini-app-on-vercel-and-supabase.md) | Telegram Mini App on Vercel and Supabase free tiers | Accepted |
