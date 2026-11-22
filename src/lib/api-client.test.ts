@@ -5,7 +5,7 @@ vi.mock('./telegram', async (importOriginal) => ({
   getTelegramInitData: vi.fn(() => 'signed-init-data'),
 }));
 
-import { updateResponse } from './api-client';
+import { updateResponse, getScholarshipReportSummary } from './api-client';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -32,5 +32,41 @@ describe('ApiClientError', () => {
       code: 'EDIT_LIMIT_REACHED',
       retryAt,
     });
+  });
+});
+
+describe('scholarship report client', () => {
+  const summary = {
+    total: 1,
+    countries: [{ country: 'BY', count: 1 }],
+    paths: [
+      { route: 'preparatory_course', count: 1 },
+      { route: 'direct_studies', count: 0 },
+    ],
+    centres: [{ centreId: 'umcs-lublin', count: 1 }],
+    fields: [
+      {
+        group: '04',
+        count: 1,
+        programmes: [{ programmeId: 'prawo', programmeName: 'Prawo', count: 1 }],
+      },
+    ],
+    typedProgrammeCount: 0,
+    universities: [{ universityId: 'science-078', count: 1 }],
+  };
+
+  it('reads the filtered summary with GET and without a request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => summary,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getScholarshipReportSummary('BY')).resolves.toEqual(summary);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scholarship-report?summary=1&country=BY',
+      expect.objectContaining({ method: 'GET', body: undefined }),
+    );
   });
 });

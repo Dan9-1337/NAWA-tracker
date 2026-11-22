@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { MIN_COHORT_SIZE } from '../../shared/product-rules';
+import { scholarshipReportMinimumScore } from '../../shared/scholarship-report';
 
 const migration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202608030001_schema.sql'),
@@ -43,6 +44,10 @@ const limitMigration = readFileSync(
 );
 const countryOnlyMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202612010001_country_only_statistics.sql'),
+  'utf8',
+);
+const scholarshipReportsMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202612020001_scholarship_reports.sql'),
   'utf8',
 );
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
@@ -465,6 +470,88 @@ describe('country-only statistics migration contract', () => {
     expect(countryOnlyMigration).toContain(
       'revoke all on function public.assert_statistics_result(jsonb) from public, anon, authenticated, service_role;',
     );
+  });
+});
+
+describe('scholarship reports migration contract', () => {
+  it('stores one report per survey with a server-set snapshot and the structural checks', () => {
+    expect(scholarshipReportsMigration).toContain('create table public.scholarship_reports');
+    expect(scholarshipReportsMigration).toContain(
+      `score_snapshot numeric not null check (score_snapshot >= ${scholarshipReportMinimumScore})`,
+    );
+    expect(scholarshipReportsMigration).toContain('primary key (identity_hash, intake_year)');
+    expect(scholarshipReportsMigration).toMatch(
+      /foreign key \(identity_hash, intake_year\)\s+references public\.responses \(identity_hash, intake_year\)\s+on delete cascade/,
+    );
+    expect(scholarshipReportsMigration).toMatch(
+      /\(study_route = 'preparatory_course'\) = \(prep_centre_id is not null\)/,
+    );
+    expect(scholarshipReportsMigration).toContain('(programme_id is null) <> (custom_programme is null)');
+    expect(scholarshipReportsMigration).toContain('length(custom_programme) between 1 and 80');
+    expect(scholarshipReportsMigration).toContain("custom_programme !~ '[\\r\\n]'");
+    expect(scholarshipReportsMigration).toContain("programme_isced ~ '^[0-9]{4}$'");
+    expect(scholarshipReportsMigration).not.toMatch(/telegram/i);
+  });
+
+  it('sets the snapshot on create and update and refuses a score below 60', () => {
+    for (const name of ['create_scholarship_report', 'update_scholarship_report']) {
+      const definition = functionDefinition(name, scholarshipReportsMigration);
+
+      expect(definition).toContain('r.nawa_orientation_score');
+      expect(definition).toContain("message = 'profile_not_found'");
+      expect(definition).toContain("message = 'score_below_threshold'");
+      expect(definition).toContain(`v_score is null or v_score < ${scholarshipReportMinimumScore}`);
+      expect(definition).toContain('score_snapshot');
+    }
+
+    const create = functionDefinition('create_scholarship_report', scholarshipReportsMigration);
+    expect(create).toContain("message = 'report_exists'");
+    expect(create).toContain('v_score');
+
+    const update = functionDefinition('update_scholarship_report', scholarshipReportsMigration);
+    expect(update).toContain('score_snapshot = v_score');
+    expect(update).toContain("message = 'report_not_found'");
+  });
+
+  it('refuses non-contributors, filters by country and excludes suspicious surveys without a floor', () => {
+    const summary = functionDefinition('get_scholarship_report_summary', scholarshipReportsMigration);
+
+    expect(summary).toContain('if not exists');
+    expect(summary).toContain('where identity_hash = p_identity_hash');
+    expect(summary).toContain('not r.is_suspicious');
+    expect(summary).toContain("r.scholarship_track = 'nawa_director'");
+    expect(summary).toContain('p_ranking_country is null');
+    expect(summary).toContain('ranking_country = p_ranking_country');
+    expect(summary).toContain("'typedProgrammeCount'");
+    expect(summary).toContain('custom_programme is not null');
+    expect(summary).not.toContain('custom_programme =');
+    expect(summary).not.toContain('custom_programme::text');
+    expect(summary).not.toMatch(/min_cohort_size|>= 10\b/);
+    expect(summary).not.toContain('otherCount');
+  });
+
+  it('keeps the table, functions and read RPC service-role only', () => {
+    expect(scholarshipReportsMigration).toContain(
+      'revoke all on table public.scholarship_reports from public, anon, authenticated;',
+    );
+    expect(scholarshipReportsMigration).toContain(
+      'grant select, insert, update, delete on table public.scholarship_reports to service_role;',
+    );
+
+    for (const signature of [
+      'get_scholarship_report(text, integer)',
+      'create_scholarship_report(text, integer, text, text, text, text, text, text)',
+      'update_scholarship_report(text, integer, text, text, text, text, text, text)',
+      'delete_scholarship_report(text, integer)',
+      'get_scholarship_report_summary(text, integer, text)',
+    ]) {
+      expect(scholarshipReportsMigration).toContain(
+        `revoke all on function public.${signature} from public, anon, authenticated;`,
+      );
+      expect(scholarshipReportsMigration).toContain(
+        `grant execute on function public.${signature} to service_role;`,
+      );
+    }
   });
 });
 

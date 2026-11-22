@@ -4,6 +4,9 @@ import { fineBuckets, makeStatisticsResult } from './test-statistics';
 import {
   createResponseRequestSchema,
   responseFormInputSchema,
+  scholarshipReportInputSchema,
+  scholarshipReportSchema,
+  scholarshipReportSummarySchema,
   statisticsRequestSchema,
   statisticsResultSchema,
 } from './validation';
@@ -247,6 +250,204 @@ describe('study field and prep-course city', () => {
 
   it('keeps the city optional when reporting an award', () => {
     expect(() => responseFormInputSchema.parse(awarded)).not.toThrow();
+  });
+});
+
+describe('scholarshipReportInputSchema', () => {
+  const direct = {
+    studyRoute: 'direct_studies' as const,
+    programmeId: 'informatyka',
+    universityId: 'science-096',
+  };
+
+  it('accepts the preparatory path with a centre and a catalogue programme', () => {
+    expect(
+      scholarshipReportInputSchema.parse({
+        studyRoute: 'preparatory_course',
+        prepCentreId: 'umcs-lublin',
+        programmeId: 'prawo',
+        universityId: 'science-078',
+      }),
+    ).toEqual({
+      studyRoute: 'preparatory_course',
+      prepCentreId: 'umcs-lublin',
+      programmeId: 'prawo',
+      universityId: 'science-078',
+    });
+  });
+
+  it('accepts the direct path without a centre', () => {
+    expect(scholarshipReportInputSchema.parse(direct)).toEqual(direct);
+    expect(
+      scholarshipReportInputSchema.parse({
+        studyRoute: 'direct_studies',
+        prepCentreId: undefined,
+        programmeId: 'informatyka',
+        universityId: 'science-096',
+      }),
+    ).toEqual(direct);
+  });
+
+  it('accepts 1 to 80 characters of typed text, trimmed, and rejects 81, empty or multiline text', () => {
+    const typed = (customProgramme: string) => ({
+      studyRoute: 'direct_studies' as const,
+      customProgramme,
+      universityId: 'science-096',
+    });
+
+    expect(scholarshipReportInputSchema.parse(typed('  Moje studia  '))).toEqual({
+      studyRoute: 'direct_studies',
+      customProgramme: 'Moje studia',
+      universityId: 'science-096',
+    });
+    expect(scholarshipReportInputSchema.parse(typed('a')).customProgramme).toBe('a');
+    expect(scholarshipReportInputSchema.parse(typed('a'.repeat(80))).customProgramme).toHaveLength(80);
+    expect(() => scholarshipReportInputSchema.parse(typed('a'.repeat(81)))).toThrow();
+    expect(() => scholarshipReportInputSchema.parse(typed('   '))).toThrow();
+    expect(() => scholarshipReportInputSchema.parse(typed('one\ntwo'))).toThrow();
+    expect(() => scholarshipReportInputSchema.parse(typed('one\r\ntwo'))).toThrow();
+  });
+
+  it('requires exactly one of a catalogue programme and typed text', () => {
+    expect(() =>
+      scholarshipReportInputSchema.parse({ ...direct, customProgramme: 'Moje studia' }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportInputSchema.parse({ studyRoute: 'direct_studies', universityId: 'science-096' }),
+    ).toThrow();
+  });
+
+  it('keeps the centre exactly on the preparatory path', () => {
+    expect(() =>
+      scholarshipReportInputSchema.parse({ ...direct, prepCentreId: 'umcs-lublin' }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportInputSchema.parse({
+        studyRoute: 'preparatory_course',
+        programmeId: 'prawo',
+        universityId: 'science-078',
+      }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportInputSchema.parse({
+        studyRoute: 'preparatory_course',
+        prepCentreId: 'unknown-centre',
+        programmeId: 'prawo',
+        universityId: 'science-078',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts only a Director-track university and rejects unknown keys', () => {
+    expect(() =>
+      scholarshipReportInputSchema.parse({ ...direct, universityId: 'culture-013' }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportInputSchema.parse({ ...direct, universityId: 'health-001' }),
+    ).toThrow();
+    expect(() => scholarshipReportInputSchema.parse({ ...direct, telegramUserId: 1 })).toThrow();
+  });
+});
+
+describe('scholarshipReportSchema', () => {
+  it('accepts a stored report at or above the 60 snapshot and rejects a lower one', () => {
+    const stored = {
+      studyRoute: 'direct_studies' as const,
+      programmeId: 'informatyka',
+      programmeName: 'Informatyka',
+      universityId: 'science-096',
+      scoreSnapshot: 72,
+    };
+
+    expect(scholarshipReportSchema.parse(stored)).toEqual(stored);
+    expect(() => scholarshipReportSchema.parse({ ...stored, scoreSnapshot: 59.9 })).toThrow();
+  });
+});
+
+describe('scholarshipReportSummarySchema', () => {
+  const summary = {
+    total: 3,
+    countries: [
+      { country: 'UA', count: 2 },
+      { country: 'BY', count: 1 },
+    ],
+    paths: [
+      { route: 'preparatory_course' as const, count: 1 },
+      { route: 'direct_studies' as const, count: 2 },
+    ],
+    centres: [{ centreId: 'umcs-lublin', count: 1 }],
+    fields: [
+      {
+        group: '06',
+        count: 1,
+        programmes: [{ programmeId: 'informatyka', programmeName: 'Informatyka', count: 1 }],
+      },
+    ],
+    typedProgrammeCount: 2,
+    universities: [
+      { universityId: 'science-096', count: 2 },
+      { universityId: 'science-078', count: 1 },
+    ],
+  };
+
+  it('accepts a summary whose lists agree with its total', () => {
+    expect(scholarshipReportSummarySchema.parse(summary)).toEqual(summary);
+  });
+
+  it('accepts a filtered selection whose country list is larger than the total', () => {
+    const filtered = {
+      ...summary,
+      total: 1,
+      countries: [
+        { country: 'UA', count: 3 },
+        { country: 'BY', count: 1 },
+      ],
+      paths: [
+        { route: 'preparatory_course' as const, count: 1 },
+        { route: 'direct_studies' as const, count: 0 },
+      ],
+      fields: [
+        {
+          group: '04',
+          count: 1,
+          programmes: [{ programmeId: 'prawo', programmeName: 'Prawo', count: 1 }],
+        },
+      ],
+      typedProgrammeCount: 0,
+      universities: [{ universityId: 'science-078', count: 1 }],
+    };
+
+    expect(scholarshipReportSummarySchema.parse(filtered)).toEqual(filtered);
+  });
+
+  it('rejects counts that disagree with the total and cells below one', () => {
+    expect(() =>
+      scholarshipReportSummarySchema.parse({ ...summary, total: 4 }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportSummarySchema.parse({
+        ...summary,
+        countries: [{ country: 'UA', count: 2 }],
+      }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportSummarySchema.parse({
+        ...summary,
+        fields: [{ ...summary.fields[0], count: 2 }],
+      }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportSummarySchema.parse({
+        ...summary,
+        centres: [{ centreId: 'umcs-lublin', count: 0 }],
+      }),
+    ).toThrow();
+    expect(() =>
+      scholarshipReportSummarySchema.parse({
+        ...summary,
+        countries: [{ country: 'Ukraine', count: 3 }],
+      }),
+    ).toThrow();
   });
 });
 

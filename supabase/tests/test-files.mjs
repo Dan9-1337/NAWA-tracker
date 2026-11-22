@@ -11,4 +11,5 @@ export const testFiles = [
   'supabase/tests/intake_summary.sql',
   'supabase/tests/score_change_limit.sql',
   'supabase/tests/spike_flags.sql',
+  'supabase/tests/scholarship_reports.sql',
 ];

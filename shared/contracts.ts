@@ -119,6 +119,103 @@ export type DeleteResponseResult = {
   deleted: true;
 };
 
+/**
+ * The answers of the scholarship-holder survey (ADR 0012). Exactly one of `programmeId` (the catalogue
+ * kierunek) and `customProgramme` (typed by hand, private to its author) is present; `prepCentreId` is present
+ * exactly on the preparatory path. The score snapshot and the ISCED-F code are set by the server, never sent.
+ */
+export type ScholarshipReportInput = {
+  studyRoute: StudyRoute;
+  /** A 2026 centre from `shared/prep-course-centres.ts`; only on the preparatory path. */
+  prepCentreId?: string;
+  /** A programme id from `shared/study-programmes.ts`. */
+  programmeId?: string;
+  /** Typed instead of a catalogue programme; 1-80 characters, single line. */
+  customProgramme?: string;
+  /** A partner university of the `nawa_director` track (`shared/universities.ts`). */
+  universityId: string;
+};
+
+export type ScholarshipReport = ScholarshipReportInput & {
+  /** The catalogue name of `programmeId`, resolved by the server; absent for a typed kierunek. */
+  programmeName?: string;
+  /** The survey's `nawa_orientation_score` when the report was last created or edited. */
+  scoreSnapshot: number;
+};
+
+export type CreateScholarshipReportRequest = {
+  report: ScholarshipReportInput;
+};
+
+export type UpdateScholarshipReportRequest = {
+  report: ScholarshipReportInput;
+};
+
+/** `GET /api/scholarship-report`: the caller's report, or null when they have not answered. */
+export type ScholarshipReportResult = {
+  report: ScholarshipReport | null;
+};
+
+export type ScholarshipReportMutationResult = {
+  report: ScholarshipReport;
+};
+
+export type DeleteScholarshipReportResult = {
+  deleted: true;
+};
+
+export type ScholarshipReportSummaryCountry = {
+  /** ISO 3166-1 alpha-2 code of the survey's `ranking_country`. */
+  country: string;
+  count: number;
+};
+
+export type ScholarshipReportSummaryPath = {
+  route: StudyRoute;
+  count: number;
+};
+
+export type ScholarshipReportSummaryCentre = {
+  /** A 2026 centre from `shared/prep-course-centres.ts`. */
+  centreId: string;
+  count: number;
+};
+
+export type ScholarshipReportSummaryProgramme = {
+  programmeId: string;
+  /** The catalogue name, resolved by the server. */
+  programmeName: string;
+  count: number;
+};
+
+export type ScholarshipReportSummaryField = {
+  /** Two-digit ISCED-F broad group from `shared/study-fields.ts`, or "other". */
+  group: string;
+  count: number;
+  programmes: ScholarshipReportSummaryProgramme[];
+};
+
+export type ScholarshipReportSummaryUniversity = {
+  universityId: string;
+  count: number;
+};
+
+/**
+ * The contributors-only results page (ADR 0016). Every count is shown from one; reports of suspicious surveys are
+ * excluded. `countries` always lists every country with a counted report, even when the lists are filtered to one
+ * country, so the filter can switch back without another request.
+ */
+export type ScholarshipReportSummary = {
+  total: number;
+  countries: ScholarshipReportSummaryCountry[];
+  paths: ScholarshipReportSummaryPath[];
+  centres: ScholarshipReportSummaryCentre[];
+  fields: ScholarshipReportSummaryField[];
+  /** Reports whose kierunek was typed by hand; their text never travels in the summary. */
+  typedProgrammeCount: number;
+  universities: ScholarshipReportSummaryUniversity[];
+};
+
 export type ApiError = {
   error: {
     code: string;

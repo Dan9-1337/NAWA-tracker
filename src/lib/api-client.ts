@@ -2,19 +2,29 @@ import type {
   ApiError,
   CreateResponseRequest,
   CreateResponseResult,
+  CreateScholarshipReportRequest,
   CurrentResponseResult,
   DeleteResponseResult,
+  DeleteScholarshipReportResult,
   IntakeSummaryResult,
+  ScholarshipReportMutationResult,
+  ScholarshipReportResult,
+  ScholarshipReportSummary,
   StatisticsResult,
   UpdateResponseRequest,
   UpdateResponseResult,
+  UpdateScholarshipReportRequest,
 } from '../../shared/contracts';
 import {
   apiErrorSchema,
   createResponseResultSchema,
   currentResponseResultSchema,
   deleteResponseResultSchema,
+  deleteScholarshipReportResultSchema,
   intakeSummaryResultSchema,
+  scholarshipReportMutationResultSchema,
+  scholarshipReportResultSchema,
+  scholarshipReportSummarySchema,
   statisticsResultSchema,
   updateResponseResultSchema,
 } from '../../shared/validation';
@@ -55,11 +65,17 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-async function request<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', body: unknown, schema: ZodType<T>): Promise<T> {
+async function request<T>(
+  path: string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  body: unknown,
+  schema: ZodType<T>,
+): Promise<T> {
+  const hasBody = method === 'POST' || method === 'PUT';
   const response = await fetch(path, {
     method,
     headers: authHeaders(),
-    body: method === 'DELETE' ? undefined : JSON.stringify(body),
+    body: hasBody ? JSON.stringify(body) : undefined,
   });
   const payload = await readJson(response);
 
@@ -106,4 +122,30 @@ export function getIntakeSummary(): Promise<IntakeSummaryResult> {
 
 export function deleteResponse(): Promise<DeleteResponseResult> {
   return request('/api/responses', 'DELETE', {}, deleteResponseResultSchema);
+}
+
+export function getScholarshipReport(): Promise<ScholarshipReportResult> {
+  return request('/api/scholarship-report', 'GET', undefined, scholarshipReportResultSchema);
+}
+
+export function getScholarshipReportSummary(country?: string): Promise<ScholarshipReportSummary> {
+  const query = new URLSearchParams({ summary: '1' });
+  if (country) query.set('country', country);
+  return request(`/api/scholarship-report?${query.toString()}`, 'GET', undefined, scholarshipReportSummarySchema);
+}
+
+export function createScholarshipReport(
+  input: CreateScholarshipReportRequest,
+): Promise<ScholarshipReportMutationResult> {
+  return request('/api/scholarship-report', 'POST', input, scholarshipReportMutationResultSchema);
+}
+
+export function updateScholarshipReport(
+  input: UpdateScholarshipReportRequest,
+): Promise<ScholarshipReportMutationResult> {
+  return request('/api/scholarship-report', 'PUT', input, scholarshipReportMutationResultSchema);
+}
+
+export function deleteScholarshipReport(): Promise<DeleteScholarshipReportResult> {
+  return request('/api/scholarship-report', 'DELETE', {}, deleteScholarshipReportResultSchema);
 }

@@ -33,6 +33,22 @@ export function profileNotFound(): HttpError {
   return new HttpError(404, 'PROFILE_NOT_FOUND', 'No survey was found for this Telegram account.');
 }
 
+export function scholarshipReportExists(): HttpError {
+  return new HttpError(409, 'REPORT_EXISTS', 'This account already has a scholarship-holder report.');
+}
+
+export function scholarshipReportNotFound(): HttpError {
+  return new HttpError(404, 'REPORT_NOT_FOUND', 'No scholarship-holder report was found for this account.');
+}
+
+export function scholarshipScoreBelowThreshold(): HttpError {
+  return new HttpError(
+    409,
+    'SCORE_BELOW_THRESHOLD',
+    'A score of at least 60 is required for the scholarship-holder survey.',
+  );
+}
+
 export function editLimitReached(retryAt?: string | null): HttpError {
   return new HttpError(
     429,

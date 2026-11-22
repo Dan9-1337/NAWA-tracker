@@ -1,6 +1,6 @@
 # 012 — Scholarship-holder survey: centre, wished-for kierunek and university, results page for contributors
 
-**Status:** Ready
+**Status:** In review
 
 ## Goal
 
@@ -102,26 +102,26 @@ Intended behavior:
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
-| A9 | | |
-| A10 | | |
-| A11 | | |
-| A12 | | |
-| A13 | | |
-| A14 | | |
-| A15 | | |
-| A16 | | |
-| A17 | | |
-| A18 | | |
-| A19 | | |
+| A1 | `npm test -- src/features/ProfileDashboard.test.tsx` → `places the invitation between the what-if block and the profile block for a 2026 Director survey` (document-order assertion) and `does not invite a survey of another intake year` (the report GET is not called). | pass |
+| A2 | `npm test -- src/features/scholarship-report` → `saves the preparatory path with a catalogue kierunek and shows the answers and the results`: POST with `prepCentreId: 'umcs-lublin'`, `programmeId: 'informatyka'`, `universityId: 'science-096'`; the card shows the route, centre, kierunek and the results button. | pass |
+| A3 | Same suite → `skips the centre step on the direct path and saves a typed kierunek` (no centre control; the POST has no `prepCentreId`); `npm run test:db:pglite` → `A3: a direct-studies report has no preparatory centre`. | pass |
+| A4 | `npm test -- shared/validation.test.ts` → `accepts 1 to 80 characters of typed text, trimmed, and rejects 81, empty or multiline text`; `npm test -- src/features/scholarship-report` → `rejects 81-character and empty typed text on the client and accepts 1 to 80` (main button disabled and the step hint); `api/scholarship-report.test.ts` → the 81-character and newline cases answer 400. | pass |
+| A5 | `shared/validation.test.ts` → `requires exactly one of a catalogue programme and typed text`, `keeps the centre exactly on the preparatory path`, `accepts only a Director-track university and rejects unknown keys`; `api/scholarship-report.test.ts` → `rejects an unknown programme id before calling the database` and the `it.each` of centre/direct, both/neither, unknown centre and a Culture university; `npm run test:db:pglite` → the `A5:` checks (SQLSTATE 23514). | pass |
+| A6 | `api/scholarship-report.test.ts` → `answers { report: null } without a report` and `answers 404 REPORT_NOT_FOUND for the summary without a report`; `npm run test:db:pglite` → `A6: the summary refuses a caller without a report`, `A6: the own report is returned after answering`. | pass |
+| A7 | `npm run test:db:pglite` → `A7:` assertions (total 4, UA 3 before BY 1, UMCS count 1, paths 1/3); `src/features/scholarship-report` → `sorts the country filter, shows counts from one…` (total 4, UA before BY, UMCS at count 1, no `otherFieldGroup`). | pass |
+| A8 | `npm run test:db:pglite` → `A8:` (BY total 1; its centre, science-078 and field group 04; direct path 0; the country list still has UA+BY); the UI test selects BY, asserts total 1 and `getScholarshipReportSummary('BY')`, then reopens on all countries. | pass |
+| A9 | `npm run test:db:pglite` → `A9:` 11 typed reports, `typedProgrammeCount` 11, fields empty, the text absent from the summary, the author still sees it and another account gets null; `api/scholarship-report.test.ts` → `never puts typed kierunek text into a summary`; the UI test renders the typed row with 11 and no text. | pass |
+| A10 | `npm run test:db:pglite` → `A10:` group `04` with the programme at count 1; the UI test `shows catalogue kierunki under their field group…` asserts `Technologie teleinformacyjne` (group 06) and `Informatyka`. | pass |
+| A11 | `npm run test:db:pglite` → `A11:` total, country and field counts drop after `is_suspicious`; the summary query has `not r.is_suspicious`. | pass |
+| A12 | `npm run test:db:pglite` → `A12:` path/centre/field counts follow the update; the UI test `prefills an existing report and replaces its answers with PUT` asserts the PUT payload and the updated card. | pass |
+| A13 | `npm run test:db:pglite` → `A13:` delete returns `{deleted:true}`, the report is gone, the survey stays, the summary is null and a second delete says `report_not_found`; the UI test deletes after confirmation, sees the invitation, no results button and the profile block. | pass |
+| A14 | `npm run test:db:pglite` → `A14: deleting the survey cascades to its report`; the full `npm test` (554 tests) includes the unchanged `api/responses.test.ts`. | pass |
+| A15 | `api/scholarship-report.test.ts` → 405 with `Allow`, 403 wrong origin, 401 missing initData, 409 `REPORT_EXISTS`, 409 `SCORE_BELOW_THRESHOLD`, 404 `PROFILE_NOT_FOUND`, 404 `REPORT_NOT_FOUND` on PUT/DELETE, 403 on a cross-origin GET; SQL `report_exists` / `report_not_found`. | pass |
+| A16 | `npm test -- src/i18n` → 80 tests pass (five-locale parity and glossary); `src/features/scholarship-report` → `scholarship-holder privacy copy` checks the holders-only and typed-kierunek points in all five locales; the reviewer reads the new copy. | pass (tests); reviewer read pending |
+| A17 | `src/features/scholarship-report` → `opens the results on all countries and returns to the dashboard with Telegram back`, plus the reopen in the filter test; the card's results button opens the view. | pass |
+| A18 | `npm run test:db:pglite` → `A18:` snapshot 72, the survey edit to 75 succeeds, the snapshot stays 72, the report save sets 75; `api/scholarship-report.test.ts` creates with 72 and the PUT returns 75. | pass |
+| A19 | `ProfileDashboard.test.tsx` → `does not invite a survey scoring below 60` and the report GET is not called; `api/scholarship-report.test.ts` → `returns 409 SCORE_BELOW_THRESHOLD and stores nothing`; `npm run test:db:pglite` → `A19:` (57.6 refused, zero rows, a direct snapshot of 58 violates 23514). | pass |
 
-- Changed files:
-- Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0012](../docs/adr/0012-scholarship-holder-survey.md); revision of this brief (results page, no floor; score snapshot and threshold for [ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md)) and [ADR 0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md).
+- Changed files: `supabase/migrations/202612020001_scholarship_reports.sql` (new), `supabase/tests/scholarship_reports.sql` (new), `supabase/tests/test-files.mjs`, `supabase/tests/migration-contracts.test.ts`, `api/scholarship-report.ts` (new), `api/scholarship-report.test.ts` (new), `api/_lib/errors.ts`, `api/_lib/origin.ts`, `shared/scholarship-report.ts` (new), `shared/contracts.ts`, `shared/validation.ts`, `shared/api-contracts.test.ts`, `shared/validation.test.ts`, `src/lib/api-client.ts`, `src/lib/api-client.test.ts`, `src/features/ProfileDashboard.tsx`, `src/features/ProfileDashboard.test.tsx`, `src/features/scholarship-report/` (new: card, flow, results, hook and test), `src/i18n/pl.ts`, `src/i18n/en.ts`, `src/i18n/ru.ts`, `src/i18n/uk.ts`, `src/i18n/be.ts`, `scripts/local-api-server.ts` (route for local manual checks), `docs/architecture.md`, `docs/product-flow.md`.
+- Checks not run, blockers, or open questions: `make check` as such was not run (the orchestrator runs it); `npm test` (all 554 tests) and `npm run typecheck` passed instead; one intermediate full-suite run had a single unreproducible failure and the next two full runs passed 554/554, while every targeted suite passed repeatedly. The real PostgreSQL/pgTAP suite (CI) was not run; `npm run test:db:pglite` passed all 12 test files, including 71 new assertions. Manual `make dev` checks were not run; `npm run build` succeeded and the 1,361-entry catalogue is a separate lazy chunk (`study-programmes` 116.46 kB / 23.50 kB gzip; main 571.16 kB / 162.77 kB gzip), loaded only on the kierunek step. Reviewer notes: (1) the brief says "11 broad groups" while `shared/study-fields.ts` has 10 named groups, so catalogue codes outside them (RAD-on's `9999`) are shown under an eleventh "other" group instead of disappearing; (2) the country filter list is deliberately unfiltered when the result lists are filtered, so the page can switch back — A8's "every list" refers to the result lists; (3) an unknown programme id is checked by an API-layer zod schema against the server catalogue rather than in `shared/validation.ts`, to keep the catalogue out of the client main bundle (the shared schema checks the centre, programme/typed exclusivity and the Director university, and the API answers 400); (4) a same-origin browser GET omits `Origin`, so GET accepts a missing header and refuses only a present, different one, while mutations keep the strict check; (5) `scripts/local-api-server.ts` was routed for the new endpoint so local manual checks work.
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0012](../docs/adr/0012-scholarship-holder-survey.md); revision of this brief (results page, no floor; score snapshot and threshold for [ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md)) and [ADR 0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md). DeepSeek V4.1 Flash — implementation.

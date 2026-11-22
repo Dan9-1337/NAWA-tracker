@@ -44,6 +44,10 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
 | `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor) |
+| `/api/scholarship-report` | GET | initData | Own scholarship-holder report, or `{ report: null }`; `?summary=1[&country=XX]` returns the contributors-only results |
+| `/api/scholarship-report` | POST | initData + Origin | Create the scholarship-holder report (2026 Director survey, score ≥ 60) |
+| `/api/scholarship-report` | PUT | initData + Origin | Replace the answers and refresh the score snapshot |
+| `/api/scholarship-report` | DELETE | initData + Origin | Delete the report; the survey stays |
 | `/api/bot` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook: `/start` (with `c_<ISO>` or `subscribe` payload), `/subscribe`, `/stop`, `/help`, and `my_chat_member` (blocked bot) |
 | `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`results_soon`, `results_out`, `intake_open`) |
 | `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
@@ -63,6 +67,10 @@ Questionnaire fields plus:
 - `spike_reviewed_at timestamp with time zone` — when the maintainer reviewed a spike flag; a reviewed survey is never flagged again
 - `study_field text not null default 'other'` — ISCED-F detailed code (`^[0-9]{4}$`) or `other`; the default only covers rows created before the field existed (`shared/study-fields.ts`)
 - `prep_course_city text` — optional; only allowed on the preparatory route with outcome `scholarship_awarded`; values from `shared/prep-course-cities.ts` or `other`
+
+### `scholarship_reports`
+
+The answers of the scholarship-holder survey ([ADR 0012](adr/0012-scholarship-holder-survey.md)), one row per survey: `(identity_hash, intake_year)` is the primary key and a foreign key to `responses (identity_hash, intake_year)` with `on delete cascade`, so deleting a survey deletes its report. `score_snapshot numeric not null` (≥ 60) is the survey's `nawa_orientation_score` when the report is created or edited; the server sets it, and a later survey edit does not move it ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)). `study_route` is `preparatory_course` or `direct_studies`; `prep_centre_id` is present exactly on the preparatory path and comes from `shared/prep-course-centres.ts`; exactly one of `programme_id` (a catalogue kierunek, with `programme_isced` a four-digit ISCED-F code) and `custom_programme` (typed, trimmed, 1–80 characters, single line) is present; `university_id` is a Director-track partner from `shared/universities.ts`. Typed text is private to its author and the maintainer, and never travels in a summary. Service-role only.
 
 ### `score_change_log`
 
@@ -84,6 +92,11 @@ One row (`id` is the single-value check). `active_intake_year` scopes every stat
 - `get_current_statistics(identity_hash, intake_year)`
 - `get_prep_city_distribution(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
 - `get_cohort_outcomes(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
+- `get_scholarship_report(identity_hash, intake_year)` — the caller's scholarship-holder report, or null
+- `create_scholarship_report(identity_hash, intake_year, study_route, prep_centre_id, programme_id, programme_isced, custom_programme, university_id)` — one report per 2026 Director survey; stores the survey's current `nawa_orientation_score` as `score_snapshot`; a missing survey → `profile_not_found`, a score below 60 → `score_below_threshold` with nothing stored, a second report → `report_exists`
+- `update_scholarship_report(identity_hash, intake_year, study_route, prep_centre_id, programme_id, programme_isced, custom_programme, university_id)` — replaces the answers and refreshes `score_snapshot` from the survey; a missing report → `report_not_found`
+- `delete_scholarship_report(identity_hash, intake_year)` — deletes the report only; the survey stays
+- `get_scholarship_report_summary(identity_hash, intake_year, ranking_country)` — null for a caller without a report; otherwise the contributors-only results, counted from every report whose survey is not `is_suspicious`, filtered by the survey's `ranking_country` (`null` = all countries); `countries` always lists every counted country so the filter can switch back; no minimum number of answers
 - `compute_orientation_score` — the single SQL implementation of the published formula (mirrors `shared/nawa-score.ts`; parity is tested)
 
 ### Spike flags
@@ -140,6 +153,36 @@ where intake_year = 2026
 ```
 
 A reviewed survey is never flagged again. The `spike_flagged_at is not null` filter keeps flags from the old status-transition rule out of both statements.
+
+### Scholarship-holder results
+
+Only a person with a report sees the contributors-only results ([ADR 0012](adr/0012-scholarship-holder-survey.md), [ADR 0016](adr/0016-scholarship-holder-results-page-without-minimum.md)): `get_scholarship_report_summary` returns null for everyone else and the API answers 404 `REPORT_NOT_FOUND`. The summary counts every report whose survey is not `is_suspicious`, with no disclosure floor: the total, the two study paths, preparatory centres, ISCED-F broad groups with catalogue kierunki, one "typed by hand" row for private text, and wished-for universities are all shown from one answer. Typed text is never included; the API resolves catalogue names and maps codes outside `broadGroups` to "other". The country filter uses the survey's `ranking_country`; the country list is deliberately left unfiltered so the page can switch back.
+
+The card stores the survey's current score as `score_snapshot` on every report create or edit. A survey below 60 gets no invitation and the server refuses a report with 409 `SCORE_BELOW_THRESHOLD`; a later survey edit does not move an existing snapshot until the report is saved again ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)).
+
+Reviewing typed kierunki (maintainer only):
+
+```sql
+select custom_programme, count(*) as reports
+from public.scholarship_reports
+where custom_programme is not null
+group by 1
+order by 2 desc, 1;
+```
+
+After adding the name, its id and ISCED-F code to `shared/study-programmes.ts` and deploying, point matching reports at it:
+
+```sql
+update public.scholarship_reports
+set programme_id = 'nowy-kierunek',
+    programme_isced = '0613',
+    custom_programme = null,
+    updated_at = now()
+where custom_programme is not null
+  and lower(btrim(custom_programme)) = lower('Nowy kierunek');
+```
+
+The next edit of such a report writes the catalogue id itself; until then the rows count under the new catalogue kierunek.
 
 ### `bot_subscriptions`
 
@@ -205,6 +248,14 @@ Supabase free-tier projects pause after roughly seven days without database acti
 The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
 
 ## Architecture changelog
+
+### 2026-12-02 — Scholarship-holder survey and results
+
+- Migration `202612020001`: new `scholarship_reports` keyed by `(identity_hash, intake_year)`, with a cascade foreign key to `responses`, a server-set `score_snapshot` (≥ 60), the structural checks for the centre, one catalogue/typed kierunek and the ISCED-F code, and service-role-only access. New RPCs `get_scholarship_report`, `create_scholarship_report`, `update_scholarship_report`, `delete_scholarship_report` and `get_scholarship_report_summary`; a survey below 60 or missing refuses a report, a second report answers `report_exists`, and the summary refuses non-contributors.
+- Dashboard: a scholarship-holder card sits between the what-if/distribution blocks and the profile block for a 2026 Director survey scoring at least 60. It opens a four-step flow (path, centre only on the preparatory path, kierunek from the lazily loaded catalogue or typed 1–80 characters, university), then shows the answers with Edit/Delete and "where holders were placed". The separate results view has an all-countries filter with counts, totals, paths, centres, ISCED-F field groups with catalogue kierunki, one typed row without text, universities, an empty state and the self-reported caption. No minimum, no ladder, no extra "other" row; reports of suspicious surveys are excluded.
+- API: `GET`/`POST`/`PUT`/`DELETE /api/scholarship-report`; a same-origin GET may omit the Origin header, and only a present, different origin is refused. Catalogue programme ids are validated on the server and the ISCED-F code is resolved there; typed text never appears in a summary.
+- Privacy copy gains the contributors-only rule, the small-country guess and the private typed kierunek in five locales.
+- Decision records: [ADR 0012](adr/0012-scholarship-holder-survey.md), [ADR 0016](adr/0016-scholarship-holder-results-page-without-minimum.md), [ADR 0017](adr/0017-orientation-mark-from-holder-scores.md).
 
 ### 2026-12-01 — Country-only statistics
 

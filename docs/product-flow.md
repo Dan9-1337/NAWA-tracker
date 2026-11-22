@@ -83,6 +83,14 @@ One screen, no tabs. The saved result card opens it: the season, the orientation
 
 Also: edit profile (same wizard), Settings, delete profile.
 
+### Scholarship-holder survey (2026 Dyrektor holders)
+
+For a 2026 Dyrektor survey scoring at least 60, a card sits between the what-if / distribution blocks and the profile block. Without a report it invites the holder (`Получили стипендию Dyrektora NAWA? …`, button `Я получил(а) стипендию`); the button is a self-declaration and nothing is verified. The flow has four steps, with the same Telegram main/back handling as the edit wizard: the path (preparatory course, then studies; or studies directly), the preparatory centre only on the preparatory path (the closed 2026 list, no "other" and no free text), the wished-for kierunek (searchable catalogue, loaded lazily, or a typed name of 1–80 characters on one line) and the university (the Director-track partner search). A typed kierunek is seen only by its author and the maintainer.
+
+After saving, the card shows the answers (the typed kierunek to its author) with Edit, Delete after a confirmation, and `Куда распределили стипендиатов`, which opens a separate results view with the Telegram back button returning to the dashboard. The results open on all countries and have a filter by the survey's country of citizenship, each country with its count; every list counts from one answer, with no ladder or "too few answers" message. They show the total, the two paths with their shares, preparatory centres, ISCED-F broad groups with their catalogue kierunki, one `Вписано вручную` row without the text, and wished-for universities, followed by one caption that these are self-reported by holders who use NAWAmeter, not NAWA data. Reports whose survey is `is_suspicious` are excluded everywhere. The empty state (`Пока нет ответов.`) is possible only on all countries when the viewer's own survey is flagged and nobody else has answered.
+
+The report stores the survey's current orientation score as a snapshot on every create or edit; a survey below 60 has no card and the server refuses the report, and a later survey edit does not move the snapshot until the report is saved again ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)). Deleting the report keeps the survey; deleting the survey deletes the report. Only contributors see the results; the server refuses the summary to everyone else ([ADR 0012](adr/0012-scholarship-holder-survey.md), [ADR 0016](adr/0016-scholarship-holder-results-page-without-minimum.md)).
+
 ### Retired: application statuses, Outcomes and Season
 
 Until the 2026 intake closed, users could report a status ladder (`submitted` → `formal_review_positive` → `merit_review_positive` → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`), and the dashboard had Outcomes and Season tabs built on it. All of that is gone from the app. The columns, the transition rules and `get_cohort_outcomes` / `get_prep_city_distribution` remain in the database for the post-award flow.
@@ -159,6 +167,10 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 - Opting in stores the Telegram id in `bot_subscriptions`, separate from the answers; it is removed on `/stop`, when the bot is blocked, and when the survey is deleted.
 
 ## Changelog
+
+### Unreleased — Scholarship-holder survey
+
+- A card on the dashboard of a 2026 Dyrektor survey scoring at least 60 opens a four-step survey for holders (path, preparatory centre, wished-for kierunek from the catalogue or typed, university). The answers come back on the card with Edit and Delete, and a separate results view opens on all countries with a citizenship filter: totals, paths, centres, ISCED-F fields with catalogue kierunki, one typed row without text and universities, all counted from one answer with no ladder. Only contributors see the results, reports of suspicious surveys are excluded, and the report keeps the survey's score snapshot on every save ([ADR 0012](adr/0012-scholarship-holder-survey.md), [ADR 0016](adr/0016-scholarship-holder-results-page-without-minimum.md), [ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)).
 
 ### Unreleased — Country-only statistics
 

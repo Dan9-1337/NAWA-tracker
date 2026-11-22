@@ -26,6 +26,19 @@ vi.mock('../lib/telegram', async (importOriginal) => {
   };
 });
 
+const scholarshipApi = vi.hoisted(() => ({
+  getScholarshipReport: vi.fn(),
+  createScholarshipReport: vi.fn(),
+  updateScholarshipReport: vi.fn(),
+  deleteScholarshipReport: vi.fn(),
+  getScholarshipReportSummary: vi.fn(),
+}));
+
+vi.mock('../lib/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/api-client')>()),
+  ...scholarshipApi,
+}));
+
 /** jsdom renders the full country list, so keep generous timeouts for slower CI machines. */
 const UI_TIMEOUT = 15_000;
 const TEST_TIMEOUT = 40_000;
@@ -52,12 +65,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
   setActiveLocale('pl');
+  scholarshipApi.getScholarshipReport.mockResolvedValue({ report: null });
 });
 
-function renderDashboard(onSubmit = vi.fn().mockResolvedValue(undefined)) {
+function renderDashboard(
+  onSubmit = vi.fn().mockResolvedValue(undefined),
+  profile: ResponseFormInput = current,
+) {
   render(
     <I18nProvider>
-      <ProfileDashboard current={current} statistics={{ status: 'loading' }} onSubmit={onSubmit} />
+      <ProfileDashboard current={profile} statistics={{ status: 'loading' }} onSubmit={onSubmit} />
     </I18nProvider>,
   );
   return onSubmit;
@@ -257,6 +274,51 @@ describe('ProfileDashboard edit wizard', () => {
       await pressBack();
       expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+describe('Scholarship-holder card', () => {
+  it(
+    'places the invitation between the what-if block and the profile block for a 2026 Director survey',
+    async () => {
+      renderDashboard();
+
+      const start = await screen.findByRole('button', { name: pl.scholarshipReport.start }, {
+        timeout: UI_TIMEOUT,
+      });
+      const card = start.closest('section')!;
+      expect(card).toHaveAccessibleName(pl.scholarshipReport.title);
+
+      const whatIf = screen.getByTestId('what-if-block');
+      const profile = screen.getByTestId('profile-block');
+      expect(whatIf.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(card.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'does not invite a survey of another intake year',
+    async () => {
+      renderDashboard(undefined, { ...current, intakeYear: 2025 });
+
+      await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT });
+      expect(screen.queryByRole('button', { name: pl.scholarshipReport.start })).not.toBeInTheDocument();
+      expect(scholarshipApi.getScholarshipReport).not.toHaveBeenCalled();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'does not invite a survey scoring below 60',
+    async () => {
+      renderDashboard(undefined, { ...current, averageGrade: 3.2 });
+
+      await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT });
+      expect(screen.queryByRole('button', { name: pl.scholarshipReport.start })).not.toBeInTheDocument();
+      expect(scholarshipApi.getScholarshipReport).not.toHaveBeenCalled();
     },
     TEST_TIMEOUT,
   );

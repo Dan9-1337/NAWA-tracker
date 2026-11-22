@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
+import {
+  scholarshipReportIntakeYear,
+  scholarshipReportMinimumScore,
+} from '../../shared/scholarship-report';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
 import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
@@ -16,6 +20,10 @@ import {
 } from './ResponseWizardSteps';
 import { ProfileDetails } from './score/ProfileDetails';
 import { ScoreScreen } from './score/ScoreScreen';
+import { ScholarshipReportCard } from './scholarship-report/ScholarshipReportCard';
+import { ScholarshipReportFlow } from './scholarship-report/ScholarshipReportFlow';
+import { ScholarshipReportResults } from './scholarship-report/ScholarshipReportResults';
+import { useScholarshipReport } from './scholarship-report/useScholarshipReport';
 import {
   StatisticsDistribution,
   StatisticsPanel,
@@ -116,6 +124,17 @@ export function ProfileDashboard({
     );
   }, [current]);
 
+  // Only a 2026 Director survey at or above the merit threshold is invited (ADR 0017); everyone else is disabled.
+  const scholarshipReportEligible =
+    current.scholarshipTrack === 'nawa_director' &&
+    current.intakeYear === scholarshipReportIntakeYear &&
+    userOrientationScore !== null &&
+    userOrientationScore >= scholarshipReportMinimumScore;
+  const scholarship = useScholarshipReport(scholarshipReportEligible);
+
+  // A new report view or flow step also starts at the top.
+  useScrollToTopOnChange(scholarship.mode, scholarship.stepIndex);
+
   const submitEdit = useCallback(async () => {
     if (disabled || !canAdvanceWizardStep('grades', editDraft)) return;
     const next = toResponseInput(editDraft);
@@ -167,6 +186,27 @@ export function ProfileDashboard({
 
   function chromeConfig(): MiniAppChromeConfig {
     if (chromeSuspended) return {};
+
+    if (scholarship.mode === 'flow' && scholarship.draft) {
+      return {
+        main: {
+          text: scholarship.isLastStep ? t.scholarshipReport.save : t.wizard.next,
+          visible: true,
+          enabled: !disabled && !scholarship.pending && scholarship.stepValid,
+          loading: scholarship.isLastStep && scholarship.pending,
+          onClick: scholarship.isLastStep
+            ? () => void scholarship.save()
+            : scholarship.next,
+        },
+        back: { visible: true, onClick: scholarship.back },
+        closingConfirmation: true,
+      };
+    }
+
+    if (scholarship.mode === 'results') {
+      return { back: { visible: true, onClick: scholarship.closeResults } };
+    }
+
     if (view === 'dashboard') return {};
     const onGradesStep = editCurrentStep === 'grades';
     return {
@@ -204,6 +244,21 @@ export function ProfileDashboard({
     }
   }, [editDraft, view]);
 
+  if (scholarship.mode === 'flow') {
+    return <ScholarshipReportFlow controller={scholarship} />;
+  }
+
+  if (scholarship.mode === 'results') {
+    return (
+      <ScholarshipReportResults
+        summary={scholarship.summary}
+        selectedCountry={scholarship.selectedCountry}
+        onSelectCountry={scholarship.selectCountry}
+        onRetry={scholarship.retrySummary}
+      />
+    );
+  }
+
   if (view === 'edit-wizard') {
     return (
       <>
@@ -234,6 +289,7 @@ export function ProfileDashboard({
       <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
       <ScoreScreen current={current} statistics={statistics} onWhatIfUsed={noteWhatIfUsed} />
       <StatisticsDistribution state={statistics} profile={current} userScore={userOrientationScore} />
+      {scholarshipReportEligible ? <ScholarshipReportCard controller={scholarship} /> : null}
       <ProfileDetails current={current} onEditSection={openEditAt} />
 
       {actionError ? (

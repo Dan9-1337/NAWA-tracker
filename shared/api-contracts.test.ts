@@ -4,12 +4,17 @@ import {
   apiErrorSchema,
   createResponseRequestSchema,
   createResponseResultSchema,
+  createScholarshipReportRequestSchema,
   currentResponseRequestSchema,
   currentResponseResultSchema,
+  deleteScholarshipReportResultSchema,
+  scholarshipReportMutationResultSchema,
+  scholarshipReportResultSchema,
   statisticsRequestSchema,
   statisticsResultSchema,
   updateResponseRequestSchema,
   updateResponseResultSchema,
+  updateScholarshipReportRequestSchema,
 } from './validation';
 
 const validForm = {
@@ -101,6 +106,53 @@ describe('API response contracts', () => {
       .toEqual({ error: { code: 'PROFILE_EXISTS', message: 'Already exists.' } });
     expect(() =>
       apiErrorSchema.parse({ error: { ...limited.error, retryAt: 'in a while' } }),
+    ).toThrow();
+  });
+});
+
+describe('scholarship report contracts', () => {
+  const report = {
+    studyRoute: 'preparatory_course' as const,
+    prepCentreId: 'umcs-lublin',
+    programmeId: 'prawo',
+    programmeName: 'Prawo',
+    universityId: 'science-078',
+    scoreSnapshot: 72,
+  };
+
+  it('accepts and updates only the answer fields', () => {
+    const request = {
+      report: {
+        studyRoute: 'preparatory_course',
+        prepCentreId: 'umcs-lublin',
+        programmeId: 'prawo',
+        universityId: 'science-078',
+      },
+    };
+
+    expect(createScholarshipReportRequestSchema.parse(request)).toEqual(request);
+    expect(updateScholarshipReportRequestSchema.parse(request)).toEqual(request);
+    expect(() =>
+      createScholarshipReportRequestSchema.parse({ ...request, intakeYear: 2026 }),
+    ).toThrow();
+    expect(() =>
+      updateScholarshipReportRequestSchema.parse({
+        report: { ...request.report, scoreSnapshot: 99 },
+      }),
+    ).toThrow();
+  });
+
+  it('accepts the own-report envelope with and without a report', () => {
+    expect(scholarshipReportResultSchema.parse({ report })).toEqual({ report });
+    expect(scholarshipReportResultSchema.parse({ report: null })).toEqual({ report: null });
+    expect(scholarshipReportMutationResultSchema.parse({ report })).toEqual({ report });
+    expect(deleteScholarshipReportResultSchema.parse({ deleted: true })).toEqual({ deleted: true });
+  });
+
+  it('rejects a mutation result without a report or with a low snapshot', () => {
+    expect(() => scholarshipReportMutationResultSchema.parse({ report: null })).toThrow();
+    expect(() =>
+      scholarshipReportMutationResultSchema.parse({ report: { ...report, scoreSnapshot: 58 } }),
     ).toThrow();
   });
 });

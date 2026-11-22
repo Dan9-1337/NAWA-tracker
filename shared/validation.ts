@@ -11,15 +11,29 @@ import {
   type ApiError,
   type CreateResponseRequest,
   type CreateResponseResult,
+  type CreateScholarshipReportRequest,
   type CurrentResponseResult,
   type DeleteResponseResult,
+  type DeleteScholarshipReportResult,
   type IntakeSummaryResult,
+  type ScholarshipReport,
+  type ScholarshipReportInput,
+  type ScholarshipReportMutationResult,
+  type ScholarshipReportResult,
+  type ScholarshipReportSummary,
   type StatisticsResult,
   type UpdateResponseRequest,
   type UpdateResponseResult,
+  type UpdateScholarshipReportRequest,
 } from './contracts';
 import { MIN_COHORT_SIZE } from './product-rules';
+import { getPrepCourseCentres } from './prep-course-centres';
 import { isPrepCourseCity } from './prep-course-cities';
+import {
+  scholarshipReportIntakeYear,
+  scholarshipReportMaxCustomProgrammeLength,
+  scholarshipReportMinimumScore,
+} from './scholarship-report';
 import { isStudyFieldCode } from './study-fields';
 import { isUniversityAllowedForTrack } from './universities';
 
@@ -264,6 +278,208 @@ export const deleteResponseResultSchema = z
     deleted: z.literal(true),
   })
   .strict() satisfies z.ZodType<DeleteResponseResult>;
+
+const prepCourseCentreIds = new Set(
+  getPrepCourseCentres(scholarshipReportIntakeYear).map((centre) => centre.id),
+);
+
+const scholarshipReportAnswersObjectSchema = z
+  .object({
+    studyRoute: z.enum(studyRoutes),
+    prepCentreId: z.string().trim().min(1).max(64).optional(),
+    programmeId: z.string().trim().min(1).max(120).optional(),
+    customProgramme: z
+      .string()
+      .trim()
+      .min(1)
+      .max(scholarshipReportMaxCustomProgrammeLength)
+      .refine((value) => !/[\r\n]/.test(value), { message: 'customProgramme must be a single line' })
+      .optional(),
+    universityId: z.string().trim().min(1).max(64),
+  })
+  .strict();
+
+type ScholarshipReportAnswers = z.infer<typeof scholarshipReportAnswersObjectSchema>;
+
+/**
+ * The structural rules shared by the request and the stored report: the centre exists exactly on the preparatory
+ * path, and exactly one of the catalogue programme and the typed text is present.
+ */
+function refineScholarshipReportAnswers(value: ScholarshipReportAnswers, ctx: z.RefinementCtx): void {
+  const preparatory = value.studyRoute === 'preparatory_course';
+
+  if (preparatory && value.prepCentreId === undefined) {
+    ctx.addIssue({ code: 'custom', path: ['prepCentreId'], message: 'a preparatory report needs a centre' });
+  }
+  if (!preparatory && value.prepCentreId !== undefined) {
+    ctx.addIssue({ code: 'custom', path: ['prepCentreId'], message: 'a direct-studies report has no centre' });
+  }
+  if ((value.programmeId === undefined) === (value.customProgramme === undefined)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['programmeId'],
+      message: 'exactly one of programmeId and customProgramme is required',
+    });
+  }
+}
+
+/**
+ * The answers the client sends. The centre and the Director-track university are checked here; the programme id is
+ * checked against the catalogue by the API server, which also resolves its ISCED-F code.
+ */
+export const scholarshipReportInputSchema = scholarshipReportAnswersObjectSchema
+  .superRefine((value, ctx) => {
+    refineScholarshipReportAnswers(value, ctx);
+
+    if (
+      value.prepCentreId !== undefined &&
+      value.studyRoute === 'preparatory_course' &&
+      !prepCourseCentreIds.has(value.prepCentreId)
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['prepCentreId'], message: 'unknown preparatory centre' });
+    }
+
+    if (!isUniversityAllowedForTrack(value.universityId, 'nawa_director')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['universityId'],
+        message: 'universityId must be a partner university of the nawa_director track',
+      });
+    }
+  }) satisfies z.ZodType<ScholarshipReportInput>;
+
+export const createScholarshipReportRequestSchema = z
+  .object({ report: scholarshipReportInputSchema })
+  .strict() satisfies z.ZodType<CreateScholarshipReportRequest>;
+
+export const updateScholarshipReportRequestSchema = z
+  .object({ report: scholarshipReportInputSchema })
+  .strict() satisfies z.ZodType<UpdateScholarshipReportRequest>;
+
+/** The stored report as the server returns it: the same answers plus the catalogue name and the score snapshot. */
+export const scholarshipReportSchema = scholarshipReportAnswersObjectSchema
+  .extend({
+    programmeName: z.string().trim().min(1).max(200).optional(),
+    scoreSnapshot: z.number().min(scholarshipReportMinimumScore),
+  })
+  .superRefine((value, ctx) => {
+    refineScholarshipReportAnswers(value, ctx);
+
+    if (value.programmeName !== undefined && value.programmeId === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['programmeName'],
+        message: 'programmeName requires a catalogue programmeId',
+      });
+    }
+  }) satisfies z.ZodType<ScholarshipReport>;
+
+export const scholarshipReportResultSchema = z
+  .object({ report: scholarshipReportSchema.nullable() })
+  .strict() satisfies z.ZodType<ScholarshipReportResult>;
+
+export const scholarshipReportMutationResultSchema = z
+  .object({ report: scholarshipReportSchema })
+  .strict() satisfies z.ZodType<ScholarshipReportMutationResult>;
+
+export const deleteScholarshipReportResultSchema = z
+  .object({ deleted: z.literal(true) })
+  .strict() satisfies z.ZodType<DeleteScholarshipReportResult>;
+
+const summaryCountSchema = z.number().int().nonnegative();
+const summaryCellCountSchema = z.number().int().positive();
+
+const summaryCountrySchema = z
+  .object({ country: countryCodeSchema, count: summaryCellCountSchema })
+  .strict();
+const summaryPathSchema = z.object({ route: z.enum(studyRoutes), count: summaryCountSchema }).strict();
+const summaryCentreSchema = z.object({ centreId: z.string().min(1), count: summaryCellCountSchema }).strict();
+const summaryProgrammeSchema = z
+  .object({
+    programmeId: z.string().min(1),
+    programmeName: z.string().min(1),
+    count: summaryCellCountSchema,
+  })
+  .strict();
+const summaryFieldSchema = z
+  .object({
+    group: z.string().min(1),
+    count: summaryCellCountSchema,
+    programmes: z.array(summaryProgrammeSchema),
+  })
+  .strict();
+const summaryUniversitySchema = z
+  .object({ universityId: z.string().min(1), count: summaryCellCountSchema })
+  .strict();
+
+/**
+ * The contributors-only summary. Every list is shown without a floor, so its cells hold at least one report;
+ * the two path rows are always present (a route with no reports has count 0). The country list is not filtered.
+ */
+export const scholarshipReportSummarySchema = z
+  .object({
+    total: summaryCountSchema,
+    countries: z.array(summaryCountrySchema),
+    paths: z.array(summaryPathSchema).length(2),
+    centres: z.array(summaryCentreSchema),
+    fields: z.array(summaryFieldSchema),
+    typedProgrammeCount: summaryCountSchema,
+    universities: z.array(summaryUniversitySchema),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const sum = (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0);
+    const pathCount = (route: string) => value.paths.find((path) => path.route === route)?.count ?? 0;
+    const pathTotal = sum(value.paths.map((path) => path.count));
+    const countryTotal = sum(value.countries.map((country) => country.count));
+    const fieldTotal = sum(value.fields.map((field) => field.count));
+
+    if (pathTotal !== value.total) {
+      ctx.addIssue({ code: 'custom', path: ['paths'], message: 'the path counts must sum to total' });
+    }
+    // `countries` is the unfiltered filter list, so it can be larger than a filtered selection; it can never be
+    // smaller, because every counted report has a country of citizenship.
+    if (countryTotal < value.total) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['countries'],
+        message: 'the country counts cannot be fewer than total',
+      });
+    }
+    if (fieldTotal + value.typedProgrammeCount !== value.total) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fields'],
+        message: 'catalogue and typed programmes must sum to total',
+      });
+    }
+    if (sum(value.centres.map((centre) => centre.count)) !== pathCount('preparatory_course')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['centres'],
+        message: 'every preparatory-path report has exactly one centre',
+      });
+    }
+    if (sum(value.universities.map((university) => university.count)) !== value.total) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['universities'],
+        message: 'every report has exactly one university',
+      });
+    }
+    for (const field of value.fields) {
+      if (sum(field.programmes.map((programme) => programme.count)) !== field.count) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['fields'],
+          message: 'programme counts must sum to their group count',
+        });
+      }
+    }
+    if (new Set(value.paths.map((path) => path.route)).size !== 2) {
+      ctx.addIssue({ code: 'custom', path: ['paths'], message: 'both study routes are required' });
+    }
+  }) satisfies z.ZodType<ScholarshipReportSummary>;
 
 export const apiErrorSchema = z
   .object({

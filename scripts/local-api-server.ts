@@ -7,6 +7,7 @@ import { createIntakeSummaryHandler } from '../api/intake-summary.js';
 import { createProductEventsHandler } from '../api/product-events.js';
 import { createResponsesHandler } from '../api/responses.js';
 import { createCurrentResponseHandler } from '../api/responses/current.js';
+import { createScholarshipReportHandler } from '../api/scholarship-report.js';
 import { createStatisticsHandler } from '../api/statistics.js';
 
 type ApiHandler = (request: ApiRequest, response: HttpResponse & { send?(body: Buffer): void }) => Promise<unknown> | unknown;
@@ -30,6 +31,10 @@ const routes: Array<{ method: string; path: string; handler: ApiHandler }> = [
   { method: 'POST', path: '/api/statistics', handler: createStatisticsHandler() },
   { method: 'POST', path: '/api/intake-summary', handler: createIntakeSummaryHandler() },
   { method: 'POST', path: '/api/product-events', handler: createProductEventsHandler() },
+  { method: 'GET', path: '/api/scholarship-report', handler: createScholarshipReportHandler() },
+  { method: 'POST', path: '/api/scholarship-report', handler: createScholarshipReportHandler() },
+  { method: 'PUT', path: '/api/scholarship-report', handler: createScholarshipReportHandler() },
+  { method: 'DELETE', path: '/api/scholarship-report', handler: createScholarshipReportHandler() },
   { method: 'POST', path: '/api/bot', handler: createBotHandler() },
   { method: 'GET', path: '/api/cron/reminders', handler: createRemindersHandler() },
 ];
