@@ -1,6 +1,6 @@
 # 0012. A survey for scholarship holders: preparatory centre, wished-for field and university, shown only to contributors
 
-Status: Accepted. Implements point 5 of [0008](0008-refocus-on-score-comparison.md).
+Status: Accepted. Implements point 5 of [0008](0008-refocus-on-score-comparison.md). Disclosure floor and results page changed by [0016](0016-scholarship-holder-results-page-without-minimum.md).
 
 ## Context
 

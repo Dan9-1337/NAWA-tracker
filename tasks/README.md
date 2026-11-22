@@ -4,7 +4,7 @@ Use this directory for handoffs from the task author to implementation agents. A
 
 Start with [AGENTS.md](../AGENTS.md) for **how to work**, check the [ADR index](../docs/adr/README.md) for **what was decided and why**, then write a task for **what to implement and how to verify it**.
 
-1. **Task author (Opus 5.5):** copy [the template](TEMPLATE.md) to `tasks/NNN-short-title.md`, write observable acceptance scenarios, record any required ADR for decisions the maintainer has resolved, and mark the task `Ready`. Opus edits only individual task briefs and ADRs; it does not implement or review the change.
+1. **Task author (Opus 5.5):** copy [the template](TEMPLATE.md) to `tasks/NNN-short-title.md`, write observable acceptance scenarios, record any required ADR for decisions the maintainer has resolved, and mark the task `Ready`. Opus edits only individual task briefs, ADRs, and `docs/assumptions.md`; it does not implement or review the change.
 2. **Implementation agent:** read the `Ready` task and [repository instructions](../AGENTS.md), work within the assigned scope, and report changed files, per-scenario evidence, and blockers. Move the task to `In review` when ready for review.
 3. **Reviewer (not Opus):** review the diff, check the evidence against the scenarios, run the necessary integration checks, and mark the task `Done` when the acceptance scenarios pass and the unchanged behavior still holds.
 

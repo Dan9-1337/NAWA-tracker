@@ -1,6 +1,6 @@
 # 0003. Compare inside a cohort ladder instead of a fixed k = 10 per country
 
-Status: Accepted
+Status: Superseded by [0015](0015-compare-within-citizenship-country-without-minimum.md)
 
 ## Context
 

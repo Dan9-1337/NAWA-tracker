@@ -22,7 +22,7 @@ Intended behavior:
 ## Context
 
 - Relevant code and docs: the `create_response_for_identity` as redefined by task [009](009-limit-score-changing-edits.md), `supabase/migrations/202611210001_cohort_ladder.sql` (`season_config`, `active_intake_year()`), `supabase/migrations/202611250001_cleanup_and_thresholds.sql` (statistics filters `not is_suspicious`), `supabase/migrations/202611270001_intake_summary.sql`, `responses.created_at`, `shared/season.ts` (`season2026.documentsFrom = '2026-03-31'`), `docs/architecture.md` (Data model, Season rollover, changelog).
-- ADRs this task follows: [0002](../docs/adr/0002-pseudonymous-identity.md), [0003](../docs/adr/0003-cohort-ladder.md), [0013](../docs/adr/0013-limit-on-score-changing-edits.md), [0014](../docs/adr/0014-flag-per-country-spikes-for-manual-review.md). Replaces none.
+- ADRs this task follows: [0002](../docs/adr/0002-pseudonymous-identity.md), [0015](../docs/adr/0015-compare-within-citizenship-country-without-minimum.md) (supersedes the cohort ladder of [0003](../docs/adr/0003-cohort-ladder.md); implemented by task [013](013-country-only-statistics.md)), [0013](../docs/adr/0013-limit-on-score-changing-edits.md), [0014](../docs/adr/0014-flag-per-country-spikes-for-manual-review.md). Replaces none.
 - Dependencies and decisions already made:
   - Thresholds: more than max(10, 5 × average hourly rate over the preceding 14 days) in one hour; 7-day quiet periods after launch and after each intake opening; no notification; review by hand in the database (maintainer, 2026-11-22).
   - The launch date lives in the database and is empty until the maintainer sets it; while empty nothing is flagged.
@@ -34,7 +34,7 @@ Intended behavior:
   - Migration `supabase/migrations/202611290001_spike_flags.sql`: the two `season_config` columns; `responses.spike_flagged_at timestamptz` and `responses.spike_reviewed_at timestamptz`; an index that supports counting by `(intake_year, ranking_country, created_at)`; `create or replace` of `create_response_for_identity` with the same signature and the spike step.
   - SQL tests.
   - `docs/architecture.md`: data model columns, the rule, the review SQL, Season rollover steps, changelog. One line in the `docs/product-flow.md` changelog.
-- Out of scope: notifications, an admin screen, flags on edits or on country changes, changing the cohort floor, changes to the API or the client, setting `public_launch_date` in any real database.
+- Out of scope: notifications, an admin screen, flags on edits or on country changes, changing the statistics rules (that is task 013), changes to the API or the client, setting `public_launch_date` in any real database.
 - Files or directories assigned to this task: `supabase/migrations/202611290001_spike_flags.sql`, `supabase/tests/` (new `spike_flags.sql`), `supabase/tests/migration-contracts.test.ts` if signatures are pinned there, `supabase/seed.sql` only if the seed breaks, `docs/architecture.md`, `docs/product-flow.md`.
 
 ## Acceptance scenarios
@@ -47,7 +47,7 @@ Intended behavior:
 | A4 | Same, but the country's 14-day history averages 4 per hour (1344 back-dated surveys); 20 in the last hour | Not flagged (20 ≤ 5 × 4); at 21 they are | SQL test |
 | A5 | Now is 3 days after `intake_opens_on`, launch long ago; 30 surveys in an hour | Nothing is flagged | SQL test |
 | A6 | A spike for country A | Surveys of country B and of other intake years are not flagged | SQL test |
-| A7 | Flagged surveys | Excluded from `get_current_statistics` cohorts and `get_intake_summary`; the owner of a flagged survey still gets a statistics result with a position when the unflagged cohort has ≥ 10 | SQL test |
+| A7 | Flagged surveys; 12 unflagged surveys in the flagged owner's country | Flagged surveys are excluded from `get_current_statistics` cohorts and `get_intake_summary`; the flagged owner still gets a statistics result with a position computed from the 12 unflagged surveys. The 12 are chosen so the test passes both before and after task 013 (ladder from 10, or country from 2) | SQL test |
 | A8 | The maintainer clears a group with the documented SQL, then another survey arrives in the same hour | Cleared surveys stay unflagged (`spike_reviewed_at` set); only unreviewed ones can be flagged | SQL test running the documented statements |
 | A9 | A survey flagged by the old status-transition rule | Not changed by the spike step or the review statements | SQL test |
 | A10 | The limit from task 009 | All task 009 SQL tests still pass | `npm run test:db:pglite` |
@@ -56,10 +56,10 @@ Intended behavior:
 
 - Behavior, contracts, or user-facing copy this task must not alter:
   - the signature and return shape of `create_response_for_identity` and its error codes, including `edit_limit_reached` from task 009;
-  - the cohort floor (10), the ladder, the statistics payload;
+  - the statistics rules and payload (only task 013 changes them);
   - API handlers and the client;
   - no raw Telegram ID anywhere.
-- Existing checks that already cover it: `supabase/tests/statistics.sql`, `supabase/tests/cohort_ladder.sql`, `supabase/tests/intake_summary.sql`, `supabase/tests/privacy_identity.sql`, the task 009 tests, `supabase/tests/migration-contracts.test.ts`.
+- Existing checks that already cover it: `supabase/tests/statistics.sql`, `supabase/tests/cohort_ladder.sql` (or its replacement from task 013), `supabase/tests/intake_summary.sql`, `supabase/tests/privacy_identity.sql`, the task 009 tests, `supabase/tests/migration-contracts.test.ts`.
 
 ## Open decisions
 
@@ -88,4 +88,4 @@ Intended behavior:
 
 - Changed files:
 - Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0014](../docs/adr/0014-flag-per-country-spikes-for-manual-review.md).
+- LLM contributions: Claude Opus 5.5 (Claude Code) — revision for ADR 0015 (A7, links); specification of this brief and [ADR 0014](../docs/adr/0014-flag-per-country-spikes-for-manual-review.md).
