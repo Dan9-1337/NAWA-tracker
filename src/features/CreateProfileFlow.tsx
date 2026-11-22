@@ -214,7 +214,7 @@ export function CreateProfileFlow({
       {actionError ? (
         <div role="alert" className="mt-4 space-y-1">
           <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">
-            {t.form.saveError}
+            {actionError}
           </p>
           <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.form.saveErrorDraft}</p>
         </div>

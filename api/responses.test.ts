@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { fineBuckets } from '../shared/test-statistics';
+import { apiErrorSchema } from '../shared/validation';
 import { HttpError } from './_lib/errors';
 import { signTelegramInitData } from './_lib/telegram-auth';
 import {
@@ -96,7 +97,7 @@ function request(method: string, body: unknown = {}, userId = USER_ID): Request 
   };
 }
 
-type FakeTable = 'responses' | 'product_events' | 'bot_subscriptions';
+type FakeTable = 'responses' | 'product_events' | 'bot_subscriptions' | 'score_change_log';
 type FakeRow = Record<string, unknown>;
 
 /** In-memory Supabase double for the delete chain used by `createDeleteProfile`. */
@@ -105,6 +106,7 @@ function fakeAdminClient(seed: Record<FakeTable, FakeRow[]>) {
     responses: seed.responses.map((row) => ({ ...row })),
     product_events: seed.product_events.map((row) => ({ ...row })),
     bot_subscriptions: seed.bot_subscriptions.map((row) => ({ ...row })),
+    score_change_log: seed.score_change_log.map((row) => ({ ...row })),
   };
   const failures = new Set<FakeTable>();
 
@@ -144,7 +146,12 @@ function fakeAdminClient(seed: Record<FakeTable, FakeRow[]>) {
 
   const client = {
     from(table: string) {
-      if (table !== 'responses' && table !== 'product_events' && table !== 'bot_subscriptions') {
+      if (
+        table !== 'responses' &&
+        table !== 'product_events' &&
+        table !== 'bot_subscriptions' &&
+        table !== 'score_change_log'
+      ) {
         throw new Error(`Unexpected table: ${table}`);
       }
       return { delete: () => deleteFrom(table) };
@@ -158,7 +165,7 @@ function responsesDependencies(
   rpcImplementation: (
     name: string,
     parameters: Record<string, unknown>,
-  ) => { data: unknown; error: { message: string } | null } = (name) => {
+  ) => { data: unknown; error: { message: string; details?: string | null } | null } = (name) => {
     if (name === 'create_response_for_identity') {
       return { data: { created: true, statistics }, error: null };
     }
@@ -262,6 +269,28 @@ describe('POST /api/responses', () => {
       error: { code: 'PROFILE_EXISTS', message: 'This Telegram account already has a survey.' },
     });
   });
+
+  it('returns 429 EDIT_LIMIT_REACHED with the retry time when the limit blocks a create', async () => {
+    const retryAt = '2026-11-23T14:05:00Z';
+    const dependencies = responsesDependencies(() => ({
+      data: null,
+      error: { message: 'edit_limit_reached', details: retryAt },
+    }));
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
+
+    expect(state.status).toBe(429);
+    const body = {
+      error: {
+        code: 'EDIT_LIMIT_REACHED',
+        message: 'Too many score changes in the last 24 hours. Try again later.',
+        retryAt,
+      },
+    };
+    expect(state.body).toEqual(body);
+    expect(apiErrorSchema.parse(state.body)).toEqual(body);
+  });
 });
 
 describe('DELETE /api/responses', () => {
@@ -296,6 +325,10 @@ describe('DELETE /api/responses', () => {
         { event_name: 'landing_viewed', identity_hash: OTHER_IDENTITY_HASH },
       ],
       bot_subscriptions: [{ telegram_user_id: USER_ID }, { telegram_user_id: USER_ID + 1 }],
+      score_change_log: [
+        { identity_hash: IDENTITY_HASH, counted: true },
+        { identity_hash: OTHER_IDENTITY_HASH, counted: true },
+      ],
     });
     const dependencies = {
       ...responsesDependencies(),
@@ -312,6 +345,11 @@ describe('DELETE /api/responses', () => {
       { event_name: 'landing_viewed', identity_hash: OTHER_IDENTITY_HASH },
     ]);
     expect(fake.tables.bot_subscriptions).toEqual([{ telegram_user_id: USER_ID + 1 }]);
+    // Deleting the survey must not reset the score-change limit (ADR 0013).
+    expect(fake.tables.score_change_log).toEqual([
+      { identity_hash: IDENTITY_HASH, counted: true },
+      { identity_hash: OTHER_IDENTITY_HASH, counted: true },
+    ]);
   });
 
   it('deletes product events even when no survey exists, and still answers 404', async () => {
@@ -319,6 +357,7 @@ describe('DELETE /api/responses', () => {
       responses: [],
       product_events: [{ event_name: 'what_if_used', identity_hash: IDENTITY_HASH }],
       bot_subscriptions: [],
+      score_change_log: [],
     });
     const dependencies = {
       ...responsesDependencies(),
@@ -337,6 +376,7 @@ describe('DELETE /api/responses', () => {
       responses: [{ id: 1, identity_hash: IDENTITY_HASH }],
       product_events: [{ event_name: 'landing_viewed', identity_hash: IDENTITY_HASH }],
       bot_subscriptions: [{ telegram_user_id: USER_ID }],
+      score_change_log: [],
     });
     fake.failDelete('product_events');
     const dependencies = {
@@ -371,6 +411,28 @@ describe('PUT /api/responses', () => {
     expect(calls[0]?.[1]).toMatchObject({ p_identity_hash: IDENTITY_HASH });
     expect(state.status).toBe(200);
     expect(state.body).toEqual({ updated: true, statistics });
+  });
+
+  it('returns 429 EDIT_LIMIT_REACHED with the retry time when the limit blocks an edit', async () => {
+    const retryAt = '2026-11-23T14:05:00Z';
+    const dependencies = responsesDependencies(() => ({
+      data: null,
+      error: { message: 'edit_limit_reached', details: retryAt },
+    }));
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), response);
+
+    expect(state.status).toBe(429);
+    const body = {
+      error: {
+        code: 'EDIT_LIMIT_REACHED',
+        message: 'Too many score changes in the last 24 hours. Try again later.',
+        retryAt,
+      },
+    };
+    expect(state.body).toEqual(body);
+    expect(apiErrorSchema.parse(state.body)).toEqual(body);
   });
 });
 

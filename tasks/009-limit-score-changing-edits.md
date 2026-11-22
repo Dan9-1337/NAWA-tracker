@@ -1,6 +1,6 @@
 # 009 — Limit score-changing saves to three in 24 hours
 
-**Status:** Ready
+**Status:** In review
 
 ## Goal
 
@@ -84,20 +84,20 @@ Intended behavior:
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
-| A9 | | |
-| A10 | | |
-| A11 | | |
-| A12 | | |
-| A13 | | |
+| A1 | `npm run test:db:pglite` → `supabase/tests/score_change_limit.sql`: "A1: a new account can create its first survey" and "A1: the first create leaves one uncounted trail row" (`[{"counted": false}]`) | pass |
+| A2 | Same run: "A2: the fourth score-changing edit in the window is blocked", "A2: the retry time is the oldest counted row plus 24 hours", "A2: the blocked edit keeps the third edit values" | pass |
+| A3 | Same run: "A3: any number of edits that leave the score unchanged succeed", "A3: unchanged-score edits add no trail rows", "A3: an unchanged-score edit still succeeds after the limit is reached", "A3: an unchanged-score edit adds no trail row after the limit" | pass |
+| A4 | Same run: "A4: a fourth edit succeeds when the oldest counted row is older than 24 hours" and "A4: the edit that fits the window is applied" | pass |
+| A5 | Same run: "A5: deleting the survey keeps the trail rows", "A5: creating the survey again inside the window is blocked", "A5: the blocked create writes no trail row". `npm test -- api/responses.test.ts` → "DELETE /api/responses > deletes responses, product events and the bot subscription, and leaves another user alone" asserts `fake.tables.score_change_log` is unchanged | pass |
+| A6 | Same SQL run: "A6: a survey created again inside the window records a counted row" and "A6: the next create is blocked after three counted re-creates" | pass |
+| A7 | No two-session harness in PGlite (single connection). Reviewer check: migration lines `perform pg_advisory_xact_lock(hashtextextended(p_identity_hash, 3));` (create) and `for update` before the count (update); pinned by `npm test -- supabase/tests/migration-contracts.test.ts` → "redefines both write RPCs with the same signatures and the shared limit rule" | pass (reviewer check) |
+| A8 | Same SQL run: "A8: the purge deletes expired rows", "A8: rows older than 24 hours are gone after the purge", "A8: rows newer than 24 hours stay after the purge". Hourly scheduling is conditional in the migration; after deploy the maintainer runs `select jobname, schedule from cron.job` (not run here) | pass (function); scheduled job not verified |
+| A9 | `npm test -- api/responses.test.ts shared/api-contracts.test.ts` → POST and PUT tests "returns 429 EDIT_LIMIT_REACHED with the retry time when the limit blocks a create/an edit", plus "accepts the score-change limit error with an optional ISO retry time" | pass |
+| A10 | `npm test -- src/pages/home-page.test.tsx` → "shows the localized score-change limit and keeps the edit values when an edit is blocked" (alert, average still `4.8`, no `survey_updated`) and "includes the date in the score-change limit when the retry time is not today"; `ProfileDashboard.test.tsx` suite still green | pass |
+| A11 | Same run: "shows the score-change limit when a re-create is blocked and keeps the draft on the device" (alert, average still `4.5`, no `wizard_completed`, local draft contains `averageGrade: 4.5`) | pass |
+| A12 | `npm test -- src/i18n` → "explains the score-change trail right after the delete-everything point" for pl/en/ru/uk/be, and the key-parity plus glossary suites are green | pass |
+| A13 | `npm test -- src/features/score/score-screen.test.tsx` (16 tests) and `home-page.test.tsx` → "previews a different average on the tape without saving it or moving the saved result" asserts `api.updateResponse` was not called | pass |
 
-- Changed files:
-- Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0013](../docs/adr/0013-limit-on-score-changing-edits.md).
+- Changed files: `supabase/migrations/202611280001_score_change_limit.sql`; `supabase/tests/score_change_limit.sql`; `supabase/tests/test-files.mjs`; `supabase/tests/migration-contracts.test.ts`; `api/_lib/errors.ts`; `api/_lib/questionnaire.ts`; `api/responses.ts`; `api/responses.test.ts`; `shared/contracts.ts`; `shared/validation.ts`; `shared/api-contracts.test.ts`; `src/lib/api-client.ts`; `src/lib/api-client.test.ts`; `src/pages/HomePage.tsx`; `src/pages/home-page.test.tsx`; `src/features/CreateProfileFlow.tsx`; `src/features/ProfileDashboard.tsx`; `src/i18n/{pl,en,ru,uk,be}.ts`; `src/i18n/locales.test.ts`; `docs/architecture.md`; `docs/product-flow.md`.
+- Checks not run, blockers, or open questions: `make check` is left to the orchestrator after both concurrent tasks finish. The PostgreSQL/pgTAP CI suite was not run locally (no Docker). The two-session concurrency assertion has no PGlite harness; the lock was reviewed statically and pinned by the migration-contract test. The deployed `cron.job` check is manual after deploy. No blockers.
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0013](../docs/adr/0013-limit-on-score-changing-edits.md). DeepSeek V4.1 Flash — implementation.

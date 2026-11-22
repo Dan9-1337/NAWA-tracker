@@ -253,6 +253,7 @@ export const apiErrorSchema = z
       .object({
         code: z.string().min(1),
         message: z.string().min(1),
+        retryAt: z.string().datetime().optional(),
       })
       .strict(),
   })

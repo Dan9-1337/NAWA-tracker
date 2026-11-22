@@ -116,5 +116,7 @@ export type ApiError = {
   error: {
     code: string;
     message: string;
+    /** ISO 8601 UTC instant when a blocked action becomes possible again; only EDIT_LIMIT_REACHED. */
+    retryAt?: string;
   };
 };

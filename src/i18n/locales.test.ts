@@ -61,6 +61,23 @@ describe('locales', () => {
       expect(messages[locale].language.be).toBe('Беларуская');
     }
   });
+
+  it.each(localeOrder)('%s explains the score-change trail right after the delete-everything point', (locale) => {
+    const points = messages[locale].privacyNotice.points;
+    const deleteIndex = points.findIndex((point) =>
+      /usunąć wszystko|delete everything|удалить всё|видалити всі|выдаліць усё/i.test(point),
+    );
+    expect(deleteIndex).toBeGreaterThanOrEqual(0);
+    expect(points[deleteIndex + 1]).toMatch(
+      {
+        pl: /około dob[ęy].*kod konta/i,
+        en: /about a day.*account code/i,
+        ru: /около суток.*код аккаунта/i,
+        uk: /приблизно добу.*код акаунта/i,
+        be: /каля сутак.*код акаўнта/i,
+      }[locale],
+    );
+  });
 });
 
 describe('locale detection', () => {

@@ -21,6 +21,7 @@ import {
   parseCreateMutationResult,
   parseUpdateMutationResult,
   type RpcClient,
+  type RpcError,
 } from './_lib/questionnaire.js';
 import { hashIdentity } from './_lib/identity.js';
 import { createSupabaseSubscriptionStore } from './_lib/subscriptions.js';
@@ -73,14 +74,14 @@ const defaultDependencies: ResponsesHandlerDependencies = {
   requireTelegramIdentity,
 };
 
-function isProfileExistsError(error: { message: string; code?: string } | null): boolean {
+function isProfileExistsError(error: RpcError | null): boolean {
   if (!error) return false;
   if (error.message === 'profile_exists') return true;
   if (error.code === '23505') return true;
   return /duplicate key|unique constraint/i.test(error.message);
 }
 
-function assertCreateSucceeded(error: { message: string; code?: string } | null): void {
+function assertCreateSucceeded(error: RpcError | null): void {
   if (isProfileExistsError(error)) {
     throw profileExists();
   }

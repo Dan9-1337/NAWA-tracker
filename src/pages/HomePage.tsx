@@ -19,13 +19,18 @@ import {
   updateResponse,
 } from '../lib/api-client';
 import { clearWizardDraft } from '../lib/draft';
-import { formatClockTime, formatShortDayTime, updatedStampKind } from '../lib/format';
+import { formatClockTime, formatDate, formatShortDayTime, updatedStampKind } from '../lib/format';
 import { getTelegramWebApp } from '../lib/telegram';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { useOnlineStatus } from '../lib/useOnlineStatus';
 import { useRequestGuard } from '../lib/useRequestGuard';
 
 type Mutation = 'create' | 'update' | 'delete';
+
+/** Local calendar date (YYYY-MM-DD) of an instant, so `formatDate` does not shift it across the UTC boundary. */
+function localIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 type AuthenticatedState = {
   mode: 'authenticated';
@@ -71,6 +76,22 @@ export function HomePage() {
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const { begin: beginEpoch, isCurrent, acquire: acquireMutation, release: releaseMutation, isBusy } =
     useRequestGuard<Mutation>();
+
+  /** A blocked score change explains when the next one is possible; every other failure keeps its generic copy. */
+  function saveErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof ApiClientError && error.code === 'EDIT_LIMIT_REACHED' && error.retryAt) {
+      const retry = new Date(error.retryAt);
+      if (!Number.isNaN(retry.getTime())) {
+        if (updatedStampKind(error.retryAt) === 'today') {
+          return t.form.editLimitToday(formatClockTime(error.retryAt, locale));
+        }
+        return t.form.editLimitDate(
+          `${formatDate(localIsoDate(retry), locale)}, ${formatClockTime(error.retryAt, locale)}`,
+        );
+      }
+    }
+    return fallback;
+  }
 
   useEffect(() => {
     if (getTelegramWebApp()) void loadCurrentSession();
@@ -132,9 +153,9 @@ export function HomePage() {
         actionError: null,
         pending: null,
       });
-    } catch {
+    } catch (error) {
       if (isCurrent(id)) {
-        setState({ mode: 'create', pending: false, actionError: t.form.saveError });
+        setState({ mode: 'create', pending: false, actionError: saveErrorMessage(error, t.form.saveError) });
       }
       throw new Error('create failed');
     } finally {
@@ -161,7 +182,7 @@ export function HomePage() {
       if (isCurrent(id)) {
         const restartStatistics = snapshot.statistics.status === 'loading';
         const statisticsId = restartStatistics ? beginEpoch() : id;
-        setState({ ...snapshot, pending: null, actionError: t.home.actionError });
+        setState({ ...snapshot, pending: null, actionError: saveErrorMessage(error, t.home.actionError) });
         if (restartStatistics) void loadStatistics(statisticsId);
       }
       throw error;

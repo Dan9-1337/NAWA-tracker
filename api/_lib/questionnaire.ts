@@ -5,9 +5,9 @@ import {
   responseFormInputSchema,
   statisticsResultSchema,
 } from '../../shared/validation.js';
-import { HttpError, unauthorized } from './errors.js';
+import { editLimitReached, HttpError, unauthorized } from './errors.js';
 
-type RpcError = { message: string };
+export type RpcError = { message: string; code?: string; details?: string | null };
 
 export type RpcClient = {
   rpc(
@@ -118,5 +118,8 @@ export function parseUpdateMutationResult(value: unknown) {
 }
 
 export function assertRpcSucceeded(error: RpcError | null): void {
-  if (error) throw new HttpError(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
+  if (!error) return;
+  // The database raises edit_limit_reached with the retry instant in the exception detail (ADR 0013).
+  if (error.message === 'edit_limit_reached') throw editLimitReached(error.details);
+  throw new HttpError(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
 }

@@ -37,6 +37,10 @@ const fieldMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202611260001_study_field_and_prep_city.sql'),
   'utf8',
 );
+const limitMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202611280001_score_change_limit.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
 function functionDefinition(name: string, source = migration): string {
@@ -403,5 +407,54 @@ describe('cleanup and thresholds migration contract', () => {
     expect(fieldMigration).toContain(
       'grant execute on function public.get_prep_city_distribution(text, integer) to service_role;',
     );
+  });
+});
+
+describe('score change limit migration contract', () => {
+  it('stores only the identity hash, save time and counted flag, service-role only', () => {
+    const tableStart = limitMigration.indexOf('create table public.score_change_log');
+    const tableEnd = limitMigration.indexOf('alter table public.score_change_log');
+    const table = limitMigration.slice(tableStart, tableEnd);
+    const columns = table.slice(table.indexOf('('), table.indexOf(');'));
+
+    expect(tableStart).toBeGreaterThan(-1);
+    expect(columns).toMatch(/identity_hash text not null/);
+    expect(columns).toMatch(/saved_at timestamp with time zone not null/);
+    expect(columns).toMatch(/counted boolean not null/);
+    expect(columns.match(/^\s+\w+/gm)).toHaveLength(3);
+    expect(columns).not.toMatch(/score|country|intake/i);
+    expect(limitMigration).toContain(
+      'create index score_change_log_identity_saved_at_idx\n  on public.score_change_log (identity_hash, saved_at);',
+    );
+    expect(limitMigration).toContain(
+      'revoke all on table public.score_change_log from public, anon, authenticated;',
+    );
+  });
+
+  it('redefines both write RPCs with the same signatures and the shared limit rule', () => {
+    expect(limitMigration).toMatch(/create or replace function public\.create_response_for_identity\(/);
+    expect(limitMigration).toMatch(/create or replace function public\.update_current_response\(/);
+
+    for (const name of ['create_response_for_identity', 'update_current_response']) {
+      const definition = functionDefinition(name, limitMigration);
+      expect(definition).toContain('score_change_retry_at');
+      expect(definition).toContain("message = 'edit_limit_reached'");
+      expect(definition).toContain("detail = to_char(v_retry_at at time zone 'UTC'");
+    }
+
+    const create = functionDefinition('create_response_for_identity', limitMigration);
+    expect(create).toContain('pg_advisory_xact_lock(hashtextextended(p_identity_hash, 3))');
+    expect(create).toContain('v_has_recent_trail');
+
+    const update = functionDefinition('update_current_response', limitMigration);
+    expect(update).toContain('for update');
+    expect(update).toContain('is distinct from v_response.nawa_orientation_score');
+  });
+
+  it('purges rows once they leave the rolling window', () => {
+    const purge = functionDefinition('purge_score_change_log', limitMigration);
+    expect(purge).toContain("saved_at <= now() - interval '24 hours'");
+    expect(limitMigration).toContain("'0 * * * *'");
+    expect(limitMigration).toContain('purge-score-change-log');
   });
 });

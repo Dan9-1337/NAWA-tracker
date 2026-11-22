@@ -87,4 +87,20 @@ describe('API response contracts', () => {
     expect(apiErrorSchema.parse({ error: { code: 'UNAUTHORIZED', message: 'Session is invalid or has expired.' } }))
       .toEqual({ error: { code: 'UNAUTHORIZED', message: 'Session is invalid or has expired.' } });
   });
+
+  it('accepts the score-change limit error with an optional ISO retry time', () => {
+    const limited = {
+      error: {
+        code: 'EDIT_LIMIT_REACHED',
+        message: 'Too many score changes in the last 24 hours. Try again later.',
+        retryAt: '2026-11-23T14:05:00Z',
+      },
+    };
+    expect(apiErrorSchema.parse(limited)).toEqual(limited);
+    expect(apiErrorSchema.parse({ error: { code: 'PROFILE_EXISTS', message: 'Already exists.' } }))
+      .toEqual({ error: { code: 'PROFILE_EXISTS', message: 'Already exists.' } });
+    expect(() =>
+      apiErrorSchema.parse({ error: { ...limited.error, retryAt: 'in a while' } }),
+    ).toThrow();
+  });
 });

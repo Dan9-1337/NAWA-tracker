@@ -6,6 +6,7 @@ import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { pl } from '../i18n/pl';
 import { ApiClientError } from '../lib/api-client';
 import { DRAFT_STORAGE_KEY_PREFIX, type WizardDraft } from '../lib/draft';
+import { formatClockTime, formatDate } from '../lib/format';
 import { trackProductEvent } from '../lib/product-events';
 import type { TelegramWebAppBridge } from '../lib/telegram';
 import { HomePage } from './HomePage';
@@ -87,6 +88,10 @@ function statistics(totalValidResponses: number): StatisticsResult {
     cohortScope: null,
     cohortGroupId: null,
   };
+}
+
+function localIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 beforeEach(async () => {
@@ -456,6 +461,107 @@ describe('HomePage', () => {
       });
       expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
       expect(screen.getByText(new RegExp(pl.form.saved))).toBeInTheDocument();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'shows the localized score-change limit and keeps the edit values when an edit is blocked',
+    async () => {
+      const retry = new Date();
+      retry.setHours(23, 59, 0, 0);
+      const retryAt = retry.toISOString();
+
+      api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+      api.getStatistics.mockResolvedValue(statistics(12));
+      api.updateResponse.mockRejectedValue(
+        new ApiClientError(429, 'EDIT_LIMIT_REACHED', 'Too many score changes.', retryAt),
+      );
+
+      const user = userEvent.setup();
+      render(<HomePage />);
+      await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT });
+
+      await user.click(screen.getByRole('button', { name: new RegExp(pl.scoreScreen.rows.average) }));
+      const average = await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT });
+      await user.clear(average);
+      await user.type(average, '4,8');
+
+      const save = await screen.findByRole('button', { name: pl.form.submitUpdate }, { timeout: UI_TIMEOUT });
+      await waitFor(() => expect(save).toBeEnabled(), { timeout: UI_TIMEOUT });
+      await clickMain(user);
+
+      const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+      expect(alert).toHaveTextContent(pl.form.editLimitToday(formatClockTime(retryAt, 'pl')));
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4.8');
+      expect(countTracked('survey_updated')).toBe(0);
+      expect(api.updateResponse).toHaveBeenCalledTimes(1);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'includes the date in the score-change limit when the retry time is not today',
+    async () => {
+      const retry = new Date();
+      retry.setDate(retry.getDate() + 1);
+      retry.setHours(9, 30, 0, 0);
+      const retryAt = retry.toISOString();
+
+      api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+      api.getStatistics.mockResolvedValue(statistics(12));
+      api.updateResponse.mockRejectedValue(
+        new ApiClientError(429, 'EDIT_LIMIT_REACHED', 'Too many score changes.', retryAt),
+      );
+
+      const user = userEvent.setup();
+      render(<HomePage />);
+      await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT });
+
+      await user.click(screen.getByRole('button', { name: new RegExp(pl.scoreScreen.rows.average) }));
+      const average = await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT });
+      await user.clear(average);
+      await user.type(average, '4,8');
+
+      const save = await screen.findByRole('button', { name: pl.form.submitUpdate }, { timeout: UI_TIMEOUT });
+      await waitFor(() => expect(save).toBeEnabled(), { timeout: UI_TIMEOUT });
+      await clickMain(user);
+
+      const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+      expect(alert).toHaveTextContent(
+        pl.form.editLimitDate(`${formatDate(localIsoDate(retry), 'pl')}, ${formatClockTime(retryAt, 'pl')}`),
+      );
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'shows the score-change limit when a re-create is blocked and keeps the draft on the device',
+    async () => {
+      const retry = new Date();
+      retry.setHours(23, 59, 0, 0);
+      const retryAt = retry.toISOString();
+
+      api.createResponse.mockRejectedValue(
+        new ApiClientError(429, 'EDIT_LIMIT_REACHED', 'Too many score changes.', retryAt),
+      );
+
+      const user = await openCreateGradesStep();
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+      await clickMain(user);
+
+      const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+      expect(alert).toHaveTextContent(pl.form.editLimitToday(formatClockTime(retryAt, 'pl')));
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4.5');
+      expect(countTracked('wizard_completed')).toBe(0);
+      expect(api.createResponse).toHaveBeenCalledTimes(1);
+
+      const telegram = await import('../lib/telegram');
+      const userId = telegram.getTelegramUserId() ?? 'anon';
+      const stored = JSON.parse(
+        localStorage.getItem(`${DRAFT_STORAGE_KEY_PREFIX}:${userId}`) ?? 'null',
+      ) as { draft?: { averageGrade?: number } } | null;
+      expect(stored?.draft?.averageGrade).toBe(4.5);
     },
     TEST_TIMEOUT,
   );

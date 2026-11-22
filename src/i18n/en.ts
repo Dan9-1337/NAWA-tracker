@@ -79,6 +79,10 @@ export const en = {
     saved: 'Saved',
     saveError: 'Could not save',
     saveErrorDraft: 'Your answers are still on this device. Please try again.',
+    editLimitToday: (time: string) =>
+      `The estimated score can be changed at most three times in 24 hours. The next change is possible after ${time}.`,
+    editLimitDate: (when: string) =>
+      `The estimated score can be changed at most three times in 24 hours. The next change is possible after ${when}.`,
     cohortChangeTitle: 'Your comparison group will change',
     cohortChangeBody:
       'Changing these details will move you to a different comparison group. You will no longer see the statistics for your previous group.',
@@ -162,6 +166,7 @@ export const en = {
       'We do not store your name, email, phone number or Telegram username.',
       'Small countries are combined into groups, and scores of awarded scholarships are shown in 5-point ranges.',
       'You can delete everything in Settings at any time.',
+      'After you delete your survey, for about a day we keep only your account code and the times of recent score changes, so the limit on changes cannot be bypassed.',
       'If you turn on reminders in the bot, your Telegram ID is stored separately from your survey until you turn them off. Deleting your survey removes it too.',
       'Your data is pseudonymous, not anonymous: technically, the author could link a survey back to an account.',
     ],

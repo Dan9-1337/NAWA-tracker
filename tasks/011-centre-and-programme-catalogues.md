@@ -1,6 +1,6 @@
 # 011 — Catalogues for the scholarship-holder survey: preparatory centres and kierunki
 
-**Status:** Ready
+**Status:** In review
 
 ## Goal
 
@@ -81,15 +81,15 @@ Intended behavior:
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
+| A1 | `npm test -- shared/prep-course-centres.test.ts` → `lists exactly the ten institutions of the NAWA list, in order, with cities`; the expected names and cities were checked against the text layer of the official 2026 PDF (`Lista-Wnioskodawcow-...-2026-2027.pdf`). Reviewer: compare the same ten names with the PDF. | pass (unit test); PDF check pending reviewer |
+| A2 | Same test file → `keeps unit and source together on an https page of the university own domain`: ten `https://` URLs, each on the university's own domain (`us.edu.pl`, `uni.lodz.pl`, `umcs.pl`, `pk.edu.pl`, `uws.edu.pl`, `ug.edu.pl`, `umk.pl`, `ur.edu.pl`, `kul.pl`, `pwr.edu.pl`). I opened every page and each names the unit. Reviewer: confirm each unit runs the NAWA preparatory course; some pages present the annual preparatory course and the NAWA accreditation together rather than on one course page. | pass (URL test); unit check pending maintainer |
+| A3 | Same test file → `joins the short university name and the unit with an em dash` (exact `UMCS — Centrum Języka i Kultury Polskiej dla Polonii i Cudzoziemców`) and `falls back to the university name when no unit is known`. | pass |
+| A4 | `shared/study-programmes.test.ts` → `has a non-empty list, sorted unique ASCII ids, and names unique after normalization`: 1,361 entries; ids unique, sorted and equal to the slug of `normalizeSearchText(name)`; names unique after normalization. | pass |
+| A5 | Same test file → `contains common kierunki with the expected broad groups`: Informatyka `0613` → `06`, Prawo `0421` → `04`, Architektura `0731` → `07`, Psychologia `0313` → `03`, Filologia polska `0232` → `02`. | pass |
+| A6 | Same test file → `maps every code to a broadGroups key or "other"`; every entry maps to a key or `other`; `9999` maps to `other` (18 entries use RAD-on's unknown code). | pass |
+| A7 | `node scripts/build-study-programmes.mjs` twice on 2026-11-22 with Node 22.23.5; `git hash-object shared/study-programmes.ts` was `2d133b8cb73c97d41b8d214651725a858dd066c8` before and after, so the content was identical. The fixture test `is deterministic on a fixture and applies the filter, frequency and tie rules` runs the script twice on a local JSON fixture and compares the output. `git status --short shared/study-programmes.ts` shows `??` because the file is new/untracked, not because the second run changed it. | pass |
+| A8 | `shared/study-programmes.ts` header names the dataset URL, `Downloaded: 2026-11-22` and the full filter; `docs/architecture.md` has the `## Catalogues` section explaining both lists and how to refresh them. Reviewer: read the header and the note. | pass (header and note present); reviewer read pending |
 
-- Changed files:
-- Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief (the centre list was extracted from the NAWA PDF during specification).
+- Changed files: `shared/prep-course-centres.ts` (new), `shared/prep-course-centres.test.ts` (new), `shared/study-programmes.ts` (new, generated), `shared/study-programmes.test.ts` (new), `scripts/build-study-programmes.mjs` (new), `docs/architecture.md` (`## Catalogues` section only), `tasks/011-centre-and-programme-catalogues.md` (status and this handoff).
+- Checks not run, blockers, or open questions: `make check` was not run (the orchestrator runs it after both concurrent tasks finish). No Docker, deploy, remote database or Telegram checks were needed. The system `node` is v22.8.0, below the `package.json` floor; verification ran on Node v22.23.5 downloaded to a temporary directory. Reviewer checks: A1 (PDF names), A2 (each unit link), A8 (header and docs note). Data notes: all ten `universityId`s matched `shared/universities.ts` (none null); KUL's NAWA spelling omits "w Lublinie" while the catalogue name includes it; RAD-on's global pagination dropped a few records between runs, so the script fetches per institution and the generated output stayed byte-identical.
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief (the centre list was extracted from the NAWA PDF during specification). DeepSeek V4.1 Flash — implementation and data collection.

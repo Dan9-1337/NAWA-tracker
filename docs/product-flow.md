@@ -160,6 +160,10 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 
 ## Changelog
 
+### Unreleased — Score-change limit
+
+- A survey's estimated score can be saved at most three times in a rolling 24 hours; the first create does not count, a survey created again within the window does, and deleting the survey does not reset the limit. A blocked save keeps the form input and says when the next change is possible ([ADR 0013](adr/0013-limit-on-score-changing-edits.md)).
+
 ### Unreleased — Product analytics
 
 - Six new named events cover the start screen, the education step, the what-if, survey edits and the two Settings links; deleting the survey also deletes the user's events ([ADR 0011](adr/0011-documented-product-events-deleted-with-survey.md)).

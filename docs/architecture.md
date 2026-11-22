@@ -62,15 +62,19 @@ Questionnaire fields plus:
 - `study_field text not null default 'other'` — ISCED-F detailed code (`^[0-9]{4}$`) or `other`; the default only covers rows created before the field existed (`shared/study-fields.ts`)
 - `prep_course_city text` — optional; only allowed on the preparatory route with outcome `scholarship_awarded`; values from `shared/prep-course-cities.ts` or `other`
 
+### `score_change_log`
+
+The trail behind the score-change limit ([ADR 0013](adr/0013-limit-on-score-changing-edits.md)): `identity_hash`, `saved_at` and `counted` only, never a score, country or intake year. It is deliberately not linked to `responses`, so deleting the survey does not reset the limit. Rows older than 24 hours stop counting immediately and `purge_score_change_log()` erases them hourly. Service-role only, indexed on `(identity_hash, saved_at)`.
+
 ### Statistics
 
 `compute_country_statistics` compares the NAWA orientation score within the active intake year (`season_config`) through the cohort ladder: country (≥ 10 non-suspicious responses) → country group (`country_groups`, unlisted countries fall into `world-other`) → whole track. The result names the tier (`cohortScope`, `cohortGroupId`); with fewer than 10 responses on every tier `detailsAvailable` is `false`.
 
 ### RPCs (service_role)
 
-- `create_response_for_identity` — insert once per `(identity_hash, intake_year)`; existing profile or unique violation → `profile_exists`
+- `create_response_for_identity` — insert once per `(identity_hash, intake_year)`; existing profile or unique violation → `profile_exists`; the first create with no trail row in the last 24 hours is recorded uncounted, a create while a recent trail row exists counts like a score-changing edit, and a save over the limit → `edit_limit_reached`
 - `get_current_response(identity_hash, intake_year)`
-- `update_current_response(identity_hash, intake_year, …)` — allows correcting one final outcome to another
+- `update_current_response(identity_hash, intake_year, …)` — allows correcting one final outcome to another; an edit that changes `nawa_orientation_score` is counted and blocked after three counted saves in a rolling 24 hours → `edit_limit_reached`
 - `get_current_statistics(identity_hash, intake_year)`
 - `get_prep_city_distribution(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
 - `get_cohort_outcomes(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
@@ -99,11 +103,11 @@ Questionnaire fields plus:
 
 ## Security and privacy
 
-**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name only; the retired `status_updated` event carried two status values in old rows; never free text, enforced by the API schema and a payload size check). Deleting the survey deletes the user's events.
+**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name only; the retired `status_updated` event carried two status values in old rows; never free text, enforced by the API schema and a payload size check). Deleting the survey deletes the user's events. `score_change_log` keeps only the identity hash and the times of recent saves that set a score, for 24 hours; it survives a deletion, as the privacy notice states ([ADR 0013](adr/0013-limit-on-score-changing-edits.md)).
 
 **Not stored:** Telegram id, Telegram username, name, email, phone, search queries, recovery or session tokens, raw IP addresses (IP hashes used transiently for public-stats rate limits).
 
-**Deleting** a profile in Settings removes every intake year of that account.
+**Deleting** a profile in Settings removes every intake year of that account and the user's product events; it does not remove the 24-hour `score_change_log` trail.
 
 **Client requirements:** Mini App must be opened inside Telegram so `initData` is present. Opening the hosted URL in a normal browser shows a gate screen, not the full product.
 
@@ -112,6 +116,11 @@ Questionnaire fields plus:
 ## Questionnaire scope
 
 Only `nawa_director` is writable (the API rejects other tracks); `health_minister` and `culture_minister` stay in the enums for later. Two study routes: `preparatory_course`, `direct_studies`. Six application statuses (`submitted` → … → `scholarship_awarded` / `scholarship_not_awarded`, plus `merit_review_negative`) stay in the enums and constraints, but the app only ever sends `submitted`. Shared enums in `shared/contracts.ts`, validated in `shared/validation.ts`, enforced in PostgreSQL constraints.
+
+## Catalogues
+
+- `shared/prep-course-centres.ts` is the closed list of NAWA preparatory-course centres, keyed by intake year. The 2026 list is the ten institutions of NAWA's *Lista Wnioskodawców otrzymujących finansowanie w programie Kursy Przygotowawcze NAWA 2026/2027*; a centre names the unit that runs the course only when the university's own site names it, with the source URL, otherwise it is shown by the university name alone. Add a new year key when NAWA publishes the next results; do not rewrite past years.
+- `shared/study-programmes.ts` is generated from the RAD-on / POL-on course registry (the source of studia.gov.pl). `node scripts/build-study-programmes.mjs` downloads the public list, keeps first-cycle and long-cycle full-time Polish-taught active programmes at all institutions, deduplicates kierunek names and writes the id-sorted module with the dataset URL, download date and filter in its header. Run it by hand when the list needs refreshing; it is never part of CI or the build.
 
 ## Season rollover
 
@@ -129,7 +138,15 @@ NAWA publishes a new call:
 
 Supabase free-tier projects pause after roughly seven days without database activity. A Vercel Cron job calls `GET /api/cron/keep-alive` once per day (`0 12 * * *` UTC). The handler verifies `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in Vercel; the platform attaches it automatically) and runs a lightweight `responses` read via the existing service-role client.
 
+The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
+
 ## Architecture changelog
+
+### 2026-11-28 — Score-change limit
+
+- Migration `202611280001`: new `score_change_log` (`identity_hash`, `saved_at`, `counted`; service-role only; index on `(identity_hash, saved_at)`) keeps the trail of score-changing saves for a rolling 24 hours and survives deletion. `create_response_for_identity` records a first create uncounted and counts a re-create inside the window; `update_current_response` counts an edit only when `nawa_orientation_score` changes. Both raise `edit_limit_reached` with the retry instant (oldest counted row + 24 hours, ISO 8601 UTC) when three counted rows are in the window. `purge_score_change_log()` erases expired rows; pg_cron schedules it hourly when the extension is available.
+- API: `edit_limit_reached` → 429 `EDIT_LIMIT_REACHED` with `retryAt`; the client shows a localized message with the retry time in local time (and the date when it is not today) and keeps the form input or the local draft.
+- Decision record: [ADR 0013](adr/0013-limit-on-score-changing-edits.md).
 
 ### 2026-11-27 — Real landing response counter
 

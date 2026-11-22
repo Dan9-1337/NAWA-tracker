@@ -27,6 +27,8 @@ export class ApiClientError extends Error {
     public readonly status: number,
     public readonly code: string,
     message: string,
+    /** ISO 8601 UTC instant when the action becomes possible again; only EDIT_LIMIT_REACHED. */
+    public readonly retryAt?: string,
   ) {
     super(message);
     this.name = 'ApiClientError';
@@ -65,7 +67,12 @@ async function request<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', body:
     const parsedError = apiErrorSchema.safeParse(payload);
     if (parsedError.success) {
       const apiError: ApiError = parsedError.data;
-      throw new ApiClientError(response.status, apiError.error.code, apiError.error.message);
+      throw new ApiClientError(
+        response.status,
+        apiError.error.code,
+        apiError.error.message,
+        apiError.error.retryAt,
+      );
     }
     throw new ApiClientError(response.status, 'INVALID_RESPONSE', getMessages().api.invalidResponse);
   }

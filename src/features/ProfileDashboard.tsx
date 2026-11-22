@@ -208,6 +208,11 @@ export function ProfileDashboard({
     return (
       <>
         <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />
+        {actionError ? (
+          <p className="mt-4 text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
+            {actionError}
+          </p>
+        ) : null}
         {cohortWarning ? (
           <div className="mt-4 rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
             <p className="font-semibold">{t.form.cohortChangeTitle}</p>

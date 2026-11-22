@@ -78,6 +78,10 @@ export const pl = {
     saved: 'Dane zapisane',
     saveError: 'Nie udało się zapisać',
     saveErrorDraft: 'Twoje odpowiedzi zostały na urządzeniu. Spróbuj ponownie.',
+    editLimitToday: (time: string) =>
+      `Wynik orientacyjny można zmienić najwyżej trzy razy na dobę. Następna zmiana — po ${time}.`,
+    editLimitDate: (when: string) =>
+      `Wynik orientacyjny można zmienić najwyżej trzy razy na dobę. Następna zmiana możliwa ${when}.`,
     cohortChangeTitle: 'Zmieni się Twoja grupa porównawcza',
     cohortChangeBody:
       'Zmiana tych danych przeniesie Cię do innej grupy porównawczej. Poprzednie statystyki nie będą już wyświetlane.',
@@ -161,6 +165,7 @@ export const pl = {
       'Nie zapisujemy imienia, e-maila, numeru telefonu ani nazwy użytkownika Telegram.',
       'Małe kraje łączymy w grupy, a wyniki osób ze stypendium pokazujemy w przedziałach co 5 punktów.',
       'W każdej chwili możesz usunąć wszystko w Ustawieniach.',
+      'Po usunięciu ankiety przez około dobę przechowujemy tylko kod konta i czas ostatnich zmian wyniku orientacyjnego — żeby nie można było obejść limitu zmian.',
       'Jeśli włączysz przypomnienia w bocie, Twój Telegram ID jest przechowywany osobno od ankiety, dopóki ich nie wyłączysz. Usunięcie ankiety kasuje też ten zapis.',
       'To dane pseudonimowe, nie anonimowe: autor technicznie mógłby powiązać ankietę z kontem.',
     ],
