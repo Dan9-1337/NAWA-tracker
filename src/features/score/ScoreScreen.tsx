@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../../shared/contracts';
 import { nawaOrientationThreshold } from '../../../shared/nawa-score';
-import { isIntakeOpen, season2026 } from '../../../shared/season';
+import { MIN_COHORT_SIZE } from '../../../shared/product-rules';
 import { ScoreTape } from '../../components/ScoreTape';
-import { ChevronIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
-import { formatCountryLabel } from '../../lib/country-label';
-import { formatDate, formatGrade, formatPrecise, parseLocalizedNumber } from '../../lib/format';
+import { formatGrade, formatPrecise, parseLocalizedNumber } from '../../lib/format';
+import { canShowScoreDistribution, percentileBand } from '../../lib/score-buckets';
 import {
   AVERAGE_STEP,
   averageAfterDrag,
@@ -15,41 +14,19 @@ import {
   stepAverage,
 } from '../../lib/score-tape';
 import { getTelegramWebApp } from '../../lib/telegram';
-import type { WizardStep } from '../ResponseWizardSteps';
+import type { StatisticsState } from '../statistics/StatisticsPanel';
+import { ThresholdChip } from './ThresholdChip';
 
 type ScoreScreenProps = {
   current: ResponseFormInput;
-  onEditSection: (section: WizardStep) => void;
+  statistics: StatisticsState;
 };
 
-type ProfileRowProps = {
-  label: string;
-  value: string;
-  onClick: () => void;
-  last?: boolean;
-};
-
-function ProfileRow({ label, value, onClick, last = false }: ProfileRowProps) {
-  return (
-    <button
-      type="button"
-      className={`flex min-h-[52px] w-full items-center justify-between gap-3 px-4 text-left active:opacity-70${
-        last ? '' : ' border-b border-[var(--section-divider-color)]'
-      }`}
-      onClick={onClick}
-    >
-      <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-      <span className="flex items-center gap-1.5 text-base font-semibold">
-        {value}
-        <span className="text-[var(--text-secondary)]">
-          <ChevronIcon />
-        </span>
-      </span>
-    </button>
-  );
-}
-
-export function ScoreScreen({ current, onEditSection }: ScoreScreenProps) {
+/**
+ * The what-if block: the tape, the average input and, only while a what-if is active,
+ * its own score, threshold chip and percentile band. Nothing here touches the saved card.
+ */
+export function ScoreScreen({ current, statistics }: ScoreScreenProps) {
   const { t, locale } = useI18n();
   const copy = t.scoreScreen;
   const maximumGrade = current.maximumGrade;
@@ -83,15 +60,15 @@ export function ScoreScreen({ current, onEditSection }: ScoreScreenProps) {
   const savedScore = scoreForAverage(current.averageGrade, profile);
   const score = scoreForAverage(average, profile);
   const isWhatIf = average !== current.averageGrade;
-  const delta = Math.round((score - threshold) * 100) / 100;
-  const thresholdText = String(threshold);
 
-  const chipText =
-    delta > 0
-      ? copy.aboveThreshold(formatPrecise(delta, locale), thresholdText)
-      : delta < 0
-        ? copy.belowThreshold(formatPrecise(Math.abs(delta), locale), thresholdText)
-        : copy.atThreshold(thresholdText);
+  const statsData = statistics.status === 'success' ? statistics.data : null;
+  const band =
+    isWhatIf &&
+    statsData &&
+    statsData.groupResponseCount >= MIN_COHORT_SIZE &&
+    canShowScoreDistribution(statsData.groupResponseCount, statsData.scoreBuckets)
+      ? percentileBand(score, statsData.scoreBuckets, current.scholarshipTrack)
+      : null;
 
   function applyAverage(next: number) {
     if (next === average) return;
@@ -119,53 +96,16 @@ export function ScoreScreen({ current, onEditSection }: ScoreScreenProps) {
     }
   }
 
-  const bonus = scoreForAverage(average, profile) - scoreForAverage(average, { ...profile, polishSchoolLevel: 'none' });
-  const formula = `${formatPrecise(average, locale)} × 90 ÷ ${formatGrade(maximumGrade, locale)}${
-    bonus > 0 ? ` + ${formatGrade(bonus, locale)}` : ''
-  } = ${formatPrecise(score, locale)}`;
-
-  const seasonLabel = isIntakeOpen()
-    ? copy.seasonOpen(formatDate(season2026.documentsTo, locale))
-    : copy.seasonClosed(String(season2026.year));
-
   return (
-    <section className="space-y-0" aria-label={copy.scoreLabel}>
-      <div className="flex items-baseline justify-between gap-3 text-sm text-[var(--text-secondary)]">
-        <span>{isWhatIf ? copy.whatIfLabel : copy.scoreLabel}</span>
-        <span className="shrink-0 text-xs">{seasonLabel}</span>
-      </div>
+    <section className="space-y-0" aria-label={copy.whatIfLabel} data-testid="what-if-block">
+      <p className="text-sm text-[var(--text-secondary)]">{copy.whatIfLabel}</p>
 
-      <div className="mt-0.5 flex items-baseline gap-2">
-        <span
-          className="font-display text-[clamp(88px,34vw,132px)] font-semibold leading-[0.95] tracking-[-0.02em] tabular-nums"
-          data-testid="score-value"
-        >
-          {formatPrecise(score, locale)}
-        </span>
-        <span className="font-display text-[28px] font-medium text-[var(--text-secondary)]">
-          {copy.scaleMax}
-        </span>
-      </div>
-
-      <div
-        className="mt-2.5 inline-flex items-center gap-2 rounded-full px-3.5 py-[7px] text-[13.5px] font-semibold"
-        style={{
-          background: 'var(--tg-theme-button-color)',
-          color: 'var(--tg-theme-button-text-color)',
-        }}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
-          <path d={delta >= 0 ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 5v14M6 13l6 6 6-6'} />
-        </svg>
-        {chipText}
-      </div>
-
-      <div className="-mx-4 mt-5">
+      <div className="-mx-4 mt-4">
         <ScoreTape
           score={score}
           threshold={threshold}
-          ariaLabel={copy.tapeAriaLabel(formatPrecise(score, locale), thresholdText)}
-          thresholdLabel={copy.thresholdFlag(thresholdText)}
+          ariaLabel={copy.tapeAriaLabel(formatPrecise(score, locale), String(threshold))}
+          thresholdLabel={copy.thresholdFlag(String(threshold))}
           onDragStart={() => {
             dragStartAverage.current = average;
           }}
@@ -176,6 +116,21 @@ export function ScoreScreen({ current, onEditSection }: ScoreScreenProps) {
       <p className="-mt-1 text-center text-[13px] text-[var(--text-secondary)]">
         {copy.tapeHint(formatPrecise(AVERAGE_STEP, locale))}
       </p>
+
+      {isWhatIf ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="what-if-result">
+          <span
+            className="font-display text-[40px] font-semibold leading-[0.95] tracking-[-0.02em] tabular-nums"
+            data-testid="what-if-score-value"
+          >
+            {formatPrecise(score, locale)}
+          </span>
+          <span className="font-display text-[18px] font-medium text-[var(--text-secondary)]">
+            {copy.scaleMax}
+          </span>
+          <ThresholdChip score={score} size="small" testId="what-if-threshold-chip" />
+        </div>
+      ) : null}
 
       <div className="mt-4 rounded-2xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3">
         <label htmlFor="what-if-average" className="text-sm text-[var(--text-secondary)]">
@@ -230,38 +185,15 @@ export function ScoreScreen({ current, onEditSection }: ScoreScreenProps) {
             </button>
           </div>
         ) : null}
+        {band ? (
+          <p className="mt-1 text-[13px] font-medium text-[var(--text-secondary)]" data-testid="what-if-percentile-band">
+            {band.kind === 'band' ? copy.percentileBand(band.from, band.to) : copy.belowAxis}
+          </p>
+        ) : null}
         {isWhatIf ? (
           <p className="mt-1 text-[13px] text-[var(--text-helper)]">{copy.whatIfNote}</p>
         ) : null}
       </div>
-
-      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-secondary-bg-color)]">
-        <ProfileRow
-          label={copy.rows.citizenship}
-          value={formatCountryLabel(current.rankingCountry, locale)}
-          onClick={() => onEditSection('education')}
-        />
-        <ProfileRow
-          label={copy.rows.average}
-          value={formatGrade(current.averageGrade, locale)}
-          onClick={() => onEditSection('grades')}
-        />
-        <ProfileRow
-          label={copy.rows.scale}
-          value={copy.scaleValue(formatGrade(maximumGrade, locale))}
-          onClick={() => onEditSection('grades')}
-        />
-        <ProfileRow
-          label={copy.rows.polish}
-          value={copy.polishValue[current.polishSchoolLevel ?? 'none']}
-          onClick={() => onEditSection('grades')}
-          last
-        />
-      </div>
-
-      <p className="mt-2.5 px-1 text-[13px] tabular-nums text-[var(--text-secondary)]">
-        {formula}. {copy.formulaDisclaimer}
-      </p>
     </section>
   );
 }

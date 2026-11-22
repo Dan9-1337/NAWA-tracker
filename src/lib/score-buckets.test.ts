@@ -4,6 +4,7 @@ import {
   displayBinCount,
   displayBuckets,
   mergeSparseBuckets,
+  percentileBand,
   percentileInBuckets,
   scoreAtPercentile,
   scoreToAxisPercent,
@@ -41,5 +42,25 @@ describe('score-buckets', () => {
     expect(scoreAtPercentile(50, buckets, 60, 8)).toBe(80);
     expect(scoreAtPercentile(0, buckets, 60, 8)).toBe(60);
     expect(scoreAtPercentile(100, buckets, 60, 8)).toBe(100);
+  });
+
+  it('turns a score into an approximate decile band', () => {
+    const buckets = Array.from({ length: 16 }, () => 10);
+
+    expect(percentileBand(60, buckets, 'nawa_director')).toEqual({ kind: 'band', from: 0, to: 10 });
+    expect(percentileBand(80, buckets, 'nawa_director')).toEqual({ kind: 'band', from: 50, to: 60 });
+    expect(percentileBand(100, buckets, 'nawa_director')).toEqual({ kind: 'band', from: 90, to: 100 });
+  });
+
+  it('reports scores below the axis origin instead of a band', () => {
+    const buckets = Array.from({ length: 16 }, () => 10);
+
+    expect(percentileBand(59.5, buckets, 'nawa_director')).toEqual({ kind: 'belowAxis' });
+    expect(percentileBand(0, buckets, 'nawa_director')).toEqual({ kind: 'belowAxis' });
+  });
+
+  it('has no band without a response distribution', () => {
+    expect(percentileBand(80, [], 'nawa_director')).toBeNull();
+    expect(percentileBand(80, Array.from({ length: 16 }, () => 0), 'nawa_director')).toBeNull();
   });
 });

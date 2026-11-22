@@ -7,18 +7,22 @@ import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
 import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
-import { ConfirmSummary } from './ConfirmSummary';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
   toResponseInput,
   type WizardStep,
 } from './ResponseWizardSteps';
+import { ProfileDetails } from './score/ProfileDetails';
 import { ScoreScreen } from './score/ScoreScreen';
-import { StatisticsPanel, type StatisticsState } from './statistics/StatisticsPanel';
+import {
+  StatisticsDistribution,
+  StatisticsPanel,
+  type StatisticsState,
+} from './statistics/StatisticsPanel';
 import { useWizardSteps } from './useWizardSteps';
 
-type View = 'dashboard' | 'edit-wizard' | 'edit-confirm';
+type View = 'dashboard' | 'edit-wizard';
 
 type ProfileDashboardProps = {
   current: ResponseFormInput;
@@ -88,6 +92,11 @@ export function ProfileDashboard({
     return () => window.clearTimeout(id);
   }, [saved]);
 
+  // The warning belongs to the values the user is about to save, so any edit asks for confirmation again.
+  useEffect(() => {
+    setCohortWarning(false);
+  }, [editDraft]);
+
   const userOrientationScore = useMemo(() => {
     if (current.scholarshipTrack !== 'nawa_director') return null;
     return calculateNawaOrientationScore(
@@ -100,7 +109,7 @@ export function ProfileDashboard({
   }, [current]);
 
   const submitEdit = useCallback(async () => {
-    if (disabled) return;
+    if (disabled || !canAdvanceWizardStep('grades', editDraft)) return;
     const next = toResponseInput(editDraft);
     if (cohortFieldsChanged(current, next).length > 0 && !cohortWarning) {
       setCohortWarning(true);
@@ -113,14 +122,6 @@ export function ProfileDashboard({
       setSaved(true);
     });
   }, [cohortWarning, current, disabled, editDraft, onSubmit, runGuarded]);
-
-  const jumpToEditSection = useCallback(
-    (section: WizardStep) => {
-      setView('edit-wizard');
-      jumpToEditStep(section);
-    },
-    [jumpToEditStep],
-  );
 
   const openEditAt = useCallback(
     (section: WizardStep) => {
@@ -147,47 +148,41 @@ export function ProfileDashboard({
     setCohortWarning(false);
   }, []);
 
-  const leaveConfirmStep = () => {
+  const leaveEditWizard = useCallback(() => {
     if (cohortWarning) {
       cancelCohortWarning();
       return;
     }
-    setView('edit-wizard');
-  };
+    goEditBack(() => setView('dashboard'));
+  }, [cancelCohortWarning, cohortWarning, goEditBack]);
 
   function chromeConfig(): MiniAppChromeConfig {
     if (chromeSuspended) return {};
     if (view === 'dashboard') return {};
-    if (view === 'edit-wizard') {
-      return {
-        main: {
-          text: t.wizard.next,
-          visible: true,
-          enabled: !disabled && canAdvanceWizardStep(editCurrentStep, editDraft),
-          onClick: () => goEditNext(editDraft, () => setView('edit-confirm')),
-        },
-        back: {
-          visible: true,
-          onClick: () => goEditBack(() => setView('dashboard')),
-        },
-        closingConfirmation: true,
-      };
-    }
+    const onGradesStep = editCurrentStep === 'grades';
     return {
       main: {
-        text: cohortWarning ? t.form.cohortChangeConfirm : t.form.submitUpdate,
+        text: onGradesStep
+          ? cohortWarning
+            ? t.form.cohortChangeConfirm
+            : t.form.submitUpdate
+          : t.wizard.next,
         visible: true,
-        enabled: !disabled && !pending,
-        loading: pending,
-        onClick: submitEdit,
+        enabled: !disabled && !pending && canAdvanceWizardStep(editCurrentStep, editDraft),
+        loading: onGradesStep && pending,
+        onClick: onGradesStep ? submitEdit : () => goEditNext(editDraft),
       },
-      secondary: {
-        text: cohortWarning ? t.form.cohortChangeCancel : t.wizard.editStep,
-        visible: true,
-        enabled: !pending,
-        onClick: leaveConfirmStep,
-      },
-      back: { visible: true, onClick: leaveConfirmStep },
+      ...(onGradesStep && cohortWarning
+        ? {
+            secondary: {
+              text: t.form.cohortChangeCancel,
+              visible: true,
+              enabled: !pending,
+              onClick: cancelCohortWarning,
+            },
+          }
+        : {}),
+      back: { visible: true, onClick: leaveEditWizard },
       closingConfirmation: true,
     };
   }
@@ -195,19 +190,15 @@ export function ProfileDashboard({
   useMiniAppChrome(chromeConfig());
 
   useEffect(() => {
-    if (view === 'edit-wizard' || view === 'edit-confirm') {
+    if (view === 'edit-wizard') {
       saveWizardDraft(editDraft);
     }
   }, [editDraft, view]);
 
   if (view === 'edit-wizard') {
-    return <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />;
-  }
-
-  if (view === 'edit-confirm') {
     return (
       <>
-        <ConfirmSummary draft={toResponseInput(editDraft)} onEditSection={jumpToEditSection} />
+        <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />
         {cohortWarning ? (
           <div className="mt-4 rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm">
             <p className="font-semibold">{t.form.cohortChangeTitle}</p>
@@ -226,8 +217,10 @@ export function ProfileDashboard({
         </p>
       ) : null}
 
-      <ScoreScreen current={current} onEditSection={openEditAt} />
       <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
+      <ScoreScreen current={current} statistics={statistics} />
+      <StatisticsDistribution state={statistics} profile={current} userScore={userOrientationScore} />
+      <ProfileDetails current={current} onEditSection={openEditAt} />
 
       {actionError ? (
         <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">

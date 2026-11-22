@@ -77,10 +77,6 @@ export function ResultPreviewCard() {
         />
       </div>
       <p className="-mt-1 text-center text-[13px] text-[var(--text-secondary)]">{t.start.previewTapeHint}</p>
-
-      <p className="mt-3 text-xs font-medium leading-5 text-[var(--text-secondary)]">
-        <span className="text-[var(--color-accent-ink)]">●</span> {t.start.previewLive}
-      </p>
     </section>
   );
 }

@@ -13,6 +13,7 @@ import {
   type CreateResponseResult,
   type CurrentResponseResult,
   type DeleteResponseResult,
+  type IntakeSummaryResult,
   type StatisticsResult,
   type UpdateResponseRequest,
   type UpdateResponseResult,
@@ -153,6 +154,15 @@ export const updateResponseRequestSchema = z
 
 export const currentResponseRequestSchema = emptyRequestSchema;
 export const statisticsRequestSchema = emptyRequestSchema;
+export const intakeSummaryRequestSchema = emptyRequestSchema;
+
+export const intakeSummaryResultSchema = z
+  .object({
+    intakeYear: z.number().int().min(2018).max(2100),
+    /** A disclosed count never sits below the cohort floor; the server sends null instead. */
+    responseCount: z.number().int().min(MIN_COHORT_SIZE).nullable(),
+  })
+  .strict() satisfies z.ZodType<IntakeSummaryResult>;
 
 export const statisticsResultSchema = z
   .object({

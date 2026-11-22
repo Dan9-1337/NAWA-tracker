@@ -1,10 +1,18 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/context';
 import { pl } from '../i18n/pl';
+import { getIntakeSummary } from '../lib/api-client';
 import { StartScreen } from './StartScreen';
+
+vi.mock('../lib/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/api-client')>()),
+  getIntakeSummary: vi.fn(),
+}));
+
+const mockedGetIntakeSummary = vi.mocked(getIntakeSummary);
 
 function setup(overrides: Partial<Parameters<typeof StartScreen>[0]> = {}) {
   const handlers = { onStart: vi.fn(), onContinue: vi.fn(), onStartOver: vi.fn() };
@@ -17,6 +25,11 @@ function setup(overrides: Partial<Parameters<typeof StartScreen>[0]> = {}) {
 }
 
 describe('StartScreen', () => {
+  beforeEach(() => {
+    mockedGetIntakeSummary.mockReset();
+    mockedGetIntakeSummary.mockResolvedValue({ intakeYear: 2026, responseCount: null });
+  });
+
   it('starts the wizard from the main button, which is disabled while saving', async () => {
     const user = userEvent.setup();
     const { onStart } = setup();
@@ -77,5 +90,70 @@ describe('StartScreen', () => {
     await user.keyboard('{PageDown}{PageDown}{PageDown}{PageDown}{PageDown}{PageDown}');
     expect(median).toHaveTextContent('Poniżej mediany');
     expect(screen.getByTestId('preview-percentile')).toHaveTextContent(pl.start.previewPercentileLabel);
+  });
+
+  it('shows the real response count outside the sample card, above the start button', async () => {
+    mockedGetIntakeSummary.mockResolvedValue({ intakeYear: 2026, responseCount: 312 });
+    setup();
+
+    const line = await screen.findByTestId('intake-response-count');
+    expect(line).toHaveTextContent(pl.start.responseCount(312, 2026));
+    expect(line).toHaveTextContent('312 odpowiedzi w naborze 2026');
+
+    const card = screen.getByTestId('preview-score').closest('section');
+    const button = screen.getByRole('button', { name: pl.start.cta });
+    expect(card).not.toBeNull();
+    expect(card).not.toContainElement(line);
+    expect(card!.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(line.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(mockedGetIntakeSummary).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders no count line when the intake is below the cohort floor', async () => {
+    mockedGetIntakeSummary.mockResolvedValue({ intakeYear: 2026, responseCount: null });
+    setup();
+
+    await waitFor(() => expect(mockedGetIntakeSummary).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('intake-response-count')).not.toBeInTheDocument();
+    expect(screen.queryByText(/w naborze/)).not.toBeInTheDocument();
+  });
+
+  it('renders no count line and keeps the start button usable while the request is pending', async () => {
+    const user = userEvent.setup();
+    mockedGetIntakeSummary.mockReturnValue(new Promise(() => {}));
+    const { onStart } = setup();
+
+    await waitFor(() => expect(mockedGetIntakeSummary).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('intake-response-count')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    const button = screen.getByRole('button', { name: pl.start.cta });
+    expect(button).toBeEnabled();
+
+    await user.click(button);
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it('renders no count line and no error when the request fails', async () => {
+    const user = userEvent.setup();
+    mockedGetIntakeSummary.mockRejectedValue(new Error('offline'));
+    const { onStart } = setup();
+
+    await waitFor(() => expect(mockedGetIntakeSummary).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('intake-response-count')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    const button = screen.getByRole('button', { name: pl.start.cta });
+    expect(button).toBeEnabled();
+
+    await user.click(button);
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it('no longer prints the hard-coded "48 responses this week" figure', async () => {
+    mockedGetIntakeSummary.mockResolvedValue({ intakeYear: 2026, responseCount: 312 });
+    setup();
+
+    await screen.findByTestId('intake-response-count');
+    expect(screen.queryByText(/48/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/w tym tygodniu/)).not.toBeInTheDocument();
   });
 });

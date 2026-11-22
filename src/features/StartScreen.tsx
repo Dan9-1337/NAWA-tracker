@@ -1,8 +1,9 @@
-import { useState, type Ref } from 'react';
+import { useEffect, useState, type Ref } from 'react';
 import { HowItWorksPanel } from '../components/HowItWorksPanel';
 import { ChevronIcon } from '../components/icons';
 import { ResultPreviewCard } from '../components/ResultPreviewCard';
 import { useI18n } from '../i18n/context';
+import { getIntakeSummary } from '../lib/api-client';
 
 type FaqId = 'how' | 'what';
 
@@ -59,7 +60,23 @@ export function StartScreen({
 }: StartScreenProps) {
   const { t } = useI18n();
   const [openFaq, setOpenFaq] = useState<FaqId | null>(null);
+  const [intakeSummary, setIntakeSummary] = useState<{ count: number; year: number } | null>(null);
   const toggle = (id: FaqId) => setOpenFaq((value) => (value === id ? null : id));
+
+  // One request when the screen mounts. A pending or failed request renders nothing: the start button stays usable.
+  useEffect(() => {
+    let mounted = true;
+    getIntakeSummary()
+      .then((summary) => {
+        if (mounted && summary.responseCount !== null) {
+          setIntakeSummary({ count: summary.responseCount, year: summary.intakeYear });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <section className="space-y-4">
@@ -100,6 +117,18 @@ export function StartScreen({
       </div>
 
       <ResultPreviewCard />
+
+      {intakeSummary ? (
+        <p
+          className="text-center text-xs font-medium text-[var(--text-secondary)]"
+          data-testid="intake-response-count"
+        >
+          <span className="text-[var(--color-accent-ink)]" aria-hidden="true">
+            ●
+          </span>{' '}
+          {t.start.responseCount(intakeSummary.count, intakeSummary.year)}
+        </p>
+      ) : null}
 
       <button
         ref={startCtaRef}

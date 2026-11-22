@@ -3,13 +3,13 @@ import type { CohortScope, ScholarshipTrack, StatisticsResult } from '../../../s
 import { MIN_COHORT_SIZE } from '../../../shared/product-rules';
 import { CountryFlag } from '../../components/CountryFlag';
 import { DashboardCard, CardHeader } from '../../components/DashboardCard';
-import { DataSourceBadge } from '../../components/DataSourceBadge';
 import { DensityStrip } from '../../components/DensityStrip';
 import { TargetIcon } from '../../components/icons';
 import { useI18n } from '../../i18n/context';
 import { formatPrecise, formatScore } from '../../lib/format';
 import { canShowScoreDistribution } from '../../lib/score-buckets';
 import { getMedianBand, formatPercentileValue } from '../../lib/stats-verdict';
+import { ThresholdChip } from '../score/ThresholdChip';
 
 type Messages = ReturnType<typeof useI18n>['t'];
 
@@ -35,43 +35,19 @@ function medianPositionLine(
   return t.dashboard.hero.belowMedianBy(formatScore(Math.abs(delta), locale));
 }
 
-function ScoreBreakdown({ gradesScore, polishSchoolBonus }: { gradesScore: number | null; polishSchoolBonus: number | null }) {
-  const { t, locale } = useI18n();
-  const hasBonus = polishSchoolBonus != null && polishSchoolBonus > 0;
-  if (gradesScore == null && !hasBonus) return null;
-
-  const rows: Array<[string, string]> = [];
-  if (gradesScore != null) rows.push([t.dashboard.score.gradesLabel, formatPrecise(gradesScore, locale)]);
-  if (hasBonus) rows.push([t.dashboard.score.polishSchoolLabel, `+${formatScore(polishSchoolBonus, locale)}`]);
-
-  return (
-    <details className={panelClass}>
-      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
-        {t.dashboard.hero.scoreBreakdown}
-      </summary>
-      <dl className="mt-2 space-y-1 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-[var(--text-secondary)]">{label}</dt>
-            <dd className="font-medium tabular-nums text-[var(--text-primary)]">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </details>
-  );
-}
-
-type ResultHeroCardProps = {
-  gradesScore: number | null;
-  polishSchoolBonus: number | null;
-  /** Shows the "country sample" source badge: true when the cohort is the applicant's own country. */
-  countrySample: boolean;
-  children: ReactNode;
+type ResultCardProps = {
+  /** The saved orientation score; the what-if never changes it. */
+  score: number;
+  seasonLabel: string;
+  /** The cohort body: detailed position, small-cohort notice or a statistics status line. */
+  children?: ReactNode;
+  /** The unofficial-sample caption; shown only when the body is about a cohort. */
+  caption?: string | null;
 };
 
-/** Frame of the result card: header, source badges, score breakdown; the body is the cohort-specific part. */
-export function ResultHeroCard({ gradesScore, polishSchoolBonus, countrySample, children }: ResultHeroCardProps) {
-  const { t } = useI18n();
+/** The saved result and its position in the cohort, in one card at the top of the dashboard. */
+export function ResultCard({ score, seasonLabel, children, caption }: ResultCardProps) {
+  const { t, locale } = useI18n();
 
   return (
     <DashboardCard tone="hero" aria-labelledby="dashboard-result-hero-title">
@@ -79,16 +55,31 @@ export function ResultHeroCard({ gradesScore, polishSchoolBonus, countrySample, 
         titleId="dashboard-result-hero-title"
         title={t.dashboard.hero.title}
         icon={<TargetIcon size={16} />}
-        badge={
-          <div className="flex flex-wrap gap-1.5">
-            <DataSourceBadge source="calculated" />
-            {countrySample ? <DataSourceBadge source="country_sample" /> : null}
-          </div>
-        }
+        badge={<span className="text-xs text-[var(--text-secondary)]">{seasonLabel}</span>}
         titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
       />
-      <ScoreBreakdown gradesScore={gradesScore} polishSchoolBonus={polishSchoolBonus} />
+
+      <div className="flex items-baseline gap-2">
+        <span
+          className="font-display text-[clamp(56px,16vw,64px)] font-semibold leading-[0.95] tracking-[-0.02em] tabular-nums"
+          data-testid="saved-score-value"
+        >
+          {formatPrecise(score, locale)}
+        </span>
+        <span className="font-display text-[22px] font-medium text-[var(--text-secondary)]">
+          {t.scoreScreen.scaleMax}
+        </span>
+      </div>
+
+      <ThresholdChip score={score} testId="saved-score-chip" />
+
       {children}
+
+      {caption ? (
+        <p className="text-[11px] text-[var(--text-helper)]" data-testid="result-card-caption">
+          {caption}
+        </p>
+      ) : null}
     </DashboardCard>
   );
 }
@@ -125,8 +116,6 @@ export function DetailedPosition({
 
   return (
     <>
-      {medianLine ? <p className="text-sm font-medium text-[var(--color-positive)]">{medianLine}</p> : null}
-
       {data.rankPosition != null && data.rankTotal != null ? (
         <p className="flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--text-primary)]">
           {cohortScope === 'country' ? <CountryFlag code={rankingCountry} size={22} /> : null}
@@ -136,13 +125,15 @@ export function DetailedPosition({
         </p>
       ) : null}
 
-      {pooledNote ? <p className="text-xs text-[var(--text-helper)]">{pooledNote}</p> : null}
-
       {percentile != null ? (
         <p className="text-sm font-medium text-[var(--text-secondary)]">
           {t.dashboard.position.percentileLine(String(percentile))}
         </p>
       ) : null}
+
+      {medianLine ? <p className="text-sm font-medium text-[var(--color-positive)]">{medianLine}</p> : null}
+
+      {pooledNote ? <p className="text-xs text-[var(--text-helper)]">{pooledNote}</p> : null}
 
       {showStrip && data.scoreBuckets ? (
         <DensityStrip

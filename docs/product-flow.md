@@ -40,6 +40,7 @@ Channel: Telegram Mini App only (`gate` → `loading` → `create` | `authentica
 ### Start
 
 - Pitch + a live sample ruler: dragging it changes a demo score, its position against a sample cohort and the percentile (no real data)
+- Below the sample card: the real number of responses in the active intake (`● 312 odpowiedzi w naborze 2026`), hidden while loading, on error, and below ten responses — no weekly delta and no placeholder
 - One start button; **NAWA Director** is the only live track (Health / Culture are hidden until their scoring documents are modelled)
 - Optional resume of local draft
 - FAQ (what you see / how it works)
@@ -74,11 +75,11 @@ Formula and 60-point merit threshold align with Ogłoszenie §2.7 for Dyrektor N
 
 ### Confirm
 
-Summary of the countries + grades → create (`POST`) or update (`PUT`).
+There is no separate confirm screen: the grades step saves directly — `POST` for a new profile, `PUT` for an edit. When an edit changes the comparison cohort (citizenship, track or country), the first save press shows a warning on the grades step and the second one confirms; Cancel, Back or any further edit hides it.
 
 ### Dashboard (authenticated)
 
-One screen, no tabs: large orientation score, threshold-60 chip, draggable measuring tape (what-if only, never saved), then the position inside the comparison cohort: rank, percentile and distribution once a cohort of ten exists. The cohort follows the ladder country → country group → whole track and says which tier it used.
+One screen, no tabs. The saved result card opens it: the season, the orientation score, the threshold-60 chip and then the position inside the comparison cohort — rank, percentile, median, a mini distribution and the cohort size once a cohort of ten exists. The cohort follows the ladder country → country group → whole track and says which tier it used; the card ends with one caption saying the sample is unofficial. The score and chip render even while statistics load or fail, with the status line inside the card. Below the card comes the what-if block (draggable measuring tape, input, and only while a what-if is active its own score, chip and percentile band; never saved), then the full-distribution disclosure for detailed cohorts, and the profile block with the edit rows and the formula. The score breakdown and the source badges are gone.
 
 Also: edit profile (same wizard), Settings, delete profile.
 
@@ -140,7 +141,7 @@ Intentionally still out of scope (confirm OK): Karta Polaka / attachments, forma
 | Area | Location |
 | --- | --- |
 | State machine | `src/pages/HomePage.tsx` |
-| Create / wizard / confirm | `src/features/CreateProfileFlow.tsx`, `ResponseWizardSteps.tsx`, `ConfirmSummary.tsx` |
+| Create / wizard / settings summary | `src/features/CreateProfileFlow.tsx`, `ResponseWizardSteps.tsx`, `ConfirmSummary.tsx` |
 | Dashboard | `src/features/ProfileDashboard.tsx`, `statistics/StatisticsPanel.tsx` |
 | Contracts | `shared/contracts.ts` |
 | Score formula | `shared/nawa-score.ts` |
@@ -162,7 +163,10 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 ### Unreleased — Refocus on the score comparison
 
 - Landing: a live sample ruler replaces the fake density strip.
+- Landing: the real response count of the active intake replaces the hard-coded "48 … +7 this week" line (one number, no delta, hidden below ten responses and outside the sample card).
 - Wizard: the university / field step is gone; two steps (countries, grades).
+- Confirm: the summary screen is gone; the wizard saves from the grades step, with the cohort-change warning inline there.
+- Dashboard: the saved result card (score, chip, position) opens the screen, then the what-if and the profile block; the score breakdown and the source badges are gone, replaced by one unofficial-sample caption.
 - Removed from the app: status reporting, the Outcomes and Season tabs, the prep-city card, `/api/outcomes` and `/api/prep-cities`; reminder copy no longer asks for an outcome.
 - Decision record: [ADR 0008](adr/0008-refocus-on-score-comparison.md).
 

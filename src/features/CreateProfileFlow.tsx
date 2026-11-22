@@ -15,12 +15,10 @@ import { getTelegramStartCountry, getTelegramWebApp } from '../lib/telegram';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
 import { useScrollToTopOnChange } from '../lib/useScrollToTop';
-import { ConfirmSummary } from './ConfirmSummary';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
   toResponseInput,
-  type WizardStep,
 } from './ResponseWizardSteps';
 import { StartScreen } from './StartScreen';
 import { useWizardSteps } from './useWizardSteps';
@@ -78,8 +76,6 @@ export function CreateProfileFlow({
     currentStep,
     goNext,
     goBack,
-    jumpToSection,
-    goToLastStep,
     resetToStart,
   } = useWizardSteps(restoredSession.current?.stepIndex ?? 0);
   const { pending, run: runGuarded } = useGuardedSubmit();
@@ -89,7 +85,7 @@ export function CreateProfileFlow({
   const startCtaRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (screen === 'wizard' || screen === 'confirm') {
+    if (screen === 'wizard') {
       saveWizardSession({ version: 2, draft, screen, stepIndex });
       setDirty(true);
     }
@@ -112,7 +108,7 @@ export function CreateProfileFlow({
   }, [screen]);
 
   const goWizardNext = useCallback(() => {
-    goNext(draft, () => setScreen('confirm'));
+    goNext(draft);
   }, [draft, goNext]);
 
   const goWizardBack = useCallback(() => {
@@ -159,44 +155,33 @@ export function CreateProfileFlow({
     });
   }, [disabled, draft, onSubmit, runGuarded]);
 
-  const jumpToSectionFromConfirm = useCallback(
-    (section: WizardStep) => {
-      setScreen('wizard');
-      jumpToSection(section);
-    },
-    [jumpToSection],
-  );
-
-  const backToLastWizardStep = useCallback(() => {
-    setScreen('wizard');
-    goToLastStep();
-  }, [goToLastStep]);
+  const onGradesStep = currentStep === 'grades';
 
   useMiniAppChrome(
     chromeSuspended
       ? {}
       : screen === 'start'
         ? { main: { text: t.start.cta, visible: !startCtaInView, enabled: !disabled, onClick: startWizard } }
-        : screen === 'wizard'
+        : onGradesStep
           ? {
               main: {
-                text: t.wizard.next,
+                text: t.form.submitCreate,
                 visible: true,
-                enabled: !disabled && canAdvanceWizardStep(currentStep, draft),
-                onClick: goWizardNext,
+                enabled: !disabled && !pending && canAdvanceWizardStep('grades', draft),
+                loading: pending,
+                onClick: handleSubmit,
               },
               back: { visible: true, onClick: goWizardBack },
               closingConfirmation: dirty,
             }
           : {
               main: {
-                text: t.form.submitCreate,
+                text: t.wizard.next,
                 visible: true,
-                enabled: !disabled && !pending,
-                loading: pending,
-                onClick: handleSubmit,
+                enabled: !disabled && canAdvanceWizardStep('education', draft),
+                onClick: goWizardNext,
               },
-              back: { visible: true, onClick: backToLastWizardStep },
+              back: { visible: true, onClick: goWizardBack },
               closingConfirmation: dirty,
             },
   );
@@ -214,21 +199,17 @@ export function CreateProfileFlow({
     );
   }
 
-  if (screen === 'confirm') {
-    return (
-      <>
-        <ConfirmSummary draft={toResponseInput(draft)} onEditSection={jumpToSectionFromConfirm} />
-        {actionError ? (
-          <div role="alert" className="space-y-1">
-            <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">
-              {t.form.saveError}
-            </p>
-            <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.form.saveErrorDraft}</p>
-          </div>
-        ) : null}
-      </>
-    );
-  }
-
-  return <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />;
+  return (
+    <>
+      <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />
+      {actionError ? (
+        <div role="alert" className="mt-4 space-y-1">
+          <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">
+            {t.form.saveError}
+          </p>
+          <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.form.saveErrorDraft}</p>
+        </div>
+      ) : null}
+    </>
+  );
 }

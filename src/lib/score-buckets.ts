@@ -105,6 +105,31 @@ export function percentileInBuckets(score: number, buckets: number[], origin: nu
   return (below / total) * 100;
 }
 
+export type PercentileBand =
+  | { kind: 'band'; from: number; to: number }
+  | { kind: 'belowAxis' };
+
+/**
+ * Approximate decile band for `score`, using the same 10-point rule as the landing preview.
+ * Returns `belowAxis` for scores under the track's axis origin, and `null` when there is no distribution.
+ */
+export function percentileBand(
+  score: number,
+  buckets: number[],
+  track: ScholarshipTrack,
+): PercentileBand | null {
+  const total = buckets.reduce((sum, count) => sum + count, 0);
+  if (buckets.length === 0 || total <= 0) return null;
+
+  const { origin, step } = scoreAxisForTrack(track);
+  if (score < origin) return { kind: 'belowAxis' };
+
+  const percentile = percentileInBuckets(score, buckets, origin, step);
+  const from = Math.min(Math.floor(percentile / 10) * 10, 90);
+
+  return { kind: 'band', from, to: from + 10 };
+}
+
 /** Inverse of `percentileInBuckets`: the score that has `percentile` percent of responses below it. */
 export function scoreAtPercentile(percentile: number, buckets: number[], origin: number, step: number): number {
   const total = buckets.reduce((sum, count) => sum + count, 0);

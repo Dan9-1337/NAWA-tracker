@@ -43,6 +43,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses` | PUT | initData + Origin | Update owned profile |
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
+| `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor) |
 | `/api/bot` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook: `/start` (with `c_<ISO>` or `subscribe` payload), `/subscribe`, `/stop`, `/help`, and `my_chat_member` (blocked bot) |
 | `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`results_soon`, `results_out`, `intake_open`) |
 | `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
@@ -112,6 +113,11 @@ NAWA publishes a new call:
 Supabase free-tier projects pause after roughly seven days without database activity. A Vercel Cron job calls `GET /api/cron/keep-alive` once per day (`0 12 * * *` UTC). The handler verifies `Authorization: Bearer <CRON_SECRET>` (set `CRON_SECRET` in Vercel; the platform attaches it automatically) and runs a lightweight `responses` read via the existing service-role client.
 
 ## Architecture changelog
+
+### 2026-11-27 — Real landing response counter
+
+- Migration `202611270001`: new `get_intake_summary()` RPC returns `{ intakeYear, responseCount }` for `active_intake_year()`, counting valid (not `is_suspicious`) responses across all tracks and sending `responseCount: null` below `min_cohort_size()`; execute is granted to the service role only. New `POST /api/intake-summary`; the landing screen calls it once on mount and renders nothing while loading, on failure, or when the count is suppressed.
+- The hard-coded `start.previewLive` figure ("48 … +7 this week") is removed from every locale and from `ResultPreviewCard`; the real line sits below the sample card and keeps the accent dot.
 
 ### Unreleased — Refocus on the score comparison
 

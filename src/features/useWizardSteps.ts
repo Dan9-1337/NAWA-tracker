@@ -14,16 +14,12 @@ export function useWizardSteps(initialStepIndex = 0) {
   const currentStep = effectiveSteps[Math.min(stepIndex, effectiveSteps.length - 1)];
 
   const goNext = useCallback(
-    (draft: WizardDraft, onReachEnd: () => void) => {
+    (draft: WizardDraft) => {
       if (!canAdvanceWizardStep(currentStep, draft)) return;
       getTelegramWebApp()?.haptic.impact('light');
-      if (stepIndex >= effectiveSteps.length - 1) {
-        onReachEnd();
-        return;
-      }
       setStepIndex((index) => Math.min(index + 1, effectiveSteps.length - 1));
     },
-    [currentStep, effectiveSteps.length, stepIndex],
+    [currentStep, effectiveSteps.length],
   );
 
   const goBack = useCallback(
@@ -42,10 +38,6 @@ export function useWizardSteps(initialStepIndex = 0) {
     setStepIndex(wizardStepIndex(section));
   }, []);
 
-  const goToLastStep = useCallback(() => {
-    setStepIndex(effectiveSteps.length - 1);
-  }, [effectiveSteps.length]);
-
   const resetToStart = useCallback(() => {
     setStepIndex(0);
   }, []);
@@ -58,7 +50,6 @@ export function useWizardSteps(initialStepIndex = 0) {
     goNext,
     goBack,
     jumpToSection,
-    goToLastStep,
     resetToStart,
   };
 }

@@ -79,6 +79,13 @@ export type StatisticsResult = {
   cohortGroupId: string | null;
 };
 
+/** The landing counter: valid responses of the active intake, hidden below the cohort floor. */
+export type IntakeSummaryResult = {
+  intakeYear: number;
+  /** Null when the intake has fewer valid responses than `MIN_COHORT_SIZE`. */
+  responseCount: number | null;
+};
+
 export type CreateResponseRequest = {
   response: ResponseFormInput;
 };

@@ -8,4 +8,5 @@ export const testFiles = [
   'supabase/tests/bot_subscriptions.sql',
   'supabase/tests/season_model.sql',
   'supabase/tests/prep_cities.sql',
+  'supabase/tests/intake_summary.sql',
 ];

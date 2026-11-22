@@ -31,7 +31,13 @@ export type WizardDraft = {
   statusChangedAt: string;
 };
 
-export type WizardScreen = 'start' | 'wizard' | 'confirm';
+export type WizardScreen = 'start' | 'wizard';
+
+/**
+ * Sessions saved before the confirm screen was removed still say `'confirm'`. They were written on top of
+ * the last wizard step, so they resume on grades — the second and last step.
+ */
+const GRADES_STEP_INDEX = 1;
 
 export type WizardSession = {
   version: typeof SESSION_VERSION;
@@ -87,6 +93,15 @@ function isWizardSession(value: unknown): value is WizardSession {
   );
 }
 
+/** Only `wizard` and `start` exist now; a stored `confirm` screen resumes on the grades step. */
+function normalizeWizardScreen(screen: unknown): WizardScreen {
+  return screen === 'wizard' || screen === 'confirm' ? 'wizard' : 'start';
+}
+
+function isLegacyConfirmScreen(screen: unknown): boolean {
+  return screen === 'confirm';
+}
+
 export function loadWizardSession(): WizardSession | null {
   if (typeof localStorage === 'undefined') return null;
   try {
@@ -95,11 +110,17 @@ export function loadWizardSession(): WizardSession | null {
     const parsed: unknown = JSON.parse(raw);
     if (isWizardSession(parsed)) {
       const legacy = (parsed as { version: unknown }).version === LEGACY_SESSION_VERSION;
+      const storedScreen = (parsed as { screen?: unknown }).screen;
       return {
         ...parsed,
         version: SESSION_VERSION,
         draft: normalizeWizardDraft(parsed.draft),
-        stepIndex: legacy ? Math.max(0, parsed.stepIndex - 1) : parsed.stepIndex,
+        screen: normalizeWizardScreen(storedScreen),
+        stepIndex: isLegacyConfirmScreen(storedScreen)
+          ? GRADES_STEP_INDEX
+          : legacy
+            ? Math.max(0, parsed.stepIndex - 1)
+            : parsed.stepIndex,
       };
     }
     if (isWizardDraft(parsed)) {
@@ -141,5 +162,5 @@ export function clearWizardDraft(): void {
 
 /** True when a saved session should prompt resume instead of jumping into the wizard. */
 export function hasRestoredWizardSession(session: WizardSession | null): boolean {
-  return session != null && (session.screen === 'wizard' || session.screen === 'confirm');
+  return session?.screen === 'wizard';
 }

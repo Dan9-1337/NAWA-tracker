@@ -31,7 +31,8 @@ export const pl = {
     previewBelowMedianBy: (delta: string) => `Poniżej mediany o ${delta} pkt`,
     previewTapeHint: 'Przeciągnij skalę i zobacz, jak zmienia się Twoja pozycja',
     previewPercentileLabel: 'percentyl',
-    previewLive: '48 zgłoszeń · +7 w tym tygodniu',
+    responseCount: (count: number, year: number) =>
+      `${count} ${plural('pl', count, { one: 'odpowiedź', few: 'odpowiedzi', many: 'odpowiedzi', other: 'odpowiedzi' })} w naborze ${year}`,
     timePromise: 'Zajmie około 1 minuty',
     resumeTitle: 'Masz zapisany postęp',
     resumeBody: 'Możesz wrócić do miejsca, w którym skończyłeś/aś, albo zacząć ankietę od nowa.',
@@ -60,7 +61,6 @@ export const pl = {
     cohortTitle: 'Będziesz porównywany/a z kandydatami:',
     dataTitle: 'Twoje dane',
     editSection: 'Zmień',
-    editStep: 'Edytuj',
     gradeBasisHint: 'NAWA liczy średnią ze świadectwa końcowego albo z ocen półrocznych, jeśli szkołę kończysz po 1 lipca.',
     studentInPolandNote: 'Studenci w Polsce ze średnią co najmniej 4,75 otrzymują maksymalną liczbę punktów: 100.',
     validation: {
@@ -249,20 +249,9 @@ export const pl = {
     switchToDark: 'Włącz ciemny motyw',
     switchToLight: 'Włącz jasny motyw',
   },
-  dataSource: {
-    official: 'Oficjalne',
-    historical: 'Dane historyczne',
-    reported: 'Zgłoszone przez użytkowników',
-    estimate: 'Szacunek NAWAmeter',
-    calculated: 'Obliczone przez NAWAmeter',
-    country_sample: 'Próba krajowa NAWAmeter',
-    global_sample: 'Próba globalna NAWAmeter',
-    nawa_estimate: 'Szacunek NAWAmeter',
-  },
   scoreScreen: {
     seasonClosed: (year: string) => `Nabór ${year} zakończony`,
     seasonOpen: (date: string) => `Nabór wniosków trwa do ${date}`,
-    scoreLabel: 'Twój wynik według wzoru NAWA',
     whatIfLabel: 'Symulacja: wynik przy innej średniej',
     scaleMax: '/ 100',
     aboveThreshold: (delta: string, threshold: string) => `O ${delta} pkt powyżej progu ${threshold}`,
@@ -278,6 +267,8 @@ export const pl = {
     increase: 'Zwiększ średnią',
     reset: 'Wróć do zapisanej',
     savedScore: (score: string) => `Zapisany wynik: ${score}`,
+    percentileBand: (from: number, to: number) => `≈ więcej niż u ${from}–${to}% grupy`,
+    belowAxis: 'Poniżej progu 60 — poza rozkładem grupy',
     invalidAverage: (max: string) => `Wpisz liczbę od 0 do ${max}`,
     rows: {
       citizenship: 'Obywatelstwo',
@@ -308,11 +299,6 @@ export const pl = {
     trackNote: 'Z Twojego kraju i regionu jest za mało odpowiedzi, więc porównujemy Cię ze wszystkimi krajami.',
   },
   dashboard: {
-    score: {
-      title: 'Wynik orientacyjny',
-      gradesLabel: 'Punkty za oceny',
-      polishSchoolLabel: 'Szkoła polska / polonijna',
-    },
     position: {
       title: 'Miejsce w grupie',
       rankLine: (rank: string, total: string, country: string) =>
@@ -329,7 +315,8 @@ export const pl = {
       cohortSizeOnly: (count: string) => `${count} w próbie`,
       expandDistribution: 'Pokaż pełny rozkład wyników',
       collapseDistribution: 'Ukryj pełny rozkład wyników',
-      scoreBreakdown: 'Szczegóły wyniku',
+      unofficialCountrySample: 'Nieoficjalnie · próba NAWAmeter w Twoim kraju',
+      unofficialSample: 'Nieoficjalnie · próba NAWAmeter',
     },
     competitionNeighbourhood: {
       title: 'Wokół Twojego wyniku',

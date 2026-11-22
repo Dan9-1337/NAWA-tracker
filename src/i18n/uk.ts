@@ -39,7 +39,8 @@ export const uk = {
     previewBelowMedianBy: (delta: string) => `На ${delta} бала нижче за медіану`,
     previewTapeHint: 'Потягніть стрічку, щоб побачити, як змінюється ваша позиція',
     previewPercentileLabel: 'процентиль',
-    previewLive: '48 заявок · +7 за тиждень',
+    responseCount: (count: number, year: number) =>
+      `${count} ${plural('uk', count, { one: 'відповідь', few: 'відповіді', many: 'відповідей', other: 'відповіді' })} за набір ${year}`,
     timePromise: 'Займе близько 1 хвилини',
     resumeTitle: 'У вас є збережений прогрес',
     resumeBody: 'Продовжте з того місця, де зупинилися, або почніть опитування спочатку.',
@@ -68,7 +69,6 @@ export const uk = {
     cohortTitle: 'Вас порівнюватимуть із кандидатами:',
     dataTitle: 'Ваші дані',
     editSection: 'Змінити',
-    editStep: 'Змінити',
     gradeBasisHint: 'NAWA обчислює середній бал за підсумковим атестатом або за оцінками за півріччя, якщо ви закінчуєте школу після 1 липня.',
     studentInPolandNote: 'Студенти в Польщі із середнім балом щонайменше 4,75 отримують максимум — 100 балів.',
     validation: {
@@ -257,20 +257,9 @@ export const uk = {
     switchToDark: 'Увімкнути темну тему',
     switchToLight: 'Увімкнути світлу тему',
   },
-  dataSource: {
-    official: 'Офіційно',
-    historical: 'Історичні дані',
-    reported: 'Повідомлено користувачами',
-    estimate: 'Орієнтовна оцінка NAWAmeter',
-    calculated: 'Розраховано NAWAmeter',
-    country_sample: 'Вибірка NAWAmeter за країною',
-    global_sample: 'Загальна вибірка NAWAmeter',
-    nawa_estimate: 'Орієнтовна оцінка NAWAmeter',
-  },
   scoreScreen: {
     seasonClosed: (year: string) => `Набір ${year} завершено`,
     seasonOpen: (date: string) => `Прийом заявок до ${date}`,
-    scoreLabel: 'Ваш бал за формулою NAWA',
     whatIfLabel: 'А що, якщо: бал за іншого середнього бала',
     scaleMax: '/ 100',
     aboveThreshold: (delta: string, threshold: string) => `На ${delta} вище за поріг ${threshold}`,
@@ -286,6 +275,8 @@ export const uk = {
     increase: 'Збільшити середній бал',
     reset: 'Повернути збережений',
     savedScore: (score: string) => `Збережений бал: ${score}`,
+    percentileBand: (from: number, to: number) => `≈ вище, ніж у ${from}–${to}% групи`,
+    belowAxis: 'Нижче порогу 60 — поза розподілом групи',
     invalidAverage: (max: string) => `Введіть число від 0 до ${max}`,
     rows: {
       citizenship: 'Громадянство',
@@ -316,11 +307,6 @@ export const uk = {
     trackNote: 'Відповідей із вашої країни та регіону замало, тому порівнюємо вас з усіма країнами.',
   },
   dashboard: {
-    score: {
-      title: 'Орієнтовний бал',
-      gradesLabel: 'Бали за оцінки',
-      polishSchoolLabel: 'Польська / полонійна школа',
-    },
     position: {
       title: 'Місце в групі',
       rankLine: (rank: string, total: string, country: string) =>
@@ -337,7 +323,8 @@ export const uk = {
       cohortSizeOnly: (count: string) => `${count} у вибірці`,
       expandDistribution: 'Показати повний розподіл балів',
       collapseDistribution: 'Сховати повний розподіл балів',
-      scoreBreakdown: 'З чого складається бал',
+      unofficialCountrySample: 'Неофіційно · вибірка NAWAmeter за країною',
+      unofficialSample: 'Неофіційно · вибірка NAWAmeter',
     },
     competitionNeighbourhood: {
       title: 'Поруч із вашим результатом',

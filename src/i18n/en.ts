@@ -32,7 +32,8 @@ export const en = {
     previewBelowMedianBy: (delta: string) => `${delta} pts below the median`,
     previewTapeHint: 'Drag the ruler to see how your position changes',
     previewPercentileLabel: 'percentile',
-    previewLive: '48 responses · +7 this week',
+    responseCount: (count: number, year: number) =>
+      `${count} ${plural('en', count, { one: 'response', other: 'responses' })} in the ${year} intake`,
     timePromise: 'Takes about 1 minute',
     resumeTitle: 'You have saved progress',
     resumeBody: 'Continue where you stopped, or start the survey again from the beginning.',
@@ -61,7 +62,6 @@ export const en = {
     cohortTitle: 'You will be compared with candidates:',
     dataTitle: 'Your data',
     editSection: 'Change',
-    editStep: 'Edit',
     gradeBasisHint: 'NAWA uses the average from your final certificate, or from your half-year grades if you finish school after 1 July.',
     studentInPolandNote: 'Students in Poland with an average of at least 4.75 receive the maximum of 100 points.',
     validation: {
@@ -250,20 +250,9 @@ export const en = {
     switchToDark: 'Switch to dark theme',
     switchToLight: 'Switch to light theme',
   },
-  dataSource: {
-    official: 'Official',
-    historical: 'Historical data',
-    reported: 'Reported by users',
-    estimate: 'NAWAmeter estimate',
-    calculated: 'Calculated by NAWAmeter',
-    country_sample: 'NAWAmeter country sample',
-    global_sample: 'NAWAmeter global sample',
-    nawa_estimate: 'NAWAmeter estimate',
-  },
   scoreScreen: {
     seasonClosed: (year: string) => `${year} intake closed`,
     seasonOpen: (date: string) => `Applications are open until ${date}`,
-    scoreLabel: 'Your score by the NAWA formula',
     whatIfLabel: 'Simulation: score with a different average',
     scaleMax: '/ 100',
     aboveThreshold: (delta: string, threshold: string) => `${delta} pts above the threshold (${threshold})`,
@@ -279,6 +268,8 @@ export const en = {
     increase: 'Increase the average',
     reset: 'Back to saved average',
     savedScore: (score: string) => `Saved score: ${score}`,
+    percentileBand: (from: number, to: number) => `≈ higher than ${from}–${to}% of the group`,
+    belowAxis: 'Below the 60 threshold — outside the group distribution',
     invalidAverage: (max: string) => `Enter a number from 0 to ${max}`,
     rows: {
       citizenship: 'Citizenship',
@@ -309,11 +300,6 @@ export const en = {
     trackNote: 'There are too few answers from your country and region, so you are compared with all countries.',
   },
   dashboard: {
-    score: {
-      title: 'Estimated score',
-      gradesLabel: 'Points for grades',
-      polishSchoolLabel: 'Polish or Polonia school',
-    },
     position: {
       title: 'Position in group',
       rankLine: (rank: string, total: string, country: string) =>
@@ -330,7 +316,8 @@ export const en = {
       cohortSizeOnly: (count: string) => `${count} in the sample`,
       expandDistribution: 'Show full score distribution',
       collapseDistribution: 'Hide full score distribution',
-      scoreBreakdown: 'Score breakdown',
+      unofficialCountrySample: 'Unofficial · NAWAmeter sample for your country',
+      unofficialSample: 'Unofficial · NAWAmeter sample',
     },
     competitionNeighbourhood: {
       title: 'Around your result',

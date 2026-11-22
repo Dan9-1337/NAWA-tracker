@@ -37,7 +37,8 @@ export const ru = {
     previewBelowMedianBy: (delta: string) => `Ниже медианы на ${delta} балла`,
     previewTapeHint: 'Потяните ленту, чтобы увидеть, как меняется ваша позиция',
     previewPercentileLabel: 'процентиль',
-    previewLive: '48 заявок · +7 за неделю',
+    responseCount: (count: number, year: number) =>
+      `${count} ${plural('ru', count, { one: 'ответ', few: 'ответа', many: 'ответов', other: 'ответа' })} за набор ${year}`,
     timePromise: 'Займёт около 1 минуты',
     resumeTitle: 'Есть сохранённый прогресс',
     resumeBody: 'Продолжите с того места, где остановились, или начните анкету заново.',
@@ -66,7 +67,6 @@ export const ru = {
     cohortTitle: 'Вас будут сравнивать с кандидатами:',
     dataTitle: 'Ваши данные',
     editSection: 'Изменить',
-    editStep: 'Изменить',
     gradeBasisHint: 'NAWA берёт средний балл по итоговому аттестату или по оценкам за полугодие, если вы заканчиваете школу после 1 июля.',
     studentInPolandNote: 'Студентам в Польше со средним баллом не ниже 4,75 присваивается максимум — 100 баллов.',
     validation: {
@@ -255,20 +255,9 @@ export const ru = {
     switchToDark: 'Включить тёмную тему',
     switchToLight: 'Включить светлую тему',
   },
-  dataSource: {
-    official: 'Официальные',
-    historical: 'Исторические данные',
-    reported: 'Сообщено пользователями',
-    estimate: 'Оценка NAWAmeter',
-    calculated: 'Рассчитано NAWAmeter',
-    country_sample: 'Выборка NAWAmeter по стране',
-    global_sample: 'Общая выборка NAWAmeter',
-    nawa_estimate: 'Оценка NAWAmeter',
-  },
   scoreScreen: {
     seasonClosed: (year: string) => `Набор ${year} закрыт`,
     seasonOpen: (date: string) => `Приём заявок до ${date}`,
-    scoreLabel: 'Ваш балл по формуле NAWA',
     whatIfLabel: 'Примерка: балл при другом среднем балле',
     scaleMax: '/ 100',
     aboveThreshold: (delta: string, threshold: string) => `На ${delta} ${points(delta)} выше порога ${threshold}`,
@@ -284,6 +273,8 @@ export const ru = {
     increase: 'Увеличить средний балл',
     reset: 'Вернуть сохранённое',
     savedScore: (score: string) => `Сохранённый балл: ${score}`,
+    percentileBand: (from: number, to: number) => `≈ выше, чем у ${from}–${to}% группы`,
+    belowAxis: 'Ниже порога 60 — вне распределения группы',
     invalidAverage: (max: string) => `Введите число от 0 до ${max}`,
     rows: {
       citizenship: 'Гражданство',
@@ -314,11 +305,6 @@ export const ru = {
     trackNote: 'Из вашей страны и региона слишком мало ответов, поэтому вас сравнивают со всеми странами.',
   },
   dashboard: {
-    score: {
-      title: 'Ориентировочный балл',
-      gradesLabel: 'Баллы за оценки',
-      polishSchoolLabel: 'Польская / полонийная школа',
-    },
     position: {
       title: 'Место в группе',
       rankLine: (rank: string, total: string, country: string) =>
@@ -336,7 +322,8 @@ export const ru = {
       cohortSizeOnly: (count: string) => `В выборке: ${count}`,
       expandDistribution: 'Показать полное распределение',
       collapseDistribution: 'Скрыть полное распределение',
-      scoreBreakdown: 'Разбор балла',
+      unofficialCountrySample: 'Неофициально · выборка NAWAmeter по стране',
+      unofficialSample: 'Неофициально · выборка NAWAmeter',
     },
     competitionNeighbourhood: {
       title: 'Вокруг вашего результата',

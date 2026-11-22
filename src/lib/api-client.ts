@@ -4,6 +4,7 @@ import type {
   CreateResponseResult,
   CurrentResponseResult,
   DeleteResponseResult,
+  IntakeSummaryResult,
   StatisticsResult,
   UpdateResponseRequest,
   UpdateResponseResult,
@@ -13,6 +14,7 @@ import {
   createResponseResultSchema,
   currentResponseResultSchema,
   deleteResponseResultSchema,
+  intakeSummaryResultSchema,
   statisticsResultSchema,
   updateResponseResultSchema,
 } from '../../shared/validation';
@@ -89,6 +91,10 @@ export function getCurrentResponse(): Promise<CurrentResponseResult> {
 
 export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
+}
+
+export function getIntakeSummary(): Promise<IntakeSummaryResult> {
+  return request('/api/intake-summary', 'POST', {}, intakeSummaryResultSchema);
 }
 
 export function deleteResponse(): Promise<DeleteResponseResult> {
