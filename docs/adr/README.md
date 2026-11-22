@@ -15,5 +15,6 @@ Use [implementation tasks](../../tasks/README.md) for work that implements a dec
 | [0006](0006-opt-in-bot-reminders.md) | The bot is opt-in and sends calendar-driven reminders | Accepted (reminder texts changed by 0008) |
 | [0007](0007-study-field-and-prep-course-city.md) | Collect the study field and the prep-course city, aggregate them as field by city | Superseded by 0008 |
 | [0008](0008-refocus-on-score-comparison.md) | Refocus on the score comparison: drop application statuses and the university question | Accepted |
+| [0009](0009-staging-environment-on-free-tiers.md) | A staging environment on free tiers, checked by smoke tests | Accepted |
 
 To add one, copy the newest file, bump the number, and add a row above.
