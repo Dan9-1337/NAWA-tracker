@@ -139,7 +139,7 @@ describe('POST /api/responses', () => {
   it('requires the configured Origin before create work', async () => {
     const dependencies = responsesDependencies();
     dependencies.assertSameOrigin = vi.fn(() => {
-      throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+      throw new HttpError(403, 'INVALID_ORIGIN', 'The request origin is not allowed.');
     });
     const { response, state } = createResponseDouble();
 
@@ -181,7 +181,7 @@ describe('POST /api/responses', () => {
 
     expect(state.status).toBe(409);
     expect(state.body).toEqual({
-      error: { code: 'PROFILE_EXISTS', message: 'Ten profil Telegram ma już ankietę.' },
+      error: { code: 'PROFILE_EXISTS', message: 'This Telegram account already has a survey.' },
     });
   });
 
@@ -199,7 +199,7 @@ describe('POST /api/responses', () => {
 
     expect(state.status).toBe(409);
     expect(state.body).toEqual({
-      error: { code: 'PROFILE_EXISTS', message: 'Ten profil Telegram ma już ankietę.' },
+      error: { code: 'PROFILE_EXISTS', message: 'This Telegram account already has a survey.' },
     });
   });
 });
@@ -249,7 +249,7 @@ describe('POST /api/responses/current', () => {
     const handler = createCurrentResponseHandler({
       getClient: vi.fn(),
       assertSameOrigin: vi.fn(() => {
-        throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+        throw new HttpError(403, 'INVALID_ORIGIN', 'The request origin is not allowed.');
       }),
       requireTelegramIdentity: vi.fn(),
     });
@@ -289,7 +289,7 @@ describe('POST /api/statistics', () => {
     const handler = createStatisticsHandler({
       getClient: vi.fn(),
       assertSameOrigin: vi.fn(() => {
-        throw new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+        throw new HttpError(403, 'INVALID_ORIGIN', 'The request origin is not allowed.');
       }),
       requireTelegramIdentity: vi.fn(),
     });

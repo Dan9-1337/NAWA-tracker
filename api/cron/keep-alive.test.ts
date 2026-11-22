@@ -39,7 +39,7 @@ describe('GET /api/cron/keep-alive', () => {
 
     expect(response.status).toHaveBeenCalledWith(401);
     expect(json).toHaveBeenCalledWith({
-      error: { code: 'UNAUTHORIZED', message: 'Sesja jest nieprawidłowa lub wygasła.' },
+      error: { code: 'UNAUTHORIZED', message: 'Session is invalid or has expired.' },
     });
   });
 
@@ -75,7 +75,7 @@ describe('GET /api/cron/keep-alive', () => {
 
     expect(response.status).toHaveBeenCalledWith(500);
     expect(json).toHaveBeenCalledWith({
-      error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
     });
   });
 });

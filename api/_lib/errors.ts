@@ -12,23 +12,23 @@ export class HttpError extends Error {
 }
 
 export function unauthorized(): HttpError {
-  return new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.');
+  return new HttpError(401, 'UNAUTHORIZED', 'Session is invalid or has expired.');
 }
 
 export function forbiddenOrigin(): HttpError {
-  return new HttpError(403, 'INVALID_ORIGIN', 'Nieprawidłowe źródło żądania.');
+  return new HttpError(403, 'INVALID_ORIGIN', 'The request origin is not allowed.');
 }
 
 export function profileExists(): HttpError {
-  return new HttpError(409, 'PROFILE_EXISTS', 'Ten profil Telegram ma już ankietę.');
+  return new HttpError(409, 'PROFILE_EXISTS', 'This Telegram account already has a survey.');
 }
 
 export function invalidIntakeYear(): HttpError {
-  return new HttpError(400, 'INVALID_INTAKE_YEAR', 'Nieprawidłowy rocznik naboru.');
+  return new HttpError(400, 'INVALID_INTAKE_YEAR', 'Invalid intake year.');
 }
 
 export function profileNotFound(): HttpError {
-  return new HttpError(404, 'PROFILE_NOT_FOUND', 'Nie znaleziono ankiety dla tego konta Telegram.');
+  return new HttpError(404, 'PROFILE_NOT_FOUND', 'No survey was found for this Telegram account.');
 }
 
 export function normalizeError(error: unknown): { status: number; body: ApiError } {
@@ -44,7 +44,7 @@ export function normalizeError(error: unknown): { status: number; body: ApiError
     body: {
       error: {
         code: 'INTERNAL_ERROR',
-        message: 'Wystąpił nieoczekiwany błąd.',
+        message: 'An unexpected error occurred.',
       },
     },
   };

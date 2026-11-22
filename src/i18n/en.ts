@@ -17,7 +17,7 @@ export const en = {
       'Your score, your percentile in the group, your position relative to the median, and how the statistics change as new responses arrive.',
     howScoreTitle: 'Estimated score',
     howScoreBody:
-      'The estimated score is calculated using the NAWA programme rules. It is based on your school certificate average and, if it applies to you, bonus points for finishing a Polish or Polonia school.',
+      'The estimated score is calculated using the NAWA programme rules. It is based on your school certificate average and, if it applies to you, bonus points for finishing a Polish school, including a school of the Polish community (Polonia).',
     howScoreFormula:
       'average grade × 90 / scale maximum\n+ 0, 5 or 10 bonus points',
     howScoreDisclaimer: 'This is not an official NAWA decision or a scholarship forecast.',
@@ -51,10 +51,10 @@ export const en = {
     gradesTitle: 'Grades',
     gradesDescription:
       'Enter the average grade from your certificate. The maximum grade is set by the country where you completed secondary school.',
-    rankingCountryHint: 'Sets your comparison group. You will be ranked with candidates from this country.',
+    rankingCountryHint: 'Sets your comparison group. You will be compared with candidates from this country.',
     schoolCountryHint: 'Sets the grading scale used in the calculation (for example, a 12-point scale in Ukraine or a 5-point scale in Kazakhstan).',
     maximumGradeLockedHint: 'The scale is set by the country where you completed secondary school.',
-    averageAboveMaximum: 'This average is higher than the maximum of the scale. Please check it.',
+    averageAboveMaximum: 'That average is above the top of the scale — looks like a typo. Please check it.',
     belarusPoloniaBonusNotice:
       'Under Ogłoszenie nr 13/2026, section 2.7 (criterion 2), the bonus for a Polish school does not apply to citizens of Belarus.',
     summaryTitle: 'Summary',
@@ -74,8 +74,8 @@ export const en = {
     },
   },
   form: {
-    submitCreate: 'Save response',
-    submitUpdate: 'Update data',
+    submitCreate: 'Save survey',
+    submitUpdate: 'Update survey',
     saved: 'Saved',
     saveError: 'Could not save',
     saveErrorDraft: 'Your answers are still on this device. Please try again.',
@@ -84,7 +84,7 @@ export const en = {
       'Changing these details will move you to a different comparison group. You will no longer see the statistics for your previous group.',
     cohortChangeConfirm: 'Save and change group',
     cohortChangeCancel: 'Cancel',
-    deleteZoneTitle: 'Danger zone',
+    deleteZoneTitle: 'Delete survey',
     deleteZoneHint:
       'Deleting your survey cannot be undone. All your saved data and your place in the statistics will be permanently lost.',
     deleteConfirmPermanent: 'Yes, delete permanently',
@@ -95,9 +95,9 @@ export const en = {
     scholarshipTrack: 'Scholarship type',
     averageGrade: 'Average grade',
     maximumGrade: 'Maximum grade on your scale',
-    polishSchoolLevel: 'Did you graduate from a Polish school?',
+    polishSchoolLevel: 'Did you graduate from a school of the Polish community (Polonia)?',
     gradeBasis: 'Which grades is your average based on?',
-    applicantKind: 'Who are you applying as?',
+    applicantKind: 'What is your applicant status?',
     averageGradePlaceholder: 'e.g. 4.82',
     maximumGradePlaceholder: 'e.g. 5.00',
   },
@@ -116,9 +116,9 @@ export const en = {
       student_in_poland: 'Full-time student in Poland with an average of at least 4.75 (2–5 scale)',
     },
     polishSchoolLevel: {
-      none: 'I did not complete such a school',
-      primary: 'Primary school level',
-      secondary: 'Secondary school level',
+      none: 'No, I did not',
+      primary: 'Yes, primary school',
+      secondary: 'Yes, secondary school',
     },
   },
   countries: {
@@ -129,7 +129,7 @@ export const en = {
   nawaScore: {
     preview: (score: string) => `Estimated score: ${score} pts`,
     previewNote:
-      'Estimated score using the formula from Ogłoszenie nr 13/2026, section 2.7 (criterion 2): grades 0–90 pts + Polish school bonus of 0, 5 or 10 pts. This is not an official NAWA result.',
+      'Estimated score using the formula from Ogłoszenie nr 13/2026, section 2.7 (criterion 2): grades 0–90 pts + bonus of 0, 5 or 10 pts for a Polish community (Polonia) school. This is not an official NAWA result.',
   },
   stats: {
     heroLabel: 'Your result',
@@ -155,15 +155,15 @@ export const en = {
   privacyNotice: {
     title: 'What data is stored?',
     body:
-      'Nobody can see your individual answers, only totals and ranges for groups. Your account is stored as a one-way key, not as your Telegram ID.',
+      'Nobody can see your individual answers, only totals and ranges for groups. Your account is stored as a code computed from your Telegram ID, not as the ID itself.',
     points: [
-      'Each Telegram account can have one profile per intake year.',
+      'Each Telegram account can have one survey per intake year.',
       'Your survey answers are stored on the server and used for group statistics.',
       'We do not store your name, email, phone number or Telegram username.',
       'Small countries are combined into groups, and scores of awarded scholarships are shown in 5-point ranges.',
       'You can delete everything in Settings at any time.',
-      'If you turn on reminders in the bot, your Telegram ID is stored separately from your answers until you turn them off. Deleting your survey removes it too.',
-      'Your data is pseudonymous, not anonymous: technically, the author could link a profile back to an account.',
+      'If you turn on reminders in the bot, your Telegram ID is stored separately from your survey until you turn them off. Deleting your survey removes it too.',
+      'Your data is pseudonymous, not anonymous: technically, the author could link a survey back to an account.',
     ],
     close: 'Close',
   },
@@ -172,7 +172,7 @@ export const en = {
     open: 'Settings',
     back: 'Back',
     viewData: 'View saved data',
-    editProfile: 'Edit profile data',
+    editProfile: 'Edit survey',
     deleteData: 'Delete my survey',
     privacyPolicy: 'Privacy policy',
     appearance: 'Appearance',
@@ -198,16 +198,16 @@ export const en = {
     intro: 'NAWAmeter is an unofficial tracker for Anders NAWA candidates.',
     capabilitiesTitle: 'What the service does',
     capabilitiesBody:
-      'It shows your score and your place among the scores declared by other users in your country or country group.',
+      'It shows your score and your place among the scores reported by other users in your country or country group.',
     dataTitle: 'Where the data comes from',
     dataBody:
-      'Statistics are calculated from NAWAmeter profiles, which users fill in themselves, unless marked otherwise.',
+      'Statistics are calculated from NAWAmeter surveys, which users fill in themselves, unless marked otherwise.',
     officialTitle: 'What counts as official',
     officialBody:
       'Only NAWA decisions and published programme rules are official. NAWAmeter estimates and ranks within the sample are not official results of the competition.',
     privacyTitle: 'How your data is protected',
     privacyBody:
-      'Other users never see your profile. Small countries are combined into groups, so no single answer can be identified. Your account is stored as a one-way key. Support messages use a short reference ID.',
+      'Other users never see your survey. Small countries are combined into groups, so no single survey can be identified. Your account is stored as a code computed from your Telegram ID. Support messages use a short reference ID.',
     metricsTitle: 'How indicators are calculated',
     metricsBody:
       'Your position and percentile are based on your country. If there are too few answers from your country, we use your country group, and then all countries.',
@@ -253,7 +253,7 @@ export const en = {
   scoreScreen: {
     seasonClosed: (year: string) => `${year} intake closed`,
     seasonOpen: (date: string) => `Applications are open until ${date}`,
-    whatIfLabel: 'Simulation: score with a different average',
+    whatIfLabel: 'What if your average were different?',
     scaleMax: '/ 100',
     aboveThreshold: (delta: string, threshold: string) => `${delta} pts above the threshold (${threshold})`,
     belowThreshold: (delta: string, threshold: string) => `${delta} pts below the threshold (${threshold})`,
@@ -261,8 +261,8 @@ export const en = {
     thresholdFlag: (threshold: string) => `threshold ${threshold}`,
     tapeAriaLabel: (score: string, threshold: string) =>
       `Ruler from 0 to 100: score ${score}, threshold ${threshold}`,
-    tapeHint: (step: string) => `Drag the ruler: the average changes by ${step}`,
-    whatIfNote: 'Simulated values are not saved. To change your answers, use “Edit profile”.',
+    tapeHint: (step: string) => `Drag the ruler to change the average by ${step}`,
+    whatIfNote: 'Simulated values are not saved. To change your answers, use “Edit survey”.',
     averageInputLabel: 'Average to try',
     decrease: 'Decrease the average',
     increase: 'Increase the average',
@@ -341,7 +341,7 @@ export const en = {
           one: `${count} more response is needed for the country ranking.`,
           other: `${count} more responses are needed for the country ranking.`,
         }),
-      benchmarkTitle: 'Comparison with all countries',
+      benchmarkTitle: 'Comparison with all candidates',
       aboveTrackMedian: 'Your score is above the median for all NAWA Director scholarship candidates.',
       aroundTrackMedian: 'Your score is close to the median for all NAWA Director scholarship candidates.',
       belowTrackMedian: 'Your score is below the median for all NAWA Director scholarship candidates.',

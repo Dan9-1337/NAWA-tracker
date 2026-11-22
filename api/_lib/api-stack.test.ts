@@ -92,7 +92,7 @@ describe('request boundaries', () => {
 
     expect(response.status).toHaveBeenCalledWith(500);
     expect(json).toHaveBeenCalledWith({
-      error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
     });
   });
 

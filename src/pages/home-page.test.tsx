@@ -106,7 +106,7 @@ beforeEach(async () => {
 async function clickMain(user: ReturnType<typeof userEvent.setup>) {
   const buttons = await screen.findAllByRole(
     'button',
-    { name: /Zobacz mój wynik|Dalej|Zapisz odpowiedź|Zaktualizuj dane|Zapisz i zmień grupę/ },
+    { name: /Zobacz mój wynik|Dalej|Zapisz ankietę|Zaktualizuj ankietę|Zapisz i zmień grupę/ },
     { timeout: UI_TIMEOUT },
   );
   const button =

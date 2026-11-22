@@ -118,5 +118,5 @@ export function parseUpdateMutationResult(value: unknown) {
 }
 
 export function assertRpcSucceeded(error: RpcError | null): void {
-  if (error) throw new HttpError(500, 'INTERNAL_ERROR', 'Wystąpił nieoczekiwany błąd.');
+  if (error) throw new HttpError(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
 }

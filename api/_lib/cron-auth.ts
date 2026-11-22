@@ -11,13 +11,13 @@ export function assertCronAuthorized(
 ): void {
   const cronSecret = getCronSecret();
   if (!cronSecret || cronSecret.length < 32) {
-    throw new HttpError(500, 'INTERNAL_ERROR', 'Wystąpił nieoczekiwany błąd.');
+    throw new HttpError(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
   }
 
   const rawHeader = request.headers.authorization ?? request.headers.Authorization;
   const header = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
   const expected = `Bearer ${cronSecret}`;
   if (!header || header !== expected) {
-    throw new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.');
+    throw new HttpError(401, 'UNAUTHORIZED', 'Session is invalid or has expired.');
   }
 }

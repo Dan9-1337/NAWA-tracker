@@ -70,7 +70,7 @@ describe('ScoreScreen what-if percentile band', () => {
 
     expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,90');
     expect(screen.getByText(pl.scoreScreen.savedScore('81,00'))).toBeInTheDocument();
-    expect(screen.getByText('≈ więcej niż u 50–60% grupy')).toBeInTheDocument();
+    expect(screen.getByText('≈ wyżej niż 50–60% grupy')).toBeInTheDocument();
     expect(screen.getByTestId('what-if-percentile-band')).toHaveTextContent(
       pl.scoreScreen.percentileBand(50, 60),
     );

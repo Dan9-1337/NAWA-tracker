@@ -77,9 +77,9 @@ export function createBotHandler(overrides: Partial<BotDependencies> = {}) {
       assertMethod(request, response, 'POST');
 
       const secret = dependencies.getWebhookSecret();
-      if (!secret) throw new HttpError(503, 'BOT_NOT_CONFIGURED', 'Bot nie jest skonfigurowany.');
+      if (!secret) throw new HttpError(503, 'BOT_NOT_CONFIGURED', 'The bot is not configured.');
       if (!secretMatches(headerValue(request, 'x-telegram-bot-api-secret-token'), secret)) {
-        throw new HttpError(401, 'UNAUTHORIZED', 'Sesja jest nieprawidłowa lub wygasła.');
+        throw new HttpError(401, 'UNAUTHORIZED', 'Session is invalid or has expired.');
       }
 
       const update = parseJsonBody(request, updateSchema);

@@ -1,6 +1,6 @@
 # 007 — Natural, consistent copy in all five locales
 
-**Status:** Draft
+**Status:** In review
 
 ## Goal
 
@@ -11,9 +11,9 @@ This task changes wording only. Keys, function signatures, numbers, thresholds, 
 ## Context
 
 - Relevant code and docs: `src/i18n/*.ts`, `src/i18n/plural.ts`, `src/i18n/locales.test.ts`, `src/i18n/response-count.test.ts`, [Product flow](../docs/product-flow.md).
-- ADRs this task follows (link the replacement if applicable; otherwise write `None`): [0005](../docs/adr/0005-only-nawa-director-track-is-live.md) (only the NAWA Director scholarship is live), [0008](../docs/adr/0008-refocus-on-score-comparison.md). Replaces none.
+- ADRs this task follows (link the replacement if applicable; otherwise write `None`): [0005](../docs/adr/0005-only-nawa-director-track-is-live.md) (only the NAWA Director scholarship is live), [0008](../docs/adr/0008-refocus-on-score-comparison.md), [0010](../docs/adr/0010-locale-glossary-and-english-api-errors.md) (glossary, tone, English API errors — this task implements it). Replaces none.
 - Dependencies and decisions already made:
-  - Maintainer (2026-11-22): translations must sound natural to a native reader. In particular, the recruitment round must not be rendered as the English word *intake*.
+  - Maintainer (2026-11-22): translations must sound natural to a native reader. The maintainer then decided that en keeps *intake* for the recruitment round (D1).
   - Task 002 introduced `start.responseCount`; task 003 introduced `scoreScreen.percentileBand`. This task rewords them but keeps their signatures.
 
 ## Findings (review of the current copy)
@@ -22,7 +22,7 @@ This task changes wording only. Keys, function signatures, numbers, thresholds, 
 
 | # | Problem | Where |
 | --- | --- | --- |
-| X1 | The recruitment round is called *intake* in EN (`responseCount`, `seasonClosed`, `privacyNotice.points[0]`). The word belongs to UK university admissions; NAWA calls it a *call for applications* / *recruitment*. | en |
+| X1 | The recruitment round in en. The maintainer decided to keep *intake* (D1), so the only change is consistency: always *intake*, never *round*, *call* or *season*, in the app and the bot. | en |
 | X2 | One concept, several words: the saved questionnaire is *survey / response / profile* (en), *анкета / опрос / ответ / профиль* (ru), *опитування / профіль* (uk), *апытанне / профіль* (be), *ankieta / profil* (pl). In ru/uk/be, *опрос/опитування/апытанне* means a poll or the act of asking; it is not a filled-in form. | all |
 | X3 | The score is both *estimated* and *preliminary*: ru `Ориентировочный балл` vs `Предварительный расчёт`; uk `Орієнтовний` vs `Попередній`; be `Арыентыровачны` vs `Папярэдні`. | ru, uk, be |
 | X4 | The code identifier *track* leaks into copy: pl `ścieżka Dyrektora NAWA` (twice plus a title), ru `по всей программе Директора NAWA`, be `па ўсёй стыпендыі`. The real name is the NAWA Director *scholarship*. What the user needs to know is "all candidates", not the name of an internal grouping. | pl, ru, be (`dashboard.smallCountry.*`) |
@@ -32,6 +32,19 @@ This task changes wording only. Keys, function signatures, numbers, thresholds, 
 | X8 | `averageAboveMaximum` accuses the user of lying (`Ай-ай-ай … Давайте по-честному`, `Давайте чесно`, `Давайце сумленна`, `Trzymajmy się faktów`). Usually the user has just mistyped. EN is already neutral. | ru, uk, be, pl |
 | X9 | `whatIfNote` points to a button that does not exist: en `“Edit profile”`, ru `«Изменить анкету»`. The real label is `settings.editProfile`. | en, ru |
 | X10 | The draggable ruler is a *ruler / лента / стрічка / стужка*. *Лента* reads as a feed or ribbon. pl already says *skala*. | en, ru, uk, be |
+
+### Bot messages (`shared/bot-messages.ts`)
+
+| # | Problem | Where |
+| --- | --- | --- |
+| T1 | The terms D1–D3 and X7 apply here too: en `reminders.intake_open` says *intake*; every locale writes `Telegram id` in lower case; *answers / ответы* stands for the saved survey (`subscribed`). | all |
+| T2 | `welcomeCountry` puts the country name after *Kraj / Страна / Краіна* (`Kraj Białoruś jest już wybrany`), which has the same problem as X6. | pl, ru, be |
+
+### API error messages (`api/_lib/*.ts`, `api/bot.ts`)
+
+| # | Problem | Where |
+| --- | --- | --- |
+| E0 | Every `HttpError` message is in Polish only. Fact checked 2026-11-22: the client stores `error.message` in `ApiClientError` (`src/lib/api-client.ts:68`), but no component renders it. The UI shows its own localized copy (`home.actionError`, `stats.error`, `telegram.missingInitData`). These texts are seen only in logs and in API tests. | `api/_lib/errors.ts`, `api/_lib/http.ts`, `api/_lib/cron-auth.ts`, `api/_lib/questionnaire.ts`, `api/bot.ts` |
 
 ### Per locale
 
@@ -54,29 +67,34 @@ This task changes wording only. Keys, function signatures, numbers, thresholds, 
 ## Scope
 
 - In scope:
+  - Reword the bot messages in `shared/bot-messages.ts` (T1, T2) by the same glossary. The keys and the `BotMessages` type stay unchanged.
+  - Rewrite every `HttpError` message in `api/` in English (D7): `api/_lib/errors.ts`, `api/_lib/http.ts`, `api/_lib/cron-auth.ts`, `api/_lib/questionnaire.ts`, `api/bot.ts`, and any other `HttpError` call the implementer finds with `grep -rn "HttpError(" api`.
   - Reword the strings in `src/i18n/{pl,en,ru,uk,be}.ts` that the findings above list, using the glossary under **Open decisions** once the maintainer has approved it.
   - Apply the glossary to every string in each locale, not only the listed ones, so that each concept has exactly one term per locale.
   - Update test expectations that quote changed copy (for example `src/i18n/response-count.test.ts`, `src/features/**/*.test.tsx`), changing only the expected strings.
-  - Add a locale test that fails if any locale contains a banned term from the glossary (for example `/intake/i` in en, `/опрос/i` in ru, `/ścieżk/i` in pl, `/Danger zone/`).
-- Out of scope: new keys or removed keys; copy outside `src/i18n` (API error messages in `api/`, bot messages, docs); layout or component changes; changing numbers, thresholds, plural rules in `plural.ts`, or the meaning of any message.
-- Files or directories assigned to this task: `src/i18n/*.ts`, `src/i18n/*.test.ts`, test files under `src/` whose only change is quoted copy.
+  - Add a test that fails if any locale of `src/i18n` or `shared/bot-messages.ts` contains a banned term from the glossary (for example `/опрос/i` in ru, `/ścieżk/i` in pl, `/Danger zone/`, `/Telegram id/`, `/по-честному/`; in en `/\b(round|call)\b/i` where it names the recruitment round).
+- Out of scope: new keys or removed keys; docs; layout or component changes; changing numbers, thresholds, plural rules in `plural.ts`, or the meaning of any message.
+- Files or directories assigned to this task: `src/i18n/*.ts`, `src/i18n/*.test.ts`, `shared/bot-messages.ts`, test files under `src/`, `api/` and `shared/` whose only change is quoted copy; the API files listed under D7 and their tests (`api/**/*.test.ts`, `shared/api-contracts.test.ts`) where they quote messages.
 
 ## Acceptance scenarios
 
 | ID | Given / when | Expected result | Planned verification |
 | --- | --- | --- | --- |
-| A1 | Any en string | Contains no *intake*; the round is called by the approved term (D1) | Banned-term locale test |
+| A1 | Any en string in the app or the bot that names the recruitment round | Uses *intake* (D1) | Reviewer read-through + `grep -n "intake" src/i18n/en.ts shared/bot-messages.ts` |
 | A2 | Each locale | The saved questionnaire is always the approved term (D2); ru/uk/be use no *опрос/опитування/апытанне* for it | Banned-term locale test + reviewer read-through |
 | A3 | Each locale | The score uses one adjective (D3) everywhere | Banned-term locale test (e.g. ru `/Предварительн/`) |
 | A4 | `dashboard.smallCountry.*` in all locales | No *ścieżka / track / по всей программе*; compares with "all candidates" | Banned-term locale test |
 | A5 | `whatIfNote` in every locale | The quoted button label equals `settings.editProfile` of the same locale | New locale test asserting `whatIfNote.includes(settings.editProfile)` |
 | A6 | `averageAboveMaximum` in every locale | Playful, says the value is above the scale, suggests a typo and asks the user to check it; contains no accusation of dishonesty (`по-честному`, `чесно`, `сумленна`, `faktów`) | Banned-term locale test + reviewer read-through against D5 |
 | A7 | Keys and arity | Unchanged; plural forms still correct (`1 / 3 / 25 / 2,5`) | `npm test -- src/i18n` |
-| A8 | Native read-through | A native or fluent speaker of each locale reads all screens (start, wizard, summary, score, dashboard, settings, about) and flags nothing as unnatural | Manual: maintainer or assigned reviewer per locale |
+| A9 | Any `HttpError` raised in `api/` | Message is English; `code`, status and JSON shape unchanged; no Polish text remains | `grep -rnE "HttpError\(.*[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" api` is empty; `npm test -- api shared` passes with only message expectations updated |
+| A8 | Native read-through | A native speaker reads all screens (start, wizard, summary, score, dashboard, settings, about) and the bot messages, and flags nothing as unnatural. Required for be and pl; the maintainer reads ru and en | Manual: assigned native reviewer per locale, before `Done` |
 
 ## Must stay unchanged
 
 - Behavior, contracts, or user-facing copy this task must not alter:
+  - API error `code` values, HTTP statuses and the error JSON shape (`shared/api-contracts`); the client's localized error copy;
+  - bot command names and the `BotMessages` keys;
   - message keys, function arity, and the `Messages` type;
   - numbers, thresholds (60, 4.75, 10), the formula text `× 90 /`, and the `Ogłoszenie nr 13/2026, pkt 2.7` citation (only its surrounding wording may change);
   - language endonyms in `language.*`;
@@ -85,18 +103,27 @@ This task changes wording only. Keys, function signatures, numbers, thresholds, 
 
 ## Open decisions
 
-The maintainer answered D4 and D5 on 2026-11-22. For D1 and D2, the maintainer set the rule and asked the task author to propose terms that follow it. D1, D2, D3 and D6 below are those proposals. The task becomes `Ready` once the maintainer confirms them.
+The maintainer settled D1–D13 on 2026-11-22. None remain open.
 
-- **D1 — Recruitment round (proposal, awaiting confirmation).** The maintainer's rule: use the dictionary meaning, and when no word fits fully, use an alternative. *Intake* means the number of people admitted at one time (Cambridge, Oxford). The word suits university admissions but not a scholarship competition, so it fails the rule. Checked 2026-11-22: on its English pages NAWA calls a *nabór* a *call for applications* ("Calls for proposals 2026", "Call for applications under the gen. Anders Programme is now open"). NAWA does not use *round*. Proposal: en *call*, as in NAWA (`312 responses for the 2026 call`, `The 2026 call is closed`, `one survey per call`); the alternative is *round*. pl *nabór*, ru *набор*, uk *набір* and be *набор* are the natural native terms and stay.
-- **D2 — The saved questionnaire (proposal, awaiting confirmation).** One term per locale: pl *ankieta*, en *survey*, ru/uk/be *анкета*. *Profile*, *response*, *опрос*, *опитування* and *апытанне* do not name it in UI copy. `settings.editProfile` becomes *Edit survey* / *Изменить анкету* / *Edytuj ankietę* / *Змінити анкету* / *Змяніць анкету*. *Response* / *ответ* / *odpowiedź* remains only as the unit of statistics, as in "312 responses in the group".
-- **D3 — The score (proposal, awaiting confirmation).** en *estimated score*, pl *wynik orientacyjny*, ru *ориентировочный балл*, uk *орієнтовний бал*, be *арыентыровачны бал*. *Preliminary*, *предварительный*, *попередній* and *папярэдні* are dropped.
-- **D4 — Programme name (reopened 2026-11-22).** The maintainer chose "the official name" based on the task author's claim that *Anders NAWA* is unofficial. The check showed that claim was wrong: NAWA uses *Anders NAWA* itself (see X5). This needs a new answer from the maintainer.
-- **D5 — Tone (decided 2026-11-22).** `averageAboveMaximum` stays playful but does not accuse the user of lying. It assumes a typo, for example ru `Ого, выше максимума шкалы! Похоже на опечатку — проверьте значение.` Every locale follows the same idea, including en, which is currently neutral. Other error messages stay neutral.
-- **D6 — Form of address and gender (proposal, awaiting confirmation).** pl keeps the informal *Ty* and replaces `/a` forms with neutral phrasing where possible. ru/uk/be keep the formal *вы* and use `(а)` forms only where no neutral phrasing exists.
+- **D1 — Recruitment round in en (decided 2026-11-22).** en uses *intake* (`312 responses in the 2026 intake`, `2026 intake closed`, bot `The 2026 intake is open`), the same term everywhere. The task author proposed *call*, the term on NAWA's English pages; the maintainer chose *intake*. pl *nabór*, ru *набор*, uk *набір* and be *набор* stay unchanged.
+- **D2 — The saved questionnaire (decided).** One term per locale: pl *ankieta*, en *survey*, ru/uk/be *анкета*. *Profile*, *опрос*, *опитування* and *апытанне* do not name it in UI or bot copy. `settings.editProfile` becomes *Edit survey* / *Изменить анкету* / *Edytuj ankietę* / *Змінити анкету* / *Змяніць анкету*. *Response* / *ответ* / *odpowiedź* remains only as the unit of statistics ("312 responses in the group").
+- **D3 — The score (decided).** en *estimated score*, pl *wynik orientacyjny*, ru *ориентировочный балл*, uk *орієнтовний бал*, be *арыентыровачны бал*. *Preliminary*, *предварительный*, *попередній* and *папярэдні* are dropped.
+- **D4 — Programme name (decided).** Keep *Anders NAWA* in every locale, as NAWA itself does (X5). Only the sentence around it changes where it reads unnaturally (D9).
+- **D5 — Tone (decided).** `averageAboveMaximum` stays playful but assumes a typo and does not accuse the user of lying, for example ru `Ого, выше максимума шкалы! Похоже на опечатку — проверьте значение.` Every locale follows the same idea, including en. Other error messages stay neutral.
+- **D6 — Form of address and gender (decided).** pl keeps the informal *Ty* and replaces `/a` forms with neutral phrasing where possible. ru/uk/be keep the formal *вы* and use `(а)` forms only where no neutral phrasing exists.
+- **D7 — API error messages (decided 2026-11-22).** Every `HttpError` message in `api/` is written in plain English, one language for all users, for example `Session is invalid or has expired.` The error `code`, the HTTP status and the error JSON shape do not change, and the server is not told the user's locale. Fact (E0): the UI does not render these messages; it shows its own localized copy.
+- **D8 — English variant (decided).** British spelling (*programme*, *-ise*).
+- **D9 — Country in sentences (decided).** In `settings.inviteText` and the bot's `welcomeCountry`, the country name goes at the start or after a colon, so it never needs declension.
+- **D10 — The draggable ruler (decided).** *ruler* / *линейка* / *лінійка* / *лінейка* / *linijka* in every locale and in the aria labels.
+- **D11 — Delete block title (decided).** `deleteZoneTitle` becomes *Delete survey* / *Удаление анкеты* / *Usuwanie ankiety* / *Видалення анкети* / *Выдаленне анкеты*.
+- **D12 — Account storage wording (decided).** Copy says that we store a code computed from the Telegram ID, not the ID itself, and never claims the ID cannot be recovered (X7). `Telegram ID` is always written in capitals.
+- **D13 — *Tracker* (decided).** The word stays.
 
 ## Verification
 
-- `npm test -- src/i18n` → A1–A5, A7.
+- `npm test -- src/i18n` → A2–A5, A7.
+- `npm test -- api shared` → A9, plus bot copy (T1, T2).
+- The greps in A1 and A9.
 - `npm test` for any `src/features/**` test whose expected copy changed → A7.
 - `make check`.
 - Manual: open the app in each of the five locales as a first-time user and as a returning user, and read every screen → A6, A8.
@@ -105,15 +132,26 @@ The maintainer answered D4 and D5 on 2026-11-22. For D1 and D2, the maintainer s
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
+| A1 | `grep -n "intake" src/i18n/en.ts shared/bot-messages.ts` finds every round reference; `npm test -- src/i18n` → `uses the agreed term for the recruitment round in English` | pass |
+| A2 | `npm test -- src/i18n` → `%s app copy has no rejected term` and `%s bot copy has no rejected term` (ru `/опрос/`, uk `/опитуванн/`, be `/апытанн/`, pl/en `/profil/`) | pass |
+| A3 | Same glossary test rejects ru `/предварительн… бал…расчёт/`, uk `/попередн… бал…розрахун/`, be `/папярэдн… бал…разлік/` | pass |
+| A4 | `npm test -- src/i18n` → `%s compares the small country with all candidates`; `grep -in "ścieżk" src/i18n/pl.ts` empty | pass |
+| A5 | `npm test -- src/i18n` → `%s points at the real edit label in whatIfNote` | pass |
+| A6 | `npm test -- src/i18n` → `%s treats an average above the maximum as a typo`; self read-through of all five messages | pass (native read-through part of A8) |
+| A7 | `npm test -- src/i18n` → 70 passed (keys, arity, plurals, alphabet checks); `make check` → 419 passed, typecheck clean | pass |
+| A8 | Not run: needs a native be and pl reviewer and the maintainer for ru/en | not run |
+| A9 | `grep -rnE "HttpError\(.*[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]" api` → empty; `npm test -- api shared` → 168 passed | pass |
 
 - Changed files:
+  - `src/i18n/{pl,en,ru,uk,be}.ts` — copy rewrite and glossary terms.
+  - `src/i18n/glossary.test.ts` — new banned-term, whatIfNote/edit-label, small-country, typo-tone and bot-country tests.
+  - `src/i18n/response-count.test.ts` — ru/uk/be expected strings follow the new wording.
+  - `shared/bot-messages.ts` — `Telegram ID` capitals, survey term instead of answers, country before a colon.
+  - `shared/bot-messages.test.ts` — expects `Telegram ID` in every locale.
+  - `api/_lib/errors.ts`, `api/_lib/http.ts`, `api/_lib/cron-auth.ts`, `api/_lib/questionnaire.ts`, `api/bot.ts` — `HttpError` messages in English.
+  - `api/_lib/api-stack.test.ts`, `api/cron/keep-alive.test.ts`, `api/intake-summary.test.ts`, `api/responses.test.ts`, `shared/api-contracts.test.ts` — expected API messages updated.
+  - `src/features/score/score-screen.test.tsx`, `src/pages/home-page.test.tsx` — expected Polish copy updated.
 - Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5: specification (review of the current copy, findings, proposed glossary).
+  - A8 needs native speakers; the implementation agent cannot sign it off.
+  - `scripts/local-api-server.ts` still returns Polish fallback strings in its local mock; it is outside this task's assigned files and is not an `HttpError` path.
+- LLM contributions: Claude Opus 5.5: specification (review of the app, bot and API copy, findings, glossary proposals, fact checks against nawa.gov.pl and `api/_lib/identity.ts`). Wrote [ADR 0010](../docs/adr/0010-locale-glossary-and-english-api-errors.md) recording the maintainer's decisions D1–D13. DeepSeek V4.1 Flash: implementation (copy rewrite in five locales and the bot, English API errors, glossary test, test expectation updates, verification).

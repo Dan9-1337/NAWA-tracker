@@ -84,7 +84,7 @@ describe('API response contracts', () => {
   });
 
   it('accepts normalized API errors', () => {
-    expect(apiErrorSchema.parse({ error: { code: 'UNAUTHORIZED', message: 'Sesja jest nieprawidłowa lub wygasła.' } }))
-      .toEqual({ error: { code: 'UNAUTHORIZED', message: 'Sesja jest nieprawidłowa lub wygasła.' } });
+    expect(apiErrorSchema.parse({ error: { code: 'UNAUTHORIZED', message: 'Session is invalid or has expired.' } }))
+      .toEqual({ error: { code: 'UNAUTHORIZED', message: 'Session is invalid or has expired.' } });
   });
 });

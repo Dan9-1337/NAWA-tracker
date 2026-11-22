@@ -109,7 +109,7 @@ describe('POST /api/intake-summary', () => {
 
     expect(state.status).toBe(500);
     expect(state.body).toEqual({
-      error: { code: 'INTERNAL_ERROR', message: 'Wystąpił nieoczekiwany błąd.' },
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
     });
   });
 

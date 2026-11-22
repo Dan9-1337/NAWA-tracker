@@ -23,7 +23,7 @@ export function assertMethod(
   const methods = typeof allowedMethods === 'string' ? [allowedMethods] : allowedMethods;
   if (!request.method || !methods.includes(request.method)) {
     response.setHeader('Allow', methods.join(', '));
-    throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Metoda żądania nie jest obsługiwana.');
+    throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'This request method is not supported.');
   }
 }
 
@@ -35,38 +35,38 @@ export function parseJsonBody<T>(request: HttpRequest, schema: z.ZodType<T>): T 
 
   if (typeof contentLength === 'string') {
     if (!/^\d+$/.test(contentLength)) {
-      throw new HttpError(400, 'INVALID_REQUEST', 'Nieprawidłowe dane żądania.');
+      throw new HttpError(400, 'INVALID_REQUEST', 'Invalid request data.');
     }
     if (Number(contentLength) > MAX_JSON_BODY_BYTES) {
-      throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'Dane żądania są zbyt duże.');
+      throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The request data is too large.');
     }
   } else if (contentLength !== undefined) {
-    throw new HttpError(400, 'INVALID_REQUEST', 'Nieprawidłowe dane żądania.');
+    throw new HttpError(400, 'INVALID_REQUEST', 'Invalid request data.');
   }
 
   if (typeof body === 'string') {
     if (Buffer.byteLength(body, 'utf8') > MAX_JSON_BODY_BYTES) {
-      throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'Dane żądania są zbyt duże.');
+      throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The request data is too large.');
     }
     try {
       body = JSON.parse(body) as unknown;
     } catch {
-      throw new HttpError(400, 'INVALID_REQUEST', 'Nieprawidłowe dane żądania.');
+      throw new HttpError(400, 'INVALID_REQUEST', 'Invalid request data.');
     }
   } else {
     try {
       if (Buffer.byteLength(JSON.stringify(body), 'utf8') > MAX_JSON_BODY_BYTES) {
-        throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'Dane żądania są zbyt duże.');
+        throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The request data is too large.');
       }
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      throw new HttpError(400, 'INVALID_REQUEST', 'Nieprawidłowe dane żądania.');
+      throw new HttpError(400, 'INVALID_REQUEST', 'Invalid request data.');
     }
   }
 
   const result = schema.safeParse(body);
   if (!result.success) {
-    throw new HttpError(400, 'INVALID_REQUEST', 'Nieprawidłowe dane żądania.');
+    throw new HttpError(400, 'INVALID_REQUEST', 'Invalid request data.');
   }
   return result.data;
 }

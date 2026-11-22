@@ -16,9 +16,9 @@ describe('bot messages', () => {
     expect(messages.subscribed).toContain('/stop');
   });
 
-  it('is honest about storing the Telegram id', () => {
+  it('is honest about storing the Telegram ID', () => {
     for (const locale of botLocales) {
-      expect(botMessages[locale].subscribed).toMatch(/Telegram id|identyfikator Telegram/);
+      expect(botMessages[locale].subscribed).toMatch(/Telegram ID/);
     }
   });
 

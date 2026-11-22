@@ -3,22 +3,22 @@ import { messages } from './index';
 
 describe('start.responseCount plurals', () => {
   it('uses the Russian one / few / many forms', () => {
-    expect(messages.ru.start.responseCount(312, 2026)).toBe('312 ответов за набор 2026');
-    expect(messages.ru.start.responseCount(1, 2026)).toBe('1 ответ за набор 2026');
-    expect(messages.ru.start.responseCount(3, 2026)).toBe('3 ответа за набор 2026');
-    expect(messages.ru.start.responseCount(25, 2026)).toBe('25 ответов за набор 2026');
+    expect(messages.ru.start.responseCount(312, 2026)).toBe('312 ответов в наборе 2026');
+    expect(messages.ru.start.responseCount(1, 2026)).toBe('1 ответ в наборе 2026');
+    expect(messages.ru.start.responseCount(3, 2026)).toBe('3 ответа в наборе 2026');
+    expect(messages.ru.start.responseCount(25, 2026)).toBe('25 ответов в наборе 2026');
   });
 
   it('uses the Ukrainian one / few / many forms', () => {
-    expect(messages.uk.start.responseCount(1, 2026)).toBe('1 відповідь за набір 2026');
-    expect(messages.uk.start.responseCount(3, 2026)).toBe('3 відповіді за набір 2026');
-    expect(messages.uk.start.responseCount(25, 2026)).toBe('25 відповідей за набір 2026');
+    expect(messages.uk.start.responseCount(1, 2026)).toBe('1 відповідь у наборі 2026');
+    expect(messages.uk.start.responseCount(3, 2026)).toBe('3 відповіді у наборі 2026');
+    expect(messages.uk.start.responseCount(25, 2026)).toBe('25 відповідей у наборі 2026');
   });
 
   it('uses the Belarusian one / few / many forms', () => {
-    expect(messages.be.start.responseCount(1, 2026)).toBe('1 адказ за набор 2026');
-    expect(messages.be.start.responseCount(3, 2026)).toBe('3 адказы за набор 2026');
-    expect(messages.be.start.responseCount(25, 2026)).toBe('25 адказаў за набор 2026');
+    expect(messages.be.start.responseCount(1, 2026)).toBe('1 адказ у наборы 2026');
+    expect(messages.be.start.responseCount(3, 2026)).toBe('3 адказы у наборы 2026');
+    expect(messages.be.start.responseCount(25, 2026)).toBe('25 адказаў у наборы 2026');
   });
 
   it('uses the Polish one / few / many forms', () => {
