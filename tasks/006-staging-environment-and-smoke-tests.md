@@ -82,7 +82,8 @@ The smoke script and the staging workflows must be unable to touch production:
   - `staging` is a force-pushed pointer branch, independent of PR #1 and `main`;
   - the environment terms, the preview rule, the privacy rule, and the log and failure rules above;
   - the staging bot's working name is `@nawa_tracker_staging_bot`. The maintainer may pick another username; only env values and the runbook text change;
-  - the production bot name, the production Supabase project, and Vercel's production builds of `main` (no env, cron fails harmlessly) are deferred until launch. This task does not touch them.
+  - the production bot name, the production Supabase project, and Vercel's production builds of `main` (no env, cron fails harmlessly) are deferred until launch. This task does not touch them;
+  - **order (2026-11-22): implement this task last.** Start it only once tasks 002, 003, 004, 005 and 007 are `Done`, so that the smoke tests run against the final API, migrations and copy. Task 007 changes the API error messages to English ([ADR 0010](../docs/adr/0010-locale-glossary-and-english-api-errors.md)). Smoke assertions check error `code` and HTTP status, not message text.
 - Facts confirmed by the maintainer (2026-11-22): no deployed production, no real questionnaires, no existing Supabase project. Facts checked by the task author: the repository is public, and the Vercel Git integration already reports Preview deployments to GitHub with `ref` = commit SHA.
 
 ## Scope

@@ -18,5 +18,8 @@ Use [implementation tasks](../../tasks/README.md) for work that implements a dec
 | [0009](0009-staging-environment-on-free-tiers.md) | A staging environment on free tiers, checked by smoke tests | Accepted |
 | [0010](0010-locale-glossary-and-english-api-errors.md) | One glossary per locale for app and bot copy; API error messages in English | Accepted |
 | [0011](0011-documented-product-events-deleted-with-survey.md) | Product analytics: a documented catalogue of named events, deleted with the survey | Accepted |
+| [0012](0012-scholarship-holder-survey.md) | A survey for scholarship holders: preparatory centre, wished-for field and university, shown only to contributors | Accepted |
+| [0013](0013-limit-on-score-changing-edits.md) | At most three score-changing saves in 24 hours | Accepted |
+| [0014](0014-flag-per-country-spikes-for-manual-review.md) | Flag per-country spikes of new surveys and hold them for manual review | Accepted |
 
 To add one, copy the newest file, bump the number, and add a row above.
