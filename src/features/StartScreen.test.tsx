@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/context';
 import { pl } from '../i18n/pl';
 import { getIntakeSummary } from '../lib/api-client';
+import { trackProductEvent } from '../lib/product-events';
 import { StartScreen } from './StartScreen';
 
 vi.mock('../lib/api-client', async (importOriginal) => ({
@@ -12,7 +13,10 @@ vi.mock('../lib/api-client', async (importOriginal) => ({
   getIntakeSummary: vi.fn(),
 }));
 
+vi.mock('../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
+
 const mockedGetIntakeSummary = vi.mocked(getIntakeSummary);
+const mockedTrackProductEvent = vi.mocked(trackProductEvent);
 
 function setup(overrides: Partial<Parameters<typeof StartScreen>[0]> = {}) {
   const handlers = { onStart: vi.fn(), onContinue: vi.fn(), onStartOver: vi.fn() };
@@ -26,8 +30,48 @@ function setup(overrides: Partial<Parameters<typeof StartScreen>[0]> = {}) {
 
 describe('StartScreen', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockedGetIntakeSummary.mockReset();
     mockedGetIntakeSummary.mockResolvedValue({ intakeYear: 2026, responseCount: null });
+  });
+
+  it('records landing_viewed once per mount of the start screen', () => {
+    const props = {
+      disabled: false,
+      showResumePrompt: false,
+      startCtaRef: createRef<HTMLButtonElement>(),
+      onStart: vi.fn(),
+      onContinue: vi.fn(),
+      onStartOver: vi.fn(),
+    };
+    const { rerender, unmount } = render(
+      <I18nProvider>
+        <StartScreen {...props} />
+      </I18nProvider>,
+    );
+
+    expect(mockedTrackProductEvent).toHaveBeenCalledTimes(1);
+    expect(mockedTrackProductEvent).toHaveBeenCalledWith({ name: 'landing_viewed' });
+
+    rerender(
+      <I18nProvider>
+        <StartScreen {...props} disabled />
+      </I18nProvider>,
+    );
+    rerender(
+      <I18nProvider>
+        <StartScreen {...props} />
+      </I18nProvider>,
+    );
+    expect(mockedTrackProductEvent).toHaveBeenCalledTimes(1);
+
+    unmount();
+    render(
+      <I18nProvider>
+        <StartScreen {...props} />
+      </I18nProvider>,
+    );
+    expect(mockedTrackProductEvent).toHaveBeenCalledTimes(2);
   });
 
   it('starts the wizard from the main button, which is disabled while saving', async () => {

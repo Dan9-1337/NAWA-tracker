@@ -4,6 +4,7 @@ import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
 import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
+import { trackProductEvent } from '../lib/product-events';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
 import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
@@ -61,6 +62,13 @@ export function ProfileDashboard({
   const [cohortWarning, setCohortWarning] = useState(false);
   const [statsUpdatedAt, setStatsUpdatedAt] = useState<string | null>(null);
   const lastProcessedStatisticsRef = useRef<unknown>(null);
+  const whatIfTracked = useRef(false);
+
+  const noteWhatIfUsed = useCallback(() => {
+    if (whatIfTracked.current) return;
+    whatIfTracked.current = true;
+    void trackProductEvent({ name: 'what_if_used' });
+  }, []);
 
   useEffect(() => {
     setEditDraft(responseToDraft(current));
@@ -117,6 +125,7 @@ export function ProfileDashboard({
     }
     await runGuarded(async () => {
       await onSubmit(next);
+      void trackProductEvent({ name: 'survey_updated' });
       setView('dashboard');
       setCohortWarning(false);
       setSaved(true);
@@ -218,7 +227,7 @@ export function ProfileDashboard({
       ) : null}
 
       <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
-      <ScoreScreen current={current} statistics={statistics} />
+      <ScoreScreen current={current} statistics={statistics} onWhatIfUsed={noteWhatIfUsed} />
       <StatisticsDistribution state={statistics} profile={current} userScore={userOrientationScore} />
       <ProfileDetails current={current} onEditSection={openEditAt} />
 

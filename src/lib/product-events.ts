@@ -5,7 +5,7 @@ export type ProductEventName = (typeof productEventNames)[number];
 
 export type ProductEvent = { name: ProductEventName };
 
-/** Fire-and-forget analytics. Events carry only their name; see `productEventRequestSchema`. */
+/** Fire-and-forget analytics. Events carry only their name; see `productEventRequestSchema` and the catalogue in `docs/architecture.md`. */
 export async function trackProductEvent(event: ProductEvent): Promise<void> {
   const initData = getTelegramInitData();
   if (!initData) return;

@@ -5,8 +5,17 @@ import type { ResponseFormInput } from '../../shared/contracts';
 import { I18nProvider } from '../i18n/context';
 import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { pl } from '../i18n/pl';
+import { trackProductEvent } from '../lib/product-events';
 import { getDevChromeState } from '../lib/telegram';
 import { ProfileDashboard } from './ProfileDashboard';
+
+vi.mock('../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
+
+const trackedEvents = vi.mocked(trackProductEvent);
+
+function countTracked(name: string): number {
+  return trackedEvents.mock.calls.filter(([event]) => event.name === name).length;
+}
 
 vi.mock('../lib/telegram', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/telegram')>();
@@ -40,18 +49,26 @@ const current: ResponseFormInput = {
 };
 
 beforeEach(() => {
+  vi.clearAllMocks();
   localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
   setActiveLocale('pl');
 });
 
-function renderDashboard() {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+function renderDashboard(onSubmit = vi.fn().mockResolvedValue(undefined)) {
   render(
     <I18nProvider>
       <ProfileDashboard current={current} statistics={{ status: 'loading' }} onSubmit={onSubmit} />
     </I18nProvider>,
   );
   return onSubmit;
+}
+
+async function editAverageTo(user: ReturnType<typeof userEvent.setup>, value: string) {
+  await user.click(screen.getByRole('button', { name: new RegExp(pl.scoreScreen.rows.average) }));
+  const average = await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT });
+  await user.clear(average);
+  await user.type(average, value);
+  await waitFor(() => expect(chrome().mainText).toBe(pl.form.submitUpdate), { timeout: UI_TIMEOUT });
 }
 
 const chrome = () => getDevChromeState();
@@ -181,6 +198,40 @@ describe('ProfileDashboard edit wizard', () => {
 
       expect(screen.getByText(pl.form.cohortChangeTitle)).toBeInTheDocument();
       expect(onSubmit).not.toHaveBeenCalled();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'records survey_updated on a successful edit and no wizard events',
+    async () => {
+      const user = userEvent.setup();
+      const onSubmit = renderDashboard();
+      await editAverageTo(user, '4,8');
+
+      await pressMain();
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(countTracked('survey_updated')).toBe(1);
+      expect(countTracked('wizard_started')).toBe(0);
+      expect(countTracked('wizard_education_completed')).toBe(0);
+      expect(countTracked('wizard_completed')).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'records no survey_updated when the edit save fails',
+    async () => {
+      const user = userEvent.setup();
+      const onSubmit = renderDashboard(vi.fn().mockRejectedValue(new Error('offline')));
+      await editAverageTo(user, '4,8');
+
+      await pressMain();
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(countTracked('survey_updated')).toBe(0);
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toBeInTheDocument();
     },
     TEST_TIMEOUT,
   );

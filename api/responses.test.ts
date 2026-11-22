@@ -4,6 +4,7 @@ import { fineBuckets } from '../shared/test-statistics';
 import { HttpError } from './_lib/errors';
 import { signTelegramInitData } from './_lib/telegram-auth';
 import {
+  createDeleteProfile,
   createResponsesHandler,
   type ResponsesHandlerDependencies,
 } from './responses';
@@ -12,6 +13,7 @@ import { createStatisticsHandler } from './statistics';
 
 const BOT_TOKEN = 'test-bot-token-that-is-at-least-32-characters';
 const IDENTITY_HASH = 'a'.repeat(64);
+const OTHER_IDENTITY_HASH = 'c'.repeat(64);
 const USER_ID = 424242424;
 
 const validForm = {
@@ -92,6 +94,64 @@ function request(method: string, body: unknown = {}, userId = USER_ID): Request 
     headers: { origin: 'https://tracker.example', ...initDataHeader(userId) },
     socket: { remoteAddress: '203.0.113.9' },
   };
+}
+
+type FakeTable = 'responses' | 'product_events' | 'bot_subscriptions';
+type FakeRow = Record<string, unknown>;
+
+/** In-memory Supabase double for the delete chain used by `createDeleteProfile`. */
+function fakeAdminClient(seed: Record<FakeTable, FakeRow[]>) {
+  const tables: Record<FakeTable, FakeRow[]> = {
+    responses: seed.responses.map((row) => ({ ...row })),
+    product_events: seed.product_events.map((row) => ({ ...row })),
+    bot_subscriptions: seed.bot_subscriptions.map((row) => ({ ...row })),
+  };
+  const failures = new Set<FakeTable>();
+
+  function deleteFrom(table: FakeTable) {
+    const filters: Array<[string, unknown]> = [];
+    let consumed = false;
+
+    const run = () => {
+      if (consumed) return { data: [], error: null };
+      consumed = true;
+      if (failures.has(table)) return { data: null, error: { message: `${table}_delete_failed` } };
+      const rows = tables[table];
+      const deleted = rows.filter((row) => filters.every(([column, value]) => row[column] === value));
+      tables[table] = rows.filter((row) => !deleted.includes(row));
+      return { data: deleted, error: null };
+    };
+
+    const builder = {
+      eq(column: string, value: unknown) {
+        filters.push([column, value]);
+        return builder;
+      },
+      select() {
+        return Promise.resolve(run());
+      },
+      then<TResult1 = { data: FakeRow[] | null; error: { message: string } | null }, TResult2 = never>(
+        onfulfilled?:
+          | ((value: { data: FakeRow[] | null; error: { message: string } | null }) => TResult1 | PromiseLike<TResult1>)
+          | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+      ) {
+        return Promise.resolve(run()).then(onfulfilled, onrejected);
+      },
+    };
+    return builder;
+  }
+
+  const client = {
+    from(table: string) {
+      if (table !== 'responses' && table !== 'product_events' && table !== 'bot_subscriptions') {
+        throw new Error(`Unexpected table: ${table}`);
+      }
+      return { delete: () => deleteFrom(table) };
+    },
+  };
+
+  return { client, tables, failDelete: (table: FakeTable) => failures.add(table) };
 }
 
 function responsesDependencies(
@@ -223,6 +283,76 @@ describe('DELETE /api/responses', () => {
     await createResponsesHandler(dependencies)(request('DELETE'), response);
 
     expect(state.status).toBe(404);
+  });
+
+  it('deletes responses, product events and the bot subscription, and leaves another user alone', async () => {
+    const fake = fakeAdminClient({
+      responses: [
+        { id: 1, identity_hash: IDENTITY_HASH },
+        { id: 2, identity_hash: OTHER_IDENTITY_HASH },
+      ],
+      product_events: [
+        { event_name: 'landing_viewed', identity_hash: IDENTITY_HASH },
+        { event_name: 'landing_viewed', identity_hash: OTHER_IDENTITY_HASH },
+      ],
+      bot_subscriptions: [{ telegram_user_id: USER_ID }, { telegram_user_id: USER_ID + 1 }],
+    });
+    const dependencies = {
+      ...responsesDependencies(),
+      deleteProfile: createDeleteProfile(() => fake.client as never),
+    };
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('DELETE'), response);
+
+    expect(state.status).toBe(200);
+    expect(state.body).toEqual({ deleted: true });
+    expect(fake.tables.responses).toEqual([{ id: 2, identity_hash: OTHER_IDENTITY_HASH }]);
+    expect(fake.tables.product_events).toEqual([
+      { event_name: 'landing_viewed', identity_hash: OTHER_IDENTITY_HASH },
+    ]);
+    expect(fake.tables.bot_subscriptions).toEqual([{ telegram_user_id: USER_ID + 1 }]);
+  });
+
+  it('deletes product events even when no survey exists, and still answers 404', async () => {
+    const fake = fakeAdminClient({
+      responses: [],
+      product_events: [{ event_name: 'what_if_used', identity_hash: IDENTITY_HASH }],
+      bot_subscriptions: [],
+    });
+    const dependencies = {
+      ...responsesDependencies(),
+      deleteProfile: createDeleteProfile(() => fake.client as never),
+    };
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('DELETE'), response);
+
+    expect(state.status).toBe(404);
+    expect(fake.tables.product_events).toEqual([]);
+  });
+
+  it('fails the delete when removing the product events fails', async () => {
+    const fake = fakeAdminClient({
+      responses: [{ id: 1, identity_hash: IDENTITY_HASH }],
+      product_events: [{ event_name: 'landing_viewed', identity_hash: IDENTITY_HASH }],
+      bot_subscriptions: [{ telegram_user_id: USER_ID }],
+    });
+    fake.failDelete('product_events');
+    const dependencies = {
+      ...responsesDependencies(),
+      deleteProfile: createDeleteProfile(() => fake.client as never),
+    };
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('DELETE'), response);
+
+    expect(state.status).toBe(500);
+    expect(state.body).toEqual({
+      error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' },
+    });
+    // The survey is still there, so the caller can retry the delete.
+    expect(fake.tables.responses).toHaveLength(1);
   });
 });
 

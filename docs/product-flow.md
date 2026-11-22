@@ -160,6 +160,10 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 
 ## Changelog
 
+### Unreleased — Product analytics
+
+- Six new named events cover the start screen, the education step, the what-if, survey edits and the two Settings links; deleting the survey also deletes the user's events ([ADR 0011](adr/0011-documented-product-events-deleted-with-survey.md)).
+
 ### Unreleased — Refocus on the score comparison
 
 - Landing: a live sample ruler replaces the fake density strip.

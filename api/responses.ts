@@ -35,24 +35,39 @@ type ResponsesRequest = {
 
 export type ResponsesHandlerDependencies = {
   getClient: () => RpcClient;
-  /** Removes every intake year of the profile and, if present, the opt-in bot subscription. */
+  /** Removes every intake year of the profile, the user's product events and the opt-in bot subscription. */
   deleteProfile: (identityHash: string, telegramUserId: number) => Promise<number>;
   hashIdentity: (identity: VerifiedTelegramIdentity) => string;
   assertSameOrigin: (request: ResponsesRequest) => void;
   requireTelegramIdentity: (request: ResponsesRequest) => VerifiedTelegramIdentity;
 };
 
-const defaultDependencies: ResponsesHandlerDependencies = {
-  getClient: getSupabaseAdmin as () => RpcClient,
-  deleteProfile: async (identityHash, telegramUserId) => {
-    const client = getSupabaseAdmin();
+/**
+ * Deletes everything DELETE /api/responses owns for one caller. Events go first so a failed events delete
+ * leaves the survey intact and the request can be retried.
+ */
+export function createDeleteProfile(getClient: () => ReturnType<typeof getSupabaseAdmin>) {
+  return async function deleteProfile(identityHash: string, telegramUserId: number): Promise<number> {
+    const client = getClient();
+
+    const eventsResult = await client.from('product_events').delete().eq('identity_hash', identityHash);
+    if (eventsResult.error) {
+      throw eventsResult.error;
+    }
+
     const deleteResult = await client.from('responses').delete().eq('identity_hash', identityHash).select('id');
     if (deleteResult.error) {
       throw deleteResult.error;
     }
+
     await createSupabaseSubscriptionStore(() => client).remove(telegramUserId);
     return deleteResult.data?.length ?? 0;
-  },
+  };
+}
+
+const defaultDependencies: ResponsesHandlerDependencies = {
+  getClient: getSupabaseAdmin as () => RpcClient,
+  deleteProfile: createDeleteProfile(getSupabaseAdmin),
   hashIdentity,
   assertSameOrigin,
   requireTelegramIdentity,

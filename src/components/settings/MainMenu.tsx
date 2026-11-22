@@ -2,6 +2,7 @@ import type { ResponseFormInput } from '../../../shared/contracts';
 import { useI18n } from '../../i18n/context';
 import { botCountryLink, botSubscribeLink, openTelegramUrl, telegramShareLink } from '../../lib/bot-links';
 import { formatCountryLabel } from '../../lib/country-label';
+import { trackProductEvent } from '../../lib/product-events';
 import type { ThemePreference } from '../../lib/theme';
 import { ChatIcon, DocumentIcon, GlobeIcon, InfoIcon, PaletteIcon, ShieldIcon, UserEditIcon, UsersIcon } from '../icons';
 import { SettingsMenuGroup, SettingsMenuRow } from './SettingsMenu';
@@ -61,20 +62,24 @@ export function MainMenu({ current, themePreference, onNavigate, onEditProfile, 
         <SettingsMenuRow
           label={t.settings.reminders}
           icon={<ChatIcon size={17} />}
-          onClick={() => openTelegramUrl(botSubscribeLink())}
+          onClick={() => {
+            void trackProductEvent({ name: 'reminders_link_opened' });
+            openTelegramUrl(botSubscribeLink());
+          }}
         />
         {current ? (
           <SettingsMenuRow
             label={t.settings.invite}
             icon={<UsersIcon size={17} />}
-            onClick={() =>
+            onClick={() => {
+              void trackProductEvent({ name: 'invite_link_opened' });
               openTelegramUrl(
                 telegramShareLink(
                   botCountryLink(current.rankingCountry),
                   t.settings.inviteText(formatCountryLabel(current.rankingCountry, locale)),
                 ),
-              )
-            }
+              );
+            }}
           />
         ) : null}
       </SettingsMenuGroup>

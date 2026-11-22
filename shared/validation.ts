@@ -259,10 +259,16 @@ export const apiErrorSchema = z
   .strict() satisfies z.ZodType<ApiError>;
 
 export const productEventNames = [
+  'landing_viewed',
   'wizard_started',
+  'wizard_education_completed',
   'wizard_completed',
   'score_viewed',
   'position_or_fallback_viewed',
+  'what_if_used',
+  'survey_updated',
+  'reminders_link_opened',
+  'invite_link_opened',
 ] as const;
 
 /** Product analytics never carry free text or a payload: an event is just its name. */

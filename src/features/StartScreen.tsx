@@ -1,9 +1,10 @@
-import { useEffect, useState, type Ref } from 'react';
+import { useEffect, useRef, useState, type Ref } from 'react';
 import { HowItWorksPanel } from '../components/HowItWorksPanel';
 import { ChevronIcon } from '../components/icons';
 import { ResultPreviewCard } from '../components/ResultPreviewCard';
 import { useI18n } from '../i18n/context';
 import { getIntakeSummary } from '../lib/api-client';
+import { trackProductEvent } from '../lib/product-events';
 
 type FaqId = 'how' | 'what';
 
@@ -61,7 +62,15 @@ export function StartScreen({
   const { t } = useI18n();
   const [openFaq, setOpenFaq] = useState<FaqId | null>(null);
   const [intakeSummary, setIntakeSummary] = useState<{ count: number; year: number } | null>(null);
+  const landingTracked = useRef(false);
   const toggle = (id: FaqId) => setOpenFaq((value) => (value === id ? null : id));
+
+  // The start screen only exists in create mode. Guarded with a ref because StrictMode runs effects twice in development.
+  useEffect(() => {
+    if (landingTracked.current) return;
+    landingTracked.current = true;
+    void trackProductEvent({ name: 'landing_viewed' });
+  }, []);
 
   // One request when the screen mounts. A pending or failed request renders nothing: the start button stays usable.
   useEffect(() => {

@@ -83,6 +83,7 @@ export function CreateProfileFlow({
   const [showResumePrompt, setShowResumePrompt] = useState(pendingResume);
   const [startCtaInView, setStartCtaInView] = useState(true);
   const startCtaRef = useRef<HTMLButtonElement>(null);
+  const educationCompleted = useRef(false);
 
   useEffect(() => {
     if (screen === 'wizard') {
@@ -108,8 +109,16 @@ export function CreateProfileFlow({
   }, [screen]);
 
   const goWizardNext = useCallback(() => {
+    if (
+      currentStep === 'education' &&
+      !educationCompleted.current &&
+      canAdvanceWizardStep('education', draft)
+    ) {
+      educationCompleted.current = true;
+      void trackProductEvent({ name: 'wizard_education_completed' });
+    }
     goNext(draft);
-  }, [draft, goNext]);
+  }, [currentStep, draft, goNext]);
 
   const goWizardBack = useCallback(() => {
     goBack(() => setScreen('start'));

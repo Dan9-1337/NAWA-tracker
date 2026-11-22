@@ -20,13 +20,15 @@ import { ThresholdChip } from './ThresholdChip';
 type ScoreScreenProps = {
   current: ResponseFormInput;
   statistics: StatisticsState;
+  /** Called when the user moves the average away from the saved one. The dashboard decides how often it is recorded. */
+  onWhatIfUsed?: () => void;
 };
 
 /**
  * The what-if block: the tape, the average input and, only while a what-if is active,
  * its own score, threshold chip and percentile band. Nothing here touches the saved card.
  */
-export function ScoreScreen({ current, statistics }: ScoreScreenProps) {
+export function ScoreScreen({ current, statistics, onWhatIfUsed }: ScoreScreenProps) {
   const { t, locale } = useI18n();
   const copy = t.scoreScreen;
   const maximumGrade = current.maximumGrade;
@@ -72,6 +74,7 @@ export function ScoreScreen({ current, statistics }: ScoreScreenProps) {
 
   function applyAverage(next: number) {
     if (next === average) return;
+    if (next !== current.averageGrade) onWhatIfUsed?.();
     const haptic = getTelegramWebApp()?.haptic;
     if (scoreForAverage(next, profile) >= threshold !== score >= threshold) {
       haptic?.impact('medium');
@@ -91,6 +94,7 @@ export function ScoreScreen({ current, statistics }: ScoreScreenProps) {
     setInputError(false);
     const next = Math.round(clampAverage(parsed, maximumGrade) * 100) / 100;
     if (next !== average) {
+      if (next !== current.averageGrade) onWhatIfUsed?.();
       typedChange.current = true;
       setAverage(next);
     }

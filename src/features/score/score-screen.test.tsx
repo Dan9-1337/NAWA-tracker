@@ -1,12 +1,25 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
 import { makeStatisticsResult } from '../../../shared/test-statistics';
 import { pl } from '../../i18n/pl';
+import { trackProductEvent } from '../../lib/product-events';
 import { ProfileDashboard } from '../ProfileDashboard';
 import type { StatisticsState } from '../statistics/StatisticsPanel';
 import { ScoreScreen } from './ScoreScreen';
+
+vi.mock('../../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
+
+const trackedEvents = vi.mocked(trackProductEvent);
+
+function countTracked(name: string): number {
+  return trackedEvents.mock.calls.filter(([event]) => event.name === name).length;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 const current: ResponseFormInput = {
   intakeYear: 2026,
@@ -160,6 +173,42 @@ describe('ScoreScreen what-if percentile band', () => {
     expect(screen.queryByTestId('what-if-percentile-band')).not.toBeInTheDocument();
     expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
     expect(screen.queryByText(pl.scoreScreen.savedScore('81,00'))).not.toBeInTheDocument();
+  });
+});
+
+describe('what-if analytics', () => {
+  it('records what_if_used once per dashboard mount and ignores invalid or unchanged values', () => {
+    renderDashboard();
+    const input = screen.getByLabelText(pl.scoreScreen.averageInputLabel);
+
+    fireEvent.change(input, { target: { value: '7' } });
+    expect(countTracked('what_if_used')).toBe(0);
+
+    fireEvent.change(input, { target: { value: '4,5' } });
+    expect(countTracked('what_if_used')).toBe(0);
+
+    fireEvent.change(input, { target: { value: '4,2' } });
+    expect(countTracked('what_if_used')).toBe(1);
+
+    fireEvent.change(input, { target: { value: '4,1' } });
+    fireEvent.change(input, { target: { value: '4,0' } });
+    expect(countTracked('what_if_used')).toBe(1);
+    expect(trackedEvents).toHaveBeenCalledWith({ name: 'what_if_used' });
+  });
+
+  it('counts several ruler steps as one what-if use per dashboard mount', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    const ruler = screen.getByRole('slider');
+
+    ruler.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(countTracked('what_if_used')).toBe(1);
+
+    await user.keyboard('{ArrowRight}{ArrowRight}{ArrowLeft}');
+
+    expect(countTracked('what_if_used')).toBe(1);
   });
 });
 

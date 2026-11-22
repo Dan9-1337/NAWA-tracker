@@ -17,5 +17,6 @@ Use [implementation tasks](../../tasks/README.md) for work that implements a dec
 | [0008](0008-refocus-on-score-comparison.md) | Refocus on the score comparison: drop application statuses and the university question | Accepted |
 | [0009](0009-staging-environment-on-free-tiers.md) | A staging environment on free tiers, checked by smoke tests | Accepted |
 | [0010](0010-locale-glossary-and-english-api-errors.md) | One glossary per locale for app and bot copy; API error messages in English | Accepted |
+| [0011](0011-documented-product-events-deleted-with-survey.md) | Product analytics: a documented catalogue of named events, deleted with the survey | Accepted |
 
 To add one, copy the newest file, bump the number, and add a row above.

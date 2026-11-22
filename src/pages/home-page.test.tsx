@@ -6,6 +6,7 @@ import { LOCALE_STORAGE_KEY, setActiveLocale } from '../i18n';
 import { pl } from '../i18n/pl';
 import { ApiClientError } from '../lib/api-client';
 import { DRAFT_STORAGE_KEY_PREFIX, type WizardDraft } from '../lib/draft';
+import { trackProductEvent } from '../lib/product-events';
 import type { TelegramWebAppBridge } from '../lib/telegram';
 import { HomePage } from './HomePage';
 
@@ -43,6 +44,14 @@ vi.mock('../lib/api-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api-client')>()),
   ...api,
 }));
+
+vi.mock('../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
+
+const trackedEvents = vi.mocked(trackProductEvent);
+
+function countTracked(name: string): number {
+  return trackedEvents.mock.calls.filter(([event]) => event.name === name).length;
+}
 
 const currentResponse: ResponseFormInput = {
   intakeYear: 2026,
@@ -172,6 +181,77 @@ describe('HomePage', () => {
     render(<HomePage />);
     expect(await screen.findByText(pl.start.title)).toBeInTheDocument();
   });
+
+  it(
+    'records wizard_education_completed once when a valid education step opens grades',
+    async () => {
+      const user = await openCreateGradesStep();
+
+      expect(countTracked('wizard_education_completed')).toBe(1);
+
+      await user.click(await screen.findByRole('button', { name: '← Back' }, { timeout: UI_TIMEOUT }));
+      expect(
+        await screen.findByLabelText(pl.labels.rankingCountry, {}, { timeout: UI_TIMEOUT }),
+      ).toBeInTheDocument();
+      await clickMain(user);
+
+      expect(
+        await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT }),
+      ).toBeInTheDocument();
+      expect(countTracked('wizard_education_completed')).toBe(1);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'records no wizard_education_completed while the education step is invalid',
+    async () => {
+      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      const user = userEvent.setup();
+      render(<HomePage />);
+
+      await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT });
+      await clickMain(user);
+
+      const next = await screen.findByRole('button', { name: pl.wizard.next }, { timeout: UI_TIMEOUT });
+      expect(next).toBeDisabled();
+      await user.click(next);
+
+      expect(countTracked('wizard_education_completed')).toBe(0);
+      expect(screen.queryByLabelText(pl.labels.averageGrade)).not.toBeInTheDocument();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'resumes on grades without wizard_education_completed and counts the save as wizard_completed',
+    async () => {
+      const telegram = await import('../lib/telegram');
+      const userId = telegram.getTelegramUserId() ?? 'anon';
+      localStorage.setItem(
+        `${DRAFT_STORAGE_KEY_PREFIX}:${userId}`,
+        JSON.stringify({ version: 2, draft: seededDraft, screen: 'confirm', stepIndex: 0 }),
+      );
+      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      api.createResponse.mockResolvedValue({ created: true, statistics: statistics(12) });
+
+      const user = userEvent.setup();
+      render(<HomePage />);
+
+      expect(await screen.findByText(pl.start.resumeTitle, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: pl.start.resumeContinue }));
+      await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT });
+
+      expect(countTracked('wizard_education_completed')).toBe(0);
+      await clickMain(user);
+
+      await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(countTracked('wizard_completed')).toBe(1);
+      expect(countTracked('wizard_education_completed')).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
 
   it(
     'resumes a session saved on the removed confirm screen on the grades step',

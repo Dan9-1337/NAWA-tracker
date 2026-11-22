@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { productEventNames } from '../shared/validation';
 import { createProductEventsHandler } from './product-events';
 
 const IDENTITY_HASH = 'b'.repeat(64);
@@ -39,10 +42,20 @@ describe('POST /api/product-events', () => {
     expect(JSON.stringify(insert.mock.calls)).not.toContain('424242424');
   });
 
+  it.each([...productEventNames])('accepts the documented event %s', async (eventName) => {
+    const { send, insert, state } = setup();
+
+    await send({ eventName });
+
+    expect(state.status).toBe(200);
+    expect(insert).toHaveBeenCalledWith({ identity_hash: IDENTITY_HASH, event_name: eventName, payload: {} });
+  });
+
   it.each([
     ['free text on a plain event', { eventName: 'score_viewed', payload: { query: 'warsaw' } }],
     ['an unknown event', { eventName: 'university_search_no_results', payload: { query: 'warsaw' } }],
     ['the retired status event', { eventName: 'status_updated', payload: { from: 'submitted', to: 'formal_review_positive' } }],
+    ['an extra field on a documented event', { eventName: 'landing_viewed', step: 1 }],
   ])('rejects %s', async (_label, body) => {
     const { send, insert, state } = setup();
 
@@ -50,5 +63,13 @@ describe('POST /api/product-events', () => {
 
     expect(state.status).toBe(400);
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('documents every accepted event name in the architecture catalogue', () => {
+    const architecture = readFileSync(resolve(process.cwd(), 'docs/architecture.md'), 'utf8');
+
+    for (const eventName of productEventNames) {
+      expect(architecture).toContain(`\`${eventName}\``);
+    }
   });
 });

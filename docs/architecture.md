@@ -80,9 +80,26 @@ Questionnaire fields plus:
 
 `telegram_user_id`, `chat_id`, `locale`, `last_reminder`. The only table with a real Telegram id; opt-in, no answers, service-role only. Removed on `/stop`, when Telegram reports the bot blocked, when a send fails with 403 or "chat not found", and by `DELETE /api/responses`.
 
+### Product events
+
+`product_events` stores one row per recorded event, keyed by `identity_hash`; the client sends them to `POST /api/product-events`. An event is only its name — the API rejects any payload and the table limits the name to 256 bytes. Names already recorded are not renamed, and an event is added, renamed or removed only together with this table ([ADR 0011](adr/0011-documented-product-events-deleted-with-survey.md)).
+
+| Event | Recorded when | At most | Recorded in |
+| --- | --- | --- | --- |
+| `landing_viewed` | The start screen is shown in `create` mode | Once per mount of the start screen | `src/features/StartScreen.tsx` |
+| `wizard_started` | The user presses the start button on the start screen | Once per press | `src/features/CreateProfileFlow.tsx` |
+| `wizard_education_completed` | The user presses Next on a valid Education step of the new-survey wizard, so the Grades step opens | Once per mount of the create flow | `src/features/CreateProfileFlow.tsx` |
+| `wizard_completed` | A new survey is saved successfully from the Grades step | Once per successful save | `src/features/CreateProfileFlow.tsx` |
+| `score_viewed` | The saved result panel first renders the score for a `nawa_director` profile | Once per mount of the result panel | `src/features/statistics/StatisticsPanel.tsx` |
+| `position_or_fallback_viewed` | The saved result panel first renders its position or the small-cohort fallback | Once per mount of the result panel | `src/features/statistics/StatisticsPanel.tsx` |
+| `what_if_used` | The user first changes the what-if average away from the saved one, by the ruler or a valid typed value | Once per mount of the dashboard | `src/features/ProfileDashboard.tsx` (the change is detected in `src/features/score/ScoreScreen.tsx`) |
+| `survey_updated` | Saving an edit through `PUT /api/responses` succeeds | Once per successful save | `src/features/ProfileDashboard.tsx` |
+| `reminders_link_opened` | The user taps Settings → "Reminders in the bot" | Once per tap | `src/components/settings/MainMenu.tsx` |
+| `invite_link_opened` | The user taps Settings → "Invite people from my country" | Once per tap | `src/components/settings/MainMenu.tsx` |
+
 ## Security and privacy
 
-**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name only; the retired `status_updated` event carried two status values in old rows; never free text, enforced by the API schema and a payload size check).
+**Stored:** questionnaire answers, `identity_hash`, suspicious flag, timestamps, and `product_events` (event name only; the retired `status_updated` event carried two status values in old rows; never free text, enforced by the API schema and a payload size check). Deleting the survey deletes the user's events.
 
 **Not stored:** Telegram id, Telegram username, name, email, phone, search queries, recovery or session tokens, raw IP addresses (IP hashes used transiently for public-stats rate limits).
 
