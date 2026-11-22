@@ -21,6 +21,8 @@ type ScoreTapeProps = {
   threshold: number;
   ariaLabel: string;
   thresholdLabel: string;
+  /** A fixed mark on the tape, e.g. the country `ориентир 2026` (ADR 0017); it does not move with the score. */
+  referenceMark?: { value: number; label: string } | null;
   /** Called when a drag starts, so the parent can remember the starting value. */
   onDragStart: () => void;
   /** Total horizontal travel in px since the drag started (negative = dragged left). */
@@ -34,6 +36,7 @@ export function ScoreTape({
   threshold,
   ariaLabel,
   thresholdLabel,
+  referenceMark,
   onDragStart,
   onDrag,
   onStep,
@@ -42,6 +45,8 @@ export function ScoreTape({
   const offset = tapeOffsetPx(score);
   const thresholdX = threshold * TAPE_PX_PER_POINT;
   const flagLeft = `clamp(8px, calc(50% + ${thresholdX - offset}px - 4px), calc(100% - 104px))`;
+  const referenceX = referenceMark ? referenceMark.value * TAPE_PX_PER_POINT : 0;
+  const referenceFlagLeft = `clamp(8px, calc(50% + ${referenceX - offset}px - 4px), calc(100% - 104px))`;
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     drag.current = { pointerId: event.pointerId, startX: event.clientX };
@@ -126,6 +131,18 @@ export function ScoreTape({
             background: FLAG_RED,
           }}
         />
+        {referenceMark ? (
+          <div
+            className="absolute"
+            style={{
+              left: referenceX - 1.5,
+              top: -26,
+              width: 3,
+              height: 102,
+              background: FLAG_RED,
+            }}
+          />
+        ) : null}
         <div
           className="absolute top-0 h-full"
           style={{
@@ -149,6 +166,22 @@ export function ScoreTape({
       >
         {thresholdLabel}
       </div>
+
+      {referenceMark ? (
+        <div
+          aria-hidden="true"
+          data-testid="orientation-mark-ruler"
+          className="absolute whitespace-nowrap rounded-lg px-2.5 py-1 text-[12.5px] font-semibold text-white"
+          style={{
+            left: referenceFlagLeft,
+            background: FLAG_RED,
+            // Stack under the threshold flag when the two marks are too close to read side by side.
+            top: referenceX - thresholdX < 130 ? 30 : 2,
+          }}
+        >
+          {referenceMark.label}
+        </div>
+      ) : null}
 
       <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 h-full w-0">
         <div

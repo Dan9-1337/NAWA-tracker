@@ -12,4 +12,5 @@ export const testFiles = [
   'supabase/tests/score_change_limit.sql',
   'supabase/tests/spike_flags.sql',
   'supabase/tests/scholarship_reports.sql',
+  'supabase/tests/orientation_mark.sql',
 ];

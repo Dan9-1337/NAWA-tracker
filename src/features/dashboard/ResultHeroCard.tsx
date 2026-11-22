@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { ScholarshipTrack, StatisticsResult } from '../../../shared/contracts';
+import type { OrientationMarkResult, ScholarshipTrack, StatisticsResult } from '../../../shared/contracts';
+import { nawaOrientationThreshold } from '../../../shared/nawa-score';
 import { CountryFlag } from '../../components/CountryFlag';
 import { DashboardCard, CardHeader } from '../../components/DashboardCard';
 import { DensityStrip } from '../../components/DensityStrip';
@@ -80,7 +81,61 @@ type DetailedPositionProps = {
   rankingCountry: string;
   track: ScholarshipTrack;
   cohortLabel: string;
+  /** The country mark (ADR 0017), when the caller has one. */
+  orientation?: OrientationMarkResult | null;
+  /** Opens the scholarship-holder flow from the `n = 0` invitation. */
+  onOrientationInvite?: () => void;
 };
+
+/**
+ * The `ориентир 2026` line: under the country position, and equally on the "only you" card (ADR 0017). With no
+ * counted holder it says so, and invites a holder to answer only when the survey scores at least 60.
+ */
+export function OrientationMarkLine({
+  orientation,
+  cohortLabel,
+  userScore,
+  onOrientationInvite,
+}: {
+  orientation?: OrientationMarkResult | null;
+  cohortLabel: string;
+  userScore: number;
+  onOrientationInvite?: () => void;
+}) {
+  const { t } = useI18n();
+
+  if (!orientation) return null;
+
+  if (orientation.mark == null) {
+    const missing = t.dashboard.hero.orientationMarkMissing(cohortLabel);
+    const canInvite = userScore >= nawaOrientationThreshold && onOrientationInvite != null;
+
+    if (canInvite) {
+      return (
+        <button
+          type="button"
+          data-testid="orientation-mark-line"
+          className="text-left text-sm leading-6 font-medium text-[var(--text-secondary)] underline decoration-dotted underline-offset-2"
+          onClick={onOrientationInvite}
+        >
+          {missing} {t.dashboard.hero.orientationMarkInvitation}
+        </button>
+      );
+    }
+
+    return (
+      <p className="text-sm leading-6 text-[var(--text-secondary)]" data-testid="orientation-mark-line">
+        {missing}
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-sm leading-6 text-[var(--text-secondary)]" data-testid="orientation-mark-line">
+      {t.dashboard.hero.orientationMarkLine(cohortLabel, String(orientation.n))}
+    </p>
+  );
+}
 
 /** Position inside the country cohort: rank, percentile, median, distribution and the number of responses. */
 export function DetailedPosition({
@@ -89,6 +144,8 @@ export function DetailedPosition({
   rankingCountry,
   track,
   cohortLabel,
+  orientation,
+  onOrientationInvite,
 }: DetailedPositionProps) {
   const { t, locale } = useI18n();
   const groupSize = data.groupResponseCount;
@@ -109,6 +166,13 @@ export function DetailedPosition({
           </span>
         </p>
       ) : null}
+
+      <OrientationMarkLine
+        orientation={orientation}
+        cohortLabel={cohortLabel}
+        userScore={userScore}
+        onOrientationInvite={onOrientationInvite}
+      />
 
       {percentile != null ? (
         <p className="text-sm font-medium text-[var(--text-secondary)]">
@@ -142,18 +206,37 @@ type OnlyYouNoticeProps = {
   /** The applicant's country of citizenship, already formatted for the active locale. */
   cohortLabel: string;
   intakeYear: number;
+  /** The saved orientation score, for the "n = 0" invitation threshold. */
+  userScore: number;
+  /** The country mark (ADR 0017), shown on this card too. */
+  orientation?: OrientationMarkResult | null;
+  onOrientationInvite?: () => void;
 };
 
 /**
  * The card body while the country has none or one valid survey: one line and nothing else — no percentile,
- * no median, no distribution and no what-if band (ADR 0015).
+ * no median, no distribution and no what-if band (ADR 0015). The country mark still appears below it.
  */
-export function OnlyYouNotice({ cohortLabel, intakeYear }: OnlyYouNoticeProps) {
+export function OnlyYouNotice({
+  cohortLabel,
+  intakeYear,
+  userScore,
+  orientation,
+  onOrientationInvite,
+}: OnlyYouNoticeProps) {
   const { t } = useI18n();
 
   return (
-    <p className="text-sm leading-6 text-[var(--text-secondary)]" data-testid="only-you-notice">
-      {t.dashboard.hero.onlyYou(cohortLabel, String(intakeYear))}
-    </p>
+    <>
+      <p className="text-sm leading-6 text-[var(--text-secondary)]" data-testid="only-you-notice">
+        {t.dashboard.hero.onlyYou(cohortLabel, String(intakeYear))}
+      </p>
+      <OrientationMarkLine
+        orientation={orientation}
+        cohortLabel={cohortLabel}
+        userScore={userScore}
+        onOrientationInvite={onOrientationInvite}
+      />
+    </>
   );
 }

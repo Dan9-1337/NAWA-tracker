@@ -1,6 +1,6 @@
 # 014 — "Ориентир 2026": lowest reported holder score per country, for every user
 
-**Status:** Ready
+**Status:** In review
 
 ## Goal
 
@@ -71,18 +71,32 @@ Intended behavior:
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
-| A9 | | |
-| A10 | | |
-| A11 | | |
+| A1 | `npm run test:db:pglite` → `orientation_mark.sql` passes 28 assertions, including `A1: three BY holder reports are counted, the UA one is not`, `A1: the mark is the lowest snapshot of the country`, `A1: the full-distribution request lists every holder snapshot, ascending`. `npm test -- src/features/dashboard/orientation-mark.test.tsx` → `shows the line with (3), the ruler mark at 72 and three labelled dots` (line `(3)`, `orientation-mark-ruler` label, 3 `orientation-mark-dot`, labelled lowest dot). | pass |
+| A2 | `npm run test:db:pglite` → `A2: one counted holder is enough`, `A2: the mark is the single holder snapshot` (88), `A2: the single snapshot is the whole score list`. Dashboard: `shows a single holder with (1) and the mark` (line `(1)`, ruler mark present). | pass |
+| A3 | `npm test -- src/features/dashboard/orientation-mark.test.tsx` → `shows no mark when the country has no counted holder` (missing line, no ruler mark, no dots); `adds the invitation at 60 or above…` (invitation sentence present at score 81); `leaves the invitation out below 60` (score 54, no invitation, no ruler mark). | pass |
+| A4 | `npm test -- src/features/dashboard/orientation-mark.test.tsx` → `adds the invitation at 60 or above and opens the holder flow`: clicking `orientation-mark-line` opens `data-testid="scholarship-flow"` of task 012. | pass |
+| A5 | `npm run test:db:pglite` → `A5: a suspicious holder at 80 does not lower the mark`, `A5: a suspicious holder is not counted` (n = 2), `A5: a suspicious holder has no dot in the list` (`[72, 95]`). | pass |
+| A6 | `npm run test:db:pglite` → `A6: the mark starts from the saved snapshot` (81), `A6: the survey now scores 65`, `A6: the mark stays at the 81 snapshot`, `A6: the stored snapshot is unchanged`. | pass |
+| A7 | `npm run test:db:pglite` → `A7: deleting the report at 72 moves the mark to 88`, `A7: the deleted report leaves the count`, `A7: deleting the last holder survey leaves no mark`, `A7: no holders remain`, `A7: a country without holders has no score list`. | pass |
+| A8 | `npm test -- src/features/dashboard/orientation-mark.test.tsx` → `shows the line and the ruler mark on the "only you" card without a distribution`: `only-you-notice` and the `(1)` line, ruler mark present, no full-distribution disclosure. | pass |
+| A9 | `npm test -- src/features/dashboard/orientation-mark.test.tsx` → `shows nothing of the feature for another intake year` (2027 profile: no line, no ruler mark, `getOrientationMark` not called). `npm run test:db:pglite` → `A9 SQL: a 2025 survey sees nothing of the 2026 mark`, `A9 SQL: the mark exists only for the 2026 intake`, `A9 SQL: a caller without any survey gets null`. | pass |
+| A10 | `npm test -- shared/api-contracts.test.ts` → `orientation mark contracts`: strict schema accepts only `mark`, `n` and the optional ascending `scores`; rejects identity/survey/report fields and inconsistent values. `npm test -- api/orientation-mark.test.ts` → 7 tests, including `reads the caller’s mark and n without the holder score list` (RPC `p_include_scores: false`), `returns the ascending holder scores only with the full distribution request` and `never forwards a score list without the full distribution request`. `npm run test:db:pglite` → `A10: without the full distribution the score list is not returned`, `A10: the payload carries only mark, n and the score list`, `A10: the score list holds numbers only`. | pass |
+| A11 | `npm test -- src/i18n` → 4 files, 85 tests pass (key parity, no-empty and function-arity checks over pl/en/ru/uk/be). New `explains the 2026 holder-score reference and never calls it a pass mark` passes for every locale, and the privacy point matched in each. Reviewer read still needed for tone. | pass |
 
 - Changed files:
+  - `supabase/migrations/202612030001_orientation_mark.sql` (new `get_orientation_mark` RPC)
+  - `supabase/tests/orientation_mark.sql` (new), `supabase/tests/test-files.mjs`, `supabase/tests/migration-contracts.test.ts`
+  - `shared/contracts.ts`, `shared/validation.ts`, `shared/api-contracts.test.ts`
+  - `api/orientation-mark.ts` (new), `api/orientation-mark.test.ts` (new)
+  - `src/lib/api-client.ts`, `src/lib/api-client.test.ts`
+  - `src/features/dashboard/useOrientationMark.ts` (new), `src/features/dashboard/ResultHeroCard.tsx`, `src/features/dashboard/DistributionDetailsSection.tsx`, `src/features/dashboard/orientation-mark.test.tsx` (new)
+  - `src/features/statistics/StatisticsPanel.tsx`, `src/features/score/ScoreScreen.tsx`, `src/features/ProfileDashboard.tsx`
+  - `src/components/ScoreTape.tsx`, `src/components/DensityStrip.tsx`, `src/index.css`
+  - `src/i18n/pl.ts`, `src/i18n/en.ts`, `src/i18n/ru.ts`, `src/i18n/uk.ts`, `src/i18n/be.ts`, `src/i18n/locales.test.ts`
+  - `src/features/ProfileDashboard.test.tsx`, `src/features/scholarship-report/scholarship-report.test.tsx`, `src/features/score/score-screen.test.tsx` (mock the new endpoint)
+  - `docs/architecture.md`, `docs/product-flow.md`, this brief
 - Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief, [ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md), and the matching `docs/assumptions.md` entries.
+  - `make check` is left to the orchestrator as instructed.
+  - No manual Telegram/browser pass and no local `make dev` run (guardrails: ports, `.env.local`); visual placement of the stacked ruler labels and the dots was not checked on a device.
+  - Local runs are PGlite only; the PostgreSQL/pgTAP suite runs in CI. No blockers.
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief, [ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md), and the matching `docs/assumptions.md` entries. DeepSeek V4.1 Flash — implementation.

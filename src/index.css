@@ -310,6 +310,34 @@ body {
     0 1px 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
+/* Holder score snapshots over the full distribution (ADR 0017); the lowest one carries the mark label. */
+.density-strip__holder {
+  position: absolute;
+  z-index: 2;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border: 1.5px solid var(--tg-theme-bg-color);
+  border-radius: var(--radius-full);
+  background: var(--text-primary);
+  transform: translate(-50%, -50%);
+}
+
+.density-strip__holder-label {
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  padding: 0.0625rem 0.3125rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--section-divider-color);
+  background: var(--tg-theme-bg-color);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
 .density-strip__labels {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

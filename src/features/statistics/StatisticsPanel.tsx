@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
+import type { OrientationMarkResult, ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
 import { isIntakeOpen, season2026 } from '../../../shared/season';
 import { useI18n } from '../../i18n/context';
 import { cohortLabel } from '../../lib/cohort-label';
@@ -22,6 +22,12 @@ type StatisticsPanelProps = {
   state: StatisticsState;
   profile?: ResponseFormInput | null;
   userScore?: number | null;
+  /** The country mark for a 2026 Director survey; null or absent while it loads or for other intake years. */
+  orientation?: OrientationMarkResult | null;
+  /** Opens the scholarship-holder flow from the `n = 0` invitation. */
+  onOrientationInvite?: () => void;
+  /** Holder score snapshots, passed only with the full distribution. */
+  orientationScores?: number[] | null;
 };
 
 export function statisticsStateFromResult(data: StatisticsResult): StatisticsState {
@@ -36,7 +42,7 @@ function statisticsData(state: StatisticsState): StatisticsResult | null {
  * The saved result card: score and threshold chip always, then either the position in the country cohort or
  * the "only you" line while the country has fewer than two valid surveys (ADR 0015).
  */
-export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelProps) {
+export function StatisticsPanel({ state, profile, userScore, orientation, onOrientationInvite }: StatisticsPanelProps) {
   const { t, locale } = useI18n();
   const trackedEvents = useRef(new Set<string>());
   const data = statisticsData(state);
@@ -107,9 +113,17 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
         rankingCountry={profile.rankingCountry}
         track={profile.scholarshipTrack}
         cohortLabel={label}
+        orientation={orientation}
+        onOrientationInvite={onOrientationInvite}
       />
     ) : (
-      <OnlyYouNotice cohortLabel={label} intakeYear={profile.intakeYear} />
+      <OnlyYouNotice
+        cohortLabel={label}
+        intakeYear={profile.intakeYear}
+        userScore={userScore}
+        orientation={orientation}
+        onOrientationInvite={onOrientationInvite}
+      />
     );
   }
 
@@ -121,7 +135,12 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
 }
 
 /** The full-distribution disclosure; only a country cohort with a distribution has one. */
-export function StatisticsDistribution({ state, profile, userScore }: StatisticsPanelProps) {
+export function StatisticsDistribution({
+  state,
+  profile,
+  userScore,
+  orientationScores,
+}: StatisticsPanelProps) {
   if (
     (state.status !== 'success' && state.status !== 'suppressed') ||
     !profile ||
@@ -141,6 +160,7 @@ export function StatisticsDistribution({ state, profile, userScore }: Statistics
       userScore={userScore}
       medianScore={data.medianScore}
       groupSize={data.groupResponseCount}
+      holderScores={orientationScores}
     />
   );
 }

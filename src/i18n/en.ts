@@ -14,7 +14,7 @@ export const en = {
     howItWorks: 'How is the result calculated?',
     whatYouSee: 'What you will see once you finish',
     whatYouSeeBody:
-      'Your score, your percentile in the group, your position relative to the median, and how the statistics change as new responses arrive.',
+      'Your score, your percentile in the group, your position relative to the median, and how the statistics change as new responses arrive. You will also see your country’s 2026 reference: the lowest score among holders who answered in NAWAmeter.',
     howScoreTitle: 'Estimated score',
     howScoreBody:
       'The estimated score is calculated using the NAWA programme rules. It is based on your school certificate average and, if it applies to you, bonus points for finishing a Polish school, including a school of the Polish community (Polonia).',
@@ -145,6 +145,7 @@ export const en = {
     densityCaption: 'Share of responses in each score range',
     chartYouLabel: 'You',
     chartMedianLabel: 'Group median',
+    chartHolderLabel: '2026 reference',
     chartYou: (score: string) => `Your score: ${score} pts`,
     chartMedian: (score: string) => `Group median: ${score} pts`,
     loading: 'Loading statistics…',
@@ -170,6 +171,7 @@ export const en = {
       'If you turn on reminders in the bot, your Telegram ID is stored separately from your survey until you turn them off. Deleting your survey removes it too.',
       'Your data is pseudonymous, not anonymous: technically, the author could link a survey back to an account.',
       'The scholarship-holder results are visible only to people who answered that survey. They show counts without names, so in a country with few holders acquaintances may guess who chose what.',
+      'The scores of holders who answered the holder survey are shown to everyone as their country’s 2026 reference, without names. In a country with few holders, acquaintances may recognise a score.',
       'A field of study typed by hand is seen only by the NAWAmeter author, to extend the list.',
     ],
     close: 'Close',
@@ -347,6 +349,7 @@ export const en = {
     belowThreshold: (delta: string, threshold: string) => `${delta} pts below the threshold (${threshold})`,
     atThreshold: (threshold: string) => `Exactly at the threshold (${threshold})`,
     thresholdFlag: (threshold: string) => `threshold ${threshold}`,
+    orientationMarkLabel: '2026 reference',
     tapeAriaLabel: (score: string, threshold: string) =>
       `Ruler from 0 to 100: score ${score}, threshold ${threshold}`,
     tapeHint: (step: string) => `Drag the ruler to change the average by ${step}`,
@@ -392,6 +395,11 @@ export const en = {
       collapseDistribution: 'Hide full score distribution',
       unofficialCountrySample: 'Unofficial · NAWAmeter sample for your country',
       unofficialSample: 'Unofficial · NAWAmeter sample',
+      orientationMarkLabel: '2026 reference',
+      orientationMarkLine: (country: string, count: string) =>
+        `${country}: the lowest score among 2026 holders who answered in NAWAmeter (${count}). Not NAWA data.`,
+      orientationMarkMissing: (country: string) => `${country}: no 2026 reference yet.`,
+      orientationMarkInvitation: 'Received the scholarship? Tell us — and the reference will appear.',
       onlyYou: (country: string, year: string) =>
         `${country}: only your survey in the ${year} intake so far.`,
     },

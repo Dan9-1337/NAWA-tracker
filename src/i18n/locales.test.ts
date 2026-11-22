@@ -78,6 +78,31 @@ describe('locales', () => {
       }[locale],
     );
   });
+
+  it.each(localeOrder)('%s explains the 2026 holder-score reference and never calls it a pass mark', (locale) => {
+    const points = messages[locale].privacyNotice.points.join('\n');
+    expect(points).toMatch(
+      {
+        pl: /punkt odniesienia 2026/i,
+        en: /2026 reference/i,
+        ru: /ориентир 2026/i,
+        uk: /орієнтир 2026/i,
+        be: /арыенцір 2026/i,
+      }[locale],
+    );
+
+    const newCopy = [
+      messages[locale].start.whatYouSeeBody,
+      messages[locale].dashboard.hero.orientationMarkLabel,
+      messages[locale].dashboard.hero.orientationMarkLine('X', '1'),
+      messages[locale].dashboard.hero.orientationMarkMissing('X'),
+      messages[locale].dashboard.hero.orientationMarkInvitation,
+      messages[locale].scoreScreen.orientationMarkLabel,
+      messages[locale].stats.chartHolderLabel,
+      points,
+    ].join('\n');
+    expect(newCopy).not.toMatch(/проходн|próg zaliczenia|pass mark|поріг зарахування|прахадн/i);
+  });
 });
 
 describe('locale detection', () => {

@@ -35,6 +35,31 @@ describe('ApiClientError', () => {
   });
 });
 
+describe('orientation mark client', () => {
+  it('asks for the holder score list only with the full distribution', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ mark: 72, n: 2, scores: [72, 88] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { getOrientationMark } = await import('./api-client');
+
+    await expect(getOrientationMark(true)).resolves.toEqual({ mark: 72, n: 2, scores: [72, 88] });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/orientation-mark?distribution=1',
+      expect.objectContaining({ method: 'GET', body: undefined }),
+    );
+
+    await getOrientationMark();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/orientation-mark',
+      expect.objectContaining({ method: 'GET', body: undefined }),
+    );
+  });
+});
+
 describe('scholarship report client', () => {
   const summary = {
     total: 1,

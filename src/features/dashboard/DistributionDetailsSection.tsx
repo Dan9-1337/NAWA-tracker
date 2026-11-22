@@ -11,6 +11,8 @@ type DistributionDetailsSectionProps = {
   userScore: number;
   medianScore?: number | null;
   groupSize: number;
+  /** Holder score snapshots, drawn as dots; only the full distribution has them (ADR 0017). */
+  holderScores?: number[] | null;
 };
 
 export function DistributionDetailsSection({
@@ -19,6 +21,7 @@ export function DistributionDetailsSection({
   userScore,
   medianScore,
   groupSize,
+  holderScores,
 }: DistributionDetailsSectionProps) {
   const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
@@ -48,6 +51,7 @@ export function DistributionDetailsSection({
             userScore={userScore}
             medianScore={medianScore}
             groupSize={groupSize}
+            holderScores={holderScores}
           />
         </div>
       ) : null}

@@ -13,7 +13,7 @@ export const pl = {
     howItWorks: 'Jak liczymy wynik?',
     whatYouSee: 'Co zobaczysz po wypełnieniu ankiety',
     whatYouSeeBody:
-      'Twój wynik, percentyl w grupie, pozycję względem mediany oraz to, jak zmieniają się statystyki wraz z nowymi odpowiedziami.',
+      'Twój wynik, percentyl w grupie, pozycję względem mediany oraz to, jak zmieniają się statystyki wraz z nowymi odpowiedziami. Zobaczysz też punkt odniesienia 2026 dla swojego kraju: najniższy wynik wśród stypendystów, którzy odpowiedzieli w NAWAmeter.',
     howScoreTitle: 'Wynik orientacyjny',
     howScoreBody:
       'Wynik orientacyjny jest liczony według zasad programu NAWA na podstawie średniej ze świadectwa oraz — jeśli dotyczy — dodatkowych punktów za ukończenie szkoły polskiej lub polonijnej.',
@@ -144,6 +144,7 @@ export const pl = {
     densityCaption: 'Udział ankiet w poszczególnych przedziałach wyników',
     chartYouLabel: 'Ty',
     chartMedianLabel: 'Mediana grupy',
+    chartHolderLabel: 'punkt odniesienia 2026',
     chartYou: (score: string) => `Twój wynik: ${score} pkt`,
     chartMedian: (score: string) => `Mediana grupy: ${score} pkt`,
     loading: 'Wczytywanie statystyk…',
@@ -169,6 +170,7 @@ export const pl = {
       'Jeśli włączysz przypomnienia w bocie, Twój Telegram ID jest przechowywany osobno od ankiety, dopóki ich nie wyłączysz. Usunięcie ankiety kasuje też ten zapis.',
       'To dane pseudonimowe, nie anonimowe: autor technicznie mógłby powiązać ankietę z kontem.',
       'Wyniki ankiety dla stypendystów widzą tylko osoby, które same na nią odpowiedziały. To liczby bez nazwisk, ale w kraju z kilkoma stypendystami znajomi mogą domyślić się, kto co wybrał.',
+      'Wyniki stypendystów, którzy odpowiedzieli na ankietę dla stypendystów, widzą wszyscy jako punkt odniesienia 2026 ich kraju — bez nazwisk. W kraju z kilkoma stypendystami znajomi mogą domyślić się, czyj to wynik.',
       'Napisany ręcznie kierunek widzi tylko autor NAWAmeter, żeby uzupełnić listę.',
     ],
     close: 'Zamknij',
@@ -346,6 +348,7 @@ export const pl = {
     belowThreshold: (delta: string, threshold: string) => `O ${delta} pkt poniżej progu ${threshold}`,
     atThreshold: (threshold: string) => `Dokładnie na progu ${threshold}`,
     thresholdFlag: (threshold: string) => `próg ${threshold}`,
+    orientationMarkLabel: 'punkt odniesienia 2026',
     tapeAriaLabel: (score: string, threshold: string) =>
       `Linijka od 0 do 100: wynik ${score} pkt, próg ${threshold} pkt`,
     tapeHint: (step: string) => `Przeciągnij linijkę, aby zmienić średnią o ${step}`,
@@ -391,6 +394,12 @@ export const pl = {
       collapseDistribution: 'Ukryj pełny rozkład wyników',
       unofficialCountrySample: 'Nieoficjalnie · próba NAWAmeter w Twoim kraju',
       unofficialSample: 'Nieoficjalnie · próba NAWAmeter',
+      orientationMarkLabel: 'punkt odniesienia 2026',
+      orientationMarkLine: (country: string, count: string) =>
+        `${country}: najniższy wynik wśród stypendystów 2026, którzy odpowiedzieli w NAWAmeter (${count}). To nie dane NAWA.`,
+      orientationMarkMissing: (country: string) =>
+        `${country}: nie ma jeszcze punktu odniesienia 2026.`,
+      orientationMarkInvitation: 'Masz stypendium? Opowiedz o nim — a punkt odniesienia się pojawi.',
       onlyYou: (country: string, year: string) =>
         `${country}: na razie tylko Twoja ankieta w naborze ${year}.`,
     },

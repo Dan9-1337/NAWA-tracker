@@ -216,6 +216,20 @@ export type ScholarshipReportSummary = {
   universities: ScholarshipReportSummaryUniversity[];
 };
 
+/**
+ * The `ориентир 2026` (ADR 0017): the lowest score snapshot among the counted 2026 Director holder reports of
+ * the caller's citizenship country, with their number. Only numbers travel — never an identity, a survey id or
+ * another report field. The score list comes only with the full distribution, for the holder dots.
+ */
+export type OrientationMarkResult = {
+  /** Null when no counted holder report exists in the country. */
+  mark: number | null;
+  /** The number of counted holder reports behind the mark; shown from one. */
+  n: number;
+  /** Holder score snapshots, ascending; present only when the client also holds the full distribution. */
+  scores?: number[];
+};
+
 export type ApiError = {
   error: {
     code: string;

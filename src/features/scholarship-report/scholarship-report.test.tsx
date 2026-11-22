@@ -17,6 +17,7 @@ import { ProfileDashboard } from '../ProfileDashboard';
 vi.mock('../../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
 
 const api = vi.hoisted(() => ({
+  getOrientationMark: vi.fn(),
   getScholarshipReport: vi.fn(),
   createScholarshipReport: vi.fn(),
   updateScholarshipReport: vi.fn(),
@@ -125,6 +126,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
   setActiveLocale('pl');
+  api.getOrientationMark.mockResolvedValue({ mark: null, n: 0 });
   api.getScholarshipReport.mockResolvedValue({ report: null });
 });
 

@@ -79,7 +79,7 @@ There is no separate confirm screen: the grades step saves directly — `POST` f
 
 ### Dashboard (authenticated)
 
-One screen, no tabs. The saved result card opens it: the season, the orientation score, the threshold-60 chip and then the position inside the country cohort — rank, percentile, median, a mini distribution and the number of responses, shown from the first two valid surveys of the applicant's country of citizenship; the card ends with one caption saying the sample is unofficial. While the country has none or one valid survey the card shows one line instead: `<Страна>: пока только ваша анкета в наборе 2026.`, with no percentile, median, distribution or what-if band. Country groups and the whole-track fallback are gone. The score and chip render even while statistics load or fail, with the status line inside the card. Below the card comes the what-if block (draggable measuring tape, input, and only while a what-if is active its own score, chip and percentile band; never saved), then the full-distribution disclosure when the country cohort has a distribution, and the profile block with the edit rows and the formula. The score breakdown and the source badges are gone.
+One screen, no tabs. The saved result card opens it: the season, the orientation score, the threshold-60 chip and then the position inside the country cohort — rank, percentile, median, a mini distribution and the number of responses, shown from the first two valid surveys of the applicant's country of citizenship; the card ends with one caption saying the sample is unofficial. Under the country position (on both the full card and the "only you" card) one line says that this is the lowest score among the 2026 holders of that country who answered in NAWAmeter, with their count and the "not NAWA data" note; with no counted holder it says the country has no mark yet, and only at a survey score of at least 60 it invites a holder to answer and opens the holder flow. While the country has none or one valid survey the card shows the "only you" line instead of a position: `<Страна>: пока только ваша анкета в наборе 2026.`, with no percentile, median, distribution or what-if band — the mark line stays. Country groups and the whole-track fallback are gone. The score and chip render even while statistics load or fail, with the status line inside the card. Below the card comes the what-if block (draggable measuring tape, input, and only while a what-if is active its own score, chip and percentile band; never saved) with a fixed `ориентир 2026` mark next to the threshold flag while the country has one, then the full-distribution disclosure when the country cohort has a distribution, which draws the holder scores as dots with the lowest one labelled, and the profile block with the edit rows and the formula. The score breakdown and the source badges are gone.
 
 Also: edit profile (same wizard), Settings, delete profile.
 
@@ -90,6 +90,10 @@ For a 2026 Dyrektor survey scoring at least 60, a card sits between the what-if 
 After saving, the card shows the answers (the typed kierunek to its author) with Edit, Delete after a confirmation, and `Куда распределили стипендиатов`, which opens a separate results view with the Telegram back button returning to the dashboard. The results open on all countries and have a filter by the survey's country of citizenship, each country with its count; every list counts from one answer, with no ladder or "too few answers" message. They show the total, the two paths with their shares, preparatory centres, ISCED-F broad groups with their catalogue kierunki, one `Вписано вручную` row without the text, and wished-for universities, followed by one caption that these are self-reported by holders who use NAWAmeter, not NAWA data. Reports whose survey is `is_suspicious` are excluded everywhere. The empty state (`Пока нет ответов.`) is possible only on all countries when the viewer's own survey is flagged and nobody else has answered.
 
 The report stores the survey's current orientation score as a snapshot on every create or edit; a survey below 60 has no card and the server refuses the report, and a later survey edit does not move the snapshot until the report is saved again ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)). Deleting the report keeps the survey; deleting the survey deletes the report. Only contributors see the results; the server refuses the summary to everyone else ([ADR 0012](adr/0012-scholarship-holder-survey.md), [ADR 0016](adr/0016-scholarship-holder-results-page-without-minimum.md)).
+
+### `Ориентир 2026` (every 2026 Dyrektor user)
+
+Every user with a 2026 Dyrektor survey, holder or not, sees for their country of citizenship the lowest score with which a reporting holder of that country received the scholarship in 2026: the **`ориентир 2026`**. It is built from the saved report snapshots of the non-suspicious 2026 Dyrektor surveys of the country, with their count and no minimum (one holder is enough; the count is always shown). The result card carries the line, the what-if ruler a fixed mark next to the 60 threshold, and the full distribution the holder scores as dots with the lowest labelled. It is an upper bound on the real cut-off and is labelled as holders' answers, never as NAWA data ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)). Editing a survey does not move it until the report is saved again; deleting a report or a survey removes its share at once. Another intake year sees nothing of it. The privacy notice and the landing FAQ say that these holder scores are visible to everyone without names, and that with few holders acquaintances may recognise a score. The app makes no product event for it.
 
 ### Retired: application statuses, Outcomes and Season
 
@@ -154,6 +158,7 @@ Intentionally still out of scope (confirm OK): Karta Polaka / attachments, forma
 | Contracts | `shared/contracts.ts` |
 | Score formula | `shared/nawa-score.ts` |
 | Cohort | `supabase/migrations/202612010001_country_only_statistics.sql` |
+| `Ориентир 2026` | `supabase/migrations/202612030001_orientation_mark.sql`, `api/orientation-mark.ts`, `src/features/dashboard/useOrientationMark.ts` |
 | Bot, reminders and country links | `api/bot.ts`, `api/cron/reminders.ts`, `shared/reminders.ts`, `shared/bot-messages.ts`, `src/lib/bot-links.ts` |
 | Languages | `src/i18n/{pl,en,ru,uk,be}.ts`, `src/i18n/locales.test.ts` |
 | Season calendar | `shared/season.ts` |
@@ -167,6 +172,10 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 - Opting in stores the Telegram id in `bot_subscriptions`, separate from the answers; it is removed on `/stop`, when the bot is blocked, and when the survey is deleted.
 
 ## Changelog
+
+### Unreleased — `Ориентир 2026`
+
+- Every 2026 Dyrektor survey sees, for its country of citizenship, the lowest reported holder score with the holder count: one line on the result card (also on the "only you" card), a fixed mark next to the threshold on the what-if ruler, and holder dots over the full distribution with the lowest labelled. With no holder the line says so and, at a score of at least 60, opens the holder flow. No minimum, no other intake year, no product event; the privacy notice and FAQ say holders' scores are visible without names and that few holders can be recognised ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md)).
 
 ### Unreleased — Scholarship-holder survey
 

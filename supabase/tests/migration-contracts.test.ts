@@ -50,6 +50,10 @@ const scholarshipReportsMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202612020001_scholarship_reports.sql'),
   'utf8',
 );
+const orientationMarkMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202612030001_orientation_mark.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
 function functionDefinition(name: string, source = migration): string {
@@ -552,6 +556,44 @@ describe('scholarship reports migration contract', () => {
         `grant execute on function public.${signature} to service_role;`,
       );
     }
+  });
+});
+
+describe('orientation mark migration contract', () => {
+  it('takes the lowest snapshot of the counted 2026 Director holder reports of the caller’s country', () => {
+    const definition = functionDefinition('get_orientation_mark', orientationMarkMigration);
+
+    expect(definition).toContain('c_mark_intake_year constant integer := 2026');
+    expect(definition).toContain('min(sr.score_snapshot)');
+    expect(definition).toContain('count(*)::integer');
+    expect(definition).toContain('sr.score_snapshot');
+    expect(definition).toContain('not r.is_suspicious');
+    expect(definition).toContain("r.scholarship_track = 'nawa_director'");
+    expect(definition).toContain('r.ranking_country = v_ranking_country');
+    expect(definition).toContain('order by sr.score_snapshot');
+    expect(definition).toContain('p_include_scores');
+    expect(definition).not.toMatch(/min_cohort_size|>= 10\b/);
+  });
+
+  it('shows the mark only to a 2026 Director survey and sends only numbers', () => {
+    const definition = functionDefinition('get_orientation_mark', orientationMarkMigration);
+    const payload = definition.slice(definition.indexOf('jsonb_build_object'));
+
+    expect(definition).toContain('if p_intake_year <> c_mark_intake_year then');
+    expect(definition).toContain('if not found then');
+    expect(payload).toContain("'mark'");
+    expect(payload).toContain("'n'");
+    expect(payload).toContain("'scores'");
+    expect(payload).not.toMatch(/identity|survey|report|programme|university|centre/i);
+  });
+
+  it('keeps the RPC service-role only', () => {
+    expect(orientationMarkMigration).toContain(
+      'revoke all on function public.get_orientation_mark(text, integer, boolean) from public, anon, authenticated;',
+    );
+    expect(orientationMarkMigration).toContain(
+      'grant execute on function public.get_orientation_mark(text, integer, boolean) to service_role;',
+    );
   });
 });
 

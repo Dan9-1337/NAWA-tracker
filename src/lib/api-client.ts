@@ -7,6 +7,7 @@ import type {
   DeleteResponseResult,
   DeleteScholarshipReportResult,
   IntakeSummaryResult,
+  OrientationMarkResult,
   ScholarshipReportMutationResult,
   ScholarshipReportResult,
   ScholarshipReportSummary,
@@ -22,6 +23,7 @@ import {
   deleteResponseResultSchema,
   deleteScholarshipReportResultSchema,
   intakeSummaryResultSchema,
+  orientationMarkResultSchema,
   scholarshipReportMutationResultSchema,
   scholarshipReportResultSchema,
   scholarshipReportSummarySchema,
@@ -118,6 +120,14 @@ export function getStatistics(): Promise<StatisticsResult> {
 
 export function getIntakeSummary(): Promise<IntakeSummaryResult> {
   return request('/api/intake-summary', 'POST', {}, intakeSummaryResultSchema);
+}
+
+/**
+ * The country mark (ADR 0017). The holder score list is requested only with the full distribution, for the dots.
+ */
+export function getOrientationMark(includeScores = false): Promise<OrientationMarkResult> {
+  const query = includeScores ? '?distribution=1' : '';
+  return request(`/api/orientation-mark${query}`, 'GET', undefined, orientationMarkResultSchema);
 }
 
 export function deleteResponse(): Promise<DeleteResponseResult> {

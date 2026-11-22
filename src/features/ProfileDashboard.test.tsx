@@ -27,6 +27,7 @@ vi.mock('../lib/telegram', async (importOriginal) => {
 });
 
 const scholarshipApi = vi.hoisted(() => ({
+  getOrientationMark: vi.fn(),
   getScholarshipReport: vi.fn(),
   createScholarshipReport: vi.fn(),
   updateScholarshipReport: vi.fn(),
@@ -65,6 +66,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.setItem(LOCALE_STORAGE_KEY, 'pl');
   setActiveLocale('pl');
+  scholarshipApi.getOrientationMark.mockResolvedValue({ mark: null, n: 0 });
   scholarshipApi.getScholarshipReport.mockResolvedValue({ report: null });
 });
 

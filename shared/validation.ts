@@ -16,6 +16,7 @@ import {
   type DeleteResponseResult,
   type DeleteScholarshipReportResult,
   type IntakeSummaryResult,
+  type OrientationMarkResult,
   type ScholarshipReport,
   type ScholarshipReportInput,
   type ScholarshipReportMutationResult,
@@ -480,6 +481,57 @@ export const scholarshipReportSummarySchema = z
       ctx.addIssue({ code: 'custom', path: ['paths'], message: 'both study routes are required' });
     }
   }) satisfies z.ZodType<ScholarshipReportSummary>;
+
+/**
+ * The `ориентир 2026` payload (ADR 0017). It carries only numbers: the lowest counted holder snapshot, the number
+ * of holders behind it, and — only together with the full distribution — their snapshots. Strict, so an identity
+ * or any survey/report field cannot slip in.
+ */
+export const orientationMarkResultSchema = z
+  .object({
+    mark: z.number().min(scholarshipReportMinimumScore).nullable(),
+    n: z.number().int().nonnegative(),
+    scores: z.array(z.number().min(scholarshipReportMinimumScore)).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if ((value.mark === null) !== (value.n === 0)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['mark'],
+        message: 'the mark exists exactly when at least one holder is counted',
+      });
+      return;
+    }
+
+    if (value.scores === undefined) return;
+
+    if (value.n === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scores'],
+        message: 'a country without holders has no holder scores',
+      });
+      return;
+    }
+    if (value.scores.length !== value.n) {
+      ctx.addIssue({ code: 'custom', path: ['scores'], message: 'the holder score list matches n' });
+      return;
+    }
+    if (value.mark === null || value.scores[0] !== value.mark) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scores'],
+        message: 'the mark is the lowest holder score',
+      });
+    }
+    for (let index = 1; index < value.scores.length; index += 1) {
+      if (value.scores[index]! < value.scores[index - 1]!) {
+        ctx.addIssue({ code: 'custom', path: ['scores'], message: 'the holder scores are ascending' });
+        return;
+      }
+    }
+  }) satisfies z.ZodType<OrientationMarkResult>;
 
 export const apiErrorSchema = z
   .object({

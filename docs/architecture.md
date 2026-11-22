@@ -44,6 +44,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
 | `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor) |
+| `/api/orientation-mark` | GET | initData | The caller's country `ориентир 2026`: `{ mark, n }`; `?distribution=1` adds the ascending holder score list for the dots |
 | `/api/scholarship-report` | GET | initData | Own scholarship-holder report, or `{ report: null }`; `?summary=1[&country=XX]` returns the contributors-only results |
 | `/api/scholarship-report` | POST | initData + Origin | Create the scholarship-holder report (2026 Director survey, score ≥ 60) |
 | `/api/scholarship-report` | PUT | initData + Origin | Replace the answers and refresh the score snapshot |
@@ -97,6 +98,7 @@ One row (`id` is the single-value check). `active_intake_year` scopes every stat
 - `update_scholarship_report(identity_hash, intake_year, study_route, prep_centre_id, programme_id, programme_isced, custom_programme, university_id)` — replaces the answers and refreshes `score_snapshot` from the survey; a missing report → `report_not_found`
 - `delete_scholarship_report(identity_hash, intake_year)` — deletes the report only; the survey stays
 - `get_scholarship_report_summary(identity_hash, intake_year, ranking_country)` — null for a caller without a report; otherwise the contributors-only results, counted from every report whose survey is not `is_suspicious`, filtered by the survey's `ranking_country` (`null` = all countries); `countries` always lists every counted country so the filter can switch back; no minimum number of answers
+- `get_orientation_mark(identity_hash, intake_year, include_scores)` — null unless the caller has a 2026 Director survey; otherwise the lowest `score_snapshot` among the counted 2026 Director holder reports of the caller's `ranking_country` and their number, with no minimum; the ascending score list is included only with `include_scores` ([ADR 0017](adr/0017-orientation-mark-from-holder-scores.md))
 - `compute_orientation_score` — the single SQL implementation of the published formula (mirrors `shared/nawa-score.ts`; parity is tested)
 
 ### Spike flags
@@ -184,6 +186,24 @@ where custom_programme is not null
 
 The next edit of such a report writes the catalogue id itself; until then the rows count under the new catalogue kierunek.
 
+### `ориентир 2026`
+
+For a user with a 2026 Director survey, `get_orientation_mark` returns the lowest `score_snapshot` among the counted 2026 Director holder reports of the user's `ranking_country`, with their number; there is no minimum, so a single holder is shown. Reports of `is_suspicious` surveys are left out, and another intake year or a missing survey gets null (404 `PROFILE_NOT_FOUND`). The mark reads the snapshot, never the survey's live score, so a survey edit does not move it until the report is saved again. `GET /api/orientation-mark` returns only numbers, `{ mark, n }`; the ascending holder score list travels only with `?distribution=1`, which the dashboard asks for once the full distribution is on screen. No identity, survey id or other report field is ever part of the payload.
+
+The line under the country position on the result card (also on the "only you" card) says how many holders answered and that this is not NAWA data; with no holder it says the country has no mark yet and, only at a survey score of at least 60, invites a holder to answer through the task 012 flow. The what-if ruler shows a fixed mark styled like the threshold flag, and the full distribution draws the holder scores as dots with the lowest one labelled. Reviewing the holder scores behind a mark (maintainer only):
+
+```sql
+select r.ranking_country, sr.score_snapshot
+from public.scholarship_reports sr
+join public.responses r
+  on r.identity_hash = sr.identity_hash
+ and r.intake_year = sr.intake_year
+where sr.intake_year = 2026
+  and r.scholarship_track = 'nawa_director'
+  and not r.is_suspicious
+order by r.ranking_country, sr.score_snapshot;
+```
+
 ### `bot_subscriptions`
 
 `telegram_user_id`, `chat_id`, `locale`, `last_reminder`. The only table with a real Telegram id; opt-in, no answers, service-role only. Removed on `/stop`, when Telegram reports the bot blocked, when a send fails with 403 or "chat not found", and by `DELETE /api/responses`.
@@ -248,6 +268,14 @@ Supabase free-tier projects pause after roughly seven days without database acti
 The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
 
 ## Architecture changelog
+
+### 2026-12-03 — "Ориентир 2026"
+
+- Migration `202612030001`: new `get_orientation_mark(identity_hash, intake_year, include_scores)` RPC. For the caller's `ranking_country` it takes the lowest `score_snapshot` among the counted 2026 Director holder reports whose survey is not `is_suspicious`, with `n` and no minimum; a 2026 Director survey is required, another intake year or a missing survey gets null. The payload carries only numbers (`mark`, `n`, and the ascending `scores` list only with `include_scores`); the RPC is service-role only. No new table, and the 14-key statistics contract and the country-only rules of ADR 0015 are untouched.
+- API: `GET /api/orientation-mark` returns `{ mark, n }`, or `{ mark, n, scores }` with `?distribution=1`; a caller without a 2026 Director survey gets 404 `PROFILE_NOT_FOUND`, and any failure hides the feature on the client.
+- Dashboard: the result card gains one line under the country position — also on the "only you" card — with the holder count and the "not NAWA data" note, or, with no holder, that the country has no mark yet plus the holder invitation at a survey score of at least 60 (it opens the task 012 flow). The what-if ruler gains a fixed mark styled like the threshold flag, and the full distribution draws the holder scores as dots, the lowest labelled. Nothing is saved and no product event is added.
+- Privacy and FAQ copy gain the holder-score reference in five locales, including the small-country guess.
+- Decision record: [ADR 0017](adr/0017-orientation-mark-from-holder-scores.md).
 
 ### 2026-12-02 — Scholarship-holder survey and results
 

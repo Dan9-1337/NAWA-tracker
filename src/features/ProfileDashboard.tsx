@@ -9,6 +9,7 @@ import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
 import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
 import { trackProductEvent } from '../lib/product-events';
+import { canShowScoreDistribution } from '../lib/score-buckets';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
 import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
@@ -29,6 +30,7 @@ import {
   StatisticsPanel,
   type StatisticsState,
 } from './statistics/StatisticsPanel';
+import { useOrientationMark } from './dashboard/useOrientationMark';
 import { useWizardSteps } from './useWizardSteps';
 
 type View = 'dashboard' | 'edit-wizard';
@@ -131,6 +133,24 @@ export function ProfileDashboard({
     userOrientationScore !== null &&
     userOrientationScore >= scholarshipReportMinimumScore;
   const scholarship = useScholarshipReport(scholarshipReportEligible);
+
+  // The country mark is for every 2026 Director survey, whether or not it has a report (ADR 0017). Its holder
+  // score list is requested only once the full distribution is on screen.
+  const orientationMarkEligible =
+    current.scholarshipTrack === 'nawa_director' &&
+    current.intakeYear === scholarshipReportIntakeYear;
+  const hasFullDistribution =
+    statistics.status === 'success' && canShowScoreDistribution(statistics.data.scoreBuckets);
+  const report = scholarship.load.report;
+  const reportRevision = report ? `report:${report.scoreSnapshot}` : 'none';
+  const orientationMark = useOrientationMark(
+    orientationMarkEligible,
+    current.rankingCountry,
+    orientationMarkEligible && hasFullDistribution,
+    reportRevision,
+  );
+  const orientation = orientationMark.data;
+  const orientationInvite = scholarshipReportEligible ? scholarship.openFlow : undefined;
 
   // A new report view or flow step also starts at the top.
   useScrollToTopOnChange(scholarship.mode, scholarship.stepIndex);
@@ -286,9 +306,25 @@ export function ProfileDashboard({
         </p>
       ) : null}
 
-      <StatisticsPanel state={statistics} profile={current} userScore={userOrientationScore} />
-      <ScoreScreen current={current} statistics={statistics} onWhatIfUsed={noteWhatIfUsed} />
-      <StatisticsDistribution state={statistics} profile={current} userScore={userOrientationScore} />
+      <StatisticsPanel
+        state={statistics}
+        profile={current}
+        userScore={userOrientationScore}
+        orientation={orientation}
+        onOrientationInvite={orientationInvite}
+      />
+      <ScoreScreen
+        current={current}
+        statistics={statistics}
+        orientationMark={orientation?.mark ?? null}
+        onWhatIfUsed={noteWhatIfUsed}
+      />
+      <StatisticsDistribution
+        state={statistics}
+        profile={current}
+        userScore={userOrientationScore}
+        orientationScores={orientation?.scores ?? null}
+      />
       {scholarshipReportEligible ? <ScholarshipReportCard controller={scholarship} /> : null}
       <ProfileDetails current={current} onEditSection={openEditAt} />
 

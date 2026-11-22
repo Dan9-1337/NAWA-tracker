@@ -19,6 +19,8 @@ import { ThresholdChip } from './ThresholdChip';
 type ScoreScreenProps = {
   current: ResponseFormInput;
   statistics: StatisticsState;
+  /** The country `ориентир 2026`; a fixed mark on the ruler while the user drags (ADR 0017). */
+  orientationMark?: number | null;
   /** Called when the user moves the average away from the saved one. The dashboard decides how often it is recorded. */
   onWhatIfUsed?: () => void;
 };
@@ -27,7 +29,7 @@ type ScoreScreenProps = {
  * The what-if block: the tape, the average input and, only while a what-if is active,
  * its own score, threshold chip and percentile band. Nothing here touches the saved card.
  */
-export function ScoreScreen({ current, statistics, onWhatIfUsed }: ScoreScreenProps) {
+export function ScoreScreen({ current, statistics, orientationMark, onWhatIfUsed }: ScoreScreenProps) {
   const { t, locale } = useI18n();
   const copy = t.scoreScreen;
   const maximumGrade = current.maximumGrade;
@@ -109,6 +111,11 @@ export function ScoreScreen({ current, statistics, onWhatIfUsed }: ScoreScreenPr
           threshold={threshold}
           ariaLabel={copy.tapeAriaLabel(formatPrecise(score, locale), String(threshold))}
           thresholdLabel={copy.thresholdFlag(String(threshold))}
+          referenceMark={
+            orientationMark != null
+              ? { value: orientationMark, label: copy.orientationMarkLabel }
+              : null
+          }
           onDragStart={() => {
             dragStartAverage.current = average;
           }}

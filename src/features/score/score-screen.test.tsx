@@ -11,6 +11,20 @@ import { ScoreScreen } from './ScoreScreen';
 
 vi.mock('../../lib/product-events', () => ({ trackProductEvent: vi.fn() }));
 
+const api = vi.hoisted(() => ({
+  getOrientationMark: vi.fn(),
+  getScholarshipReport: vi.fn(),
+  createScholarshipReport: vi.fn(),
+  updateScholarshipReport: vi.fn(),
+  deleteScholarshipReport: vi.fn(),
+  getScholarshipReportSummary: vi.fn(),
+}));
+
+vi.mock('../../lib/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/api-client')>()),
+  ...api,
+}));
+
 const trackedEvents = vi.mocked(trackProductEvent);
 
 function countTracked(name: string): number {
@@ -19,6 +33,8 @@ function countTracked(name: string): number {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  api.getOrientationMark.mockResolvedValue({ mark: null, n: 0 });
+  api.getScholarshipReport.mockResolvedValue({ report: null });
 });
 
 const current: ResponseFormInput = {

@@ -8,6 +8,7 @@ import {
   currentResponseRequestSchema,
   currentResponseResultSchema,
   deleteScholarshipReportResultSchema,
+  orientationMarkResultSchema,
   scholarshipReportMutationResultSchema,
   scholarshipReportResultSchema,
   statisticsRequestSchema,
@@ -107,6 +108,41 @@ describe('API response contracts', () => {
     expect(() =>
       apiErrorSchema.parse({ error: { ...limited.error, retryAt: 'in a while' } }),
     ).toThrow();
+  });
+});
+
+describe('orientation mark contracts', () => {
+  it('accepts the mark with n and only numbers', () => {
+    expect(orientationMarkResultSchema.parse({ mark: 72, n: 3 })).toEqual({ mark: 72, n: 3 });
+    expect(orientationMarkResultSchema.parse({ mark: 72, n: 3, scores: [72, 80, 95] })).toEqual({
+      mark: 72,
+      n: 3,
+      scores: [72, 80, 95],
+    });
+    expect(orientationMarkResultSchema.parse({ mark: null, n: 0 })).toEqual({ mark: null, n: 0 });
+  });
+
+  it('rejects any field that is not the mark, n or the score list', () => {
+    for (const extra of [
+      { identityHash: 'a'.repeat(64) },
+      { surveyId: crypto.randomUUID() },
+      { reportId: crypto.randomUUID() },
+      { programmeId: 'informatyka' },
+      { scoreSnapshot: 72 },
+    ]) {
+      expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 3, ...extra })).toThrow();
+    }
+  });
+
+  it('keeps the mark, n and the score list consistent', () => {
+    expect(() => orientationMarkResultSchema.parse({ mark: null, n: 1 })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 0 })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 2, scores: [72] })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 2, scores: [72, 80, 95] })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 80, n: 2, scores: [72, 95] })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 2, scores: [95, 72] })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 1, scores: [] })).toThrow();
+    expect(() => orientationMarkResultSchema.parse({ mark: 72, n: 1, scores: [72, 72] })).toThrow();
   });
 });
 
