@@ -26,6 +26,7 @@ Intended behavior:
   - If the selection has no counted reports (possible only for `Все страны` when the viewer's own survey is flagged and nobody else has answered): ru `Пока нет ответов.` and nothing else.
   - One caption: the numbers are self-reported by holders who use NAWAmeter, not NAWA data.
 - **Typed kierunki** are stored, returned only to their author, and never included in any aggregate except as "Other". `docs/architecture.md` gets SQL for the maintainer to list them and, after adding a name to the catalogue, to move matching reports onto the new programme id and ISCED code.
+- **Score snapshot and threshold** ([ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md)). On every create and edit, the report stores the survey's current `nawa_orientation_score` as `score_snapshot`, set by the server, never by the client. A survey with a score below 60 gets no invitation card, and `POST`/`PUT` for it answer 409 `SCORE_BELOW_THRESHOLD` with nothing stored. Editing the survey later does not change the snapshot. The survey stays editable as before.
 - **Deletion.** Deleting the survey deletes the report (FK on `responses (identity_hash, intake_year)` with `on delete cascade`). Deleting the report alone leaves the survey. The edit limit of [ADR 0013](../docs/adr/0013-limit-on-score-changing-edits.md) does not apply: a report has no score.
 - **Privacy copy** (`privacyNotice.points`, five locales): results of the scholarship-holder survey are visible only to those who answered it; they show counts without names, so in a country with few holders acquaintances may guess who chose what; a kierunek typed by hand is seen only by the author of NAWAmeter.
 
@@ -34,7 +35,7 @@ Intended behavior:
 - Relevant code and docs: `src/features/ProfileDashboard.tsx` (`View`, edit wizard pattern, `useMiniAppChrome`), `src/features/wizard/*`, `src/components/SearchableSelect.tsx`, `src/components/RadioOption.tsx`, `shared/universities.ts` (`universitiesForScholarshipTrack`, `getUniversityById`), `shared/study-fields.ts` (`broadGroups`), task 011 modules, `api/responses.ts` (handler pattern, dependencies, error helpers), `api/_lib/*`, `shared/contracts.ts`, `shared/validation.ts`, `src/lib/api-client.ts`, `supabase/migrations/202611220001_privacy_identity.sql` (`responses_identity_hash_intake_year_key`), `src/i18n/*.ts`, `docs/architecture.md`, `docs/product-flow.md`.
 - ADRs this task follows: [0002](../docs/adr/0002-pseudonymous-identity.md), [0005](../docs/adr/0005-only-nawa-director-track-is-live.md), [0008](../docs/adr/0008-refocus-on-score-comparison.md), [0010](../docs/adr/0010-locale-glossary-and-english-api-errors.md), [0011](../docs/adr/0011-documented-product-events-deleted-with-survey.md), [0012](../docs/adr/0012-scholarship-holder-survey.md) as changed by [0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md). Replaces none.
 - Dependencies and decisions already made:
-  - **Depends on task 011** (catalogues). It does not redefine the RPCs of tasks 009 and 010, and its migration file name sorts after theirs. **Start after task 009 is merged, and not in parallel with task 013**: all three edit `shared/contracts.ts`, `shared/validation.ts` and `src/i18n/*.ts`.
+  - **Depends on task 011** (catalogues). It does not redefine the RPCs of tasks 009 and 010, and its migration file name sorts after theirs and after task 013's `202612010001_country_only_statistics.sql`. **Start after task 009 is merged, and not in parallel with task 013**: all three edit `shared/contracts.ts`, `shared/validation.ts` and `src/i18n/*.ts`.
   - Maintainer decisions (2026-11-22): only 2026 Director holders; entry from the dashboard of an existing survey; closed centre list; kierunek from the list or typed (≤ 80, private); 11 broad ISCED-F groups; results only for contributors; the report can be edited and deleted on its own. Revised the same day ([ADR 0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md)): no floor and no ladder; results on a separate page; all countries by default with a filter by country of citizenship.
   - The old `prep_course_city`, `study_field` and status columns and `get_prep_city_distribution` are not reused.
   - No product events in this task; adding any needs a catalogue entry under ADR 0011.
@@ -42,14 +43,14 @@ Intended behavior:
 ## Scope
 
 - In scope:
-  - Migration `supabase/migrations/202611300001_scholarship_reports.sql`: table `scholarship_reports` (`identity_hash`, `intake_year`, `study_route`, `prep_centre_id`, `programme_id`, `programme_isced`, `custom_programme`, `university_id`, timestamps), unique on `(identity_hash, intake_year)`, FK with cascade to `responses`, checks (centre present only on the preparatory path; exactly one of programme id / typed text; typed text 1–80 characters; ISCED `^[0-9]{4}$`); RPCs for get-own, create, update, delete and `get_scholarship_report_summary(identity_hash, intake_year, ranking_country)` (`ranking_country` null = all countries) that refuses callers without a report and returns the filter's country list with counts plus the lists above; service role only.
+  - Migration `supabase/migrations/202612020001_scholarship_reports.sql`: table `scholarship_reports` (`identity_hash`, `intake_year`, `score_snapshot` (numeric, ≥ 60, not null), `study_route`, `prep_centre_id`, `programme_id`, `programme_isced`, `custom_programme`, `university_id`, timestamps), unique on `(identity_hash, intake_year)`, FK with cascade to `responses`, checks (centre present only on the preparatory path; exactly one of programme id / typed text; typed text 1–80 characters; ISCED `^[0-9]{4}$`); RPCs for get-own, create, update, delete and `get_scholarship_report_summary(identity_hash, intake_year, ranking_country)` (`ranking_country` null = all countries) that refuses callers without a report and returns the filter's country list with counts plus the lists above; service role only.
   - Contracts and zod schemas for the input, the own report and the summary; ids validated against the task 011 catalogues and the track's universities; `programme_isced` set by the server from the catalogue, never by the client.
   - `api/scholarship-report.ts`: `GET` (own report, or `{ report: null }`), `GET ?summary=1[&country=XX]` (the results page; `country` validated as a country code; 404 `REPORT_NOT_FOUND` without a report), `POST`, `PUT`, `DELETE`; same-origin and `initData` checks; 404 `PROFILE_NOT_FOUND` without a 2026 Director survey; 409 `REPORT_EXISTS` on a second `POST`; 404 `REPORT_NOT_FOUND` on `PUT`/`DELETE` without one.
   - API client functions, the dashboard card, the flow view, the results page, five-locale copy following ADR 0010, the privacy points.
   - Tests listed under Verification.
   - `docs/architecture.md` (table, RPCs, disclosure rules, typed-kierunek SQL, changelog) and `docs/product-flow.md` (new section for the survey, changelog line).
 - Out of scope: inviting holders through the bot, holders of other intakes or tracks, verification of the scholarship, showing results to non-contributors, cross-tables (for example field by centre), product events, changes to the score statistics, the spike rule (task 010) or the edit limit (task 009).
-- Files or directories assigned to this task: `supabase/migrations/202611300001_scholarship_reports.sql`, `supabase/tests/` (new `scholarship_reports.sql`), `supabase/tests/migration-contracts.test.ts`, `api/scholarship-report.ts` (+ test), `api/_lib/errors.ts`, `shared/contracts.ts`, `shared/validation.ts`, `shared/api-contracts.test.ts`, `shared/season.ts` or a new `shared/scholarship-report.ts` for the constant, `src/lib/api-client.ts`, `src/features/ProfileDashboard.tsx`, new files under `src/features/scholarship-report/`, `src/i18n/*.ts`, `docs/architecture.md`, `docs/product-flow.md`.
+- Files or directories assigned to this task: `supabase/migrations/202612020001_scholarship_reports.sql`, `supabase/tests/` (new `scholarship_reports.sql`), `supabase/tests/migration-contracts.test.ts`, `api/scholarship-report.ts` (+ test), `api/_lib/errors.ts`, `shared/contracts.ts`, `shared/validation.ts`, `shared/api-contracts.test.ts`, `shared/season.ts` or a new `shared/scholarship-report.ts` for the constant, `src/lib/api-client.ts`, `src/features/ProfileDashboard.tsx`, new files under `src/features/scholarship-report/`, `src/i18n/*.ts`, `docs/architecture.md`, `docs/product-flow.md`.
 
 ## Acceptance scenarios
 
@@ -71,6 +72,8 @@ Intended behavior:
 | A14 | Delete the survey | The report is deleted with it | SQL test (cascade) + `api/responses.test.ts` unchanged and passing |
 | A15 | `POST` twice; `PUT`/`DELETE` without a report; no 2026 Director survey; cross-origin; no `initData` | 409 `REPORT_EXISTS`; 404 `REPORT_NOT_FOUND`; 404 `PROFILE_NOT_FOUND`; 403; 401 | Handler test |
 | A17 | Card with a saved report → `Куда распределили стипендиатов`; then Telegram back | The results page opens; back returns to the dashboard | Results-page / ProfileDashboard test |
+| A18 | Report saved for a survey scoring 72, then the survey is edited to 75 | `score_snapshot` stays 72; editing and saving the report sets it to 75; the survey edit itself is not blocked | SQL test + handler test |
+| A19 | Survey scoring 58 | No invitation card; `POST` answers 409 `SCORE_BELOW_THRESHOLD`; nothing stored | ProfileDashboard test + handler test + SQL check |
 | A16 | Copy | All new keys in five locales; the privacy points present; locale parity passes; terms follow ADR 0010 | `npm test -- src/i18n` + reviewer read |
 
 ## Must stay unchanged
@@ -89,8 +92,8 @@ Intended behavior:
 
 ## Verification
 
-- `npm run test:db:pglite` → A3, A5–A14 (SQL); CI runs pgTAP
-- `npm test -- api/scholarship-report.test.ts shared/api-contracts.test.ts shared/validation.test.ts` → A4–A6, A9, A15
+- `npm run test:db:pglite` → A3, A5–A14, A18, A19 (SQL); CI runs pgTAP
+- `npm test -- api/scholarship-report.test.ts shared/api-contracts.test.ts shared/validation.test.ts` → A4–A6, A9, A15, A18, A19
 - `npm test -- src/features/ProfileDashboard.test.tsx src/features/scholarship-report src/i18n` → A1–A4, A7, A8, A12, A13, A16, A17
 - `make check`
 - Manual (local fixtures, `make dev` after checking ports 3000/3001 and `.env.local`): as a returning 2026 user, fill the survey on each path, edit it, delete it; seed reports in two countries and check the results page with both filters. → A1–A3, A7, A8, A12, A13, A17
@@ -116,7 +119,9 @@ Intended behavior:
 | A15 | | |
 | A16 | | |
 | A17 | | |
+| A18 | | |
+| A19 | | |
 
 - Changed files:
 - Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0012](../docs/adr/0012-scholarship-holder-survey.md); revision of this brief (results page, no floor) and [ADR 0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md).
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0012](../docs/adr/0012-scholarship-holder-survey.md); revision of this brief (results page, no floor; score snapshot and threshold for [ADR 0017](../docs/adr/0017-orientation-mark-from-holder-scores.md)) and [ADR 0016](../docs/adr/0016-scholarship-holder-results-page-without-minimum.md).

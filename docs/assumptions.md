@@ -11,7 +11,7 @@ implementing task is not done yet.
 
 | # | Assumption or convention | Why | Source | Wrong if |
 | --- | --- | --- | --- | --- |
-| P1 | NAWAmeter is an unofficial orientation tool, not a substitute for `programs.nawa.gov.pl`. Its numbers are never an official ranking, a cut-off or a forecast of seats. | We see only people who choose to use the app. | [product-flow](product-flow.md), AGENTS.md | — (a rule, not an assumption) |
+| P1 | NAWAmeter is an unofficial orientation tool, not a substitute for `programs.nawa.gov.pl`. Its numbers are never an official ranking, a cut-off or a forecast of seats. The `ориентир 2026` (D12) is the one number about awards, and it is labelled as holders' answers, an upper bound, not NAWA data. | We see only people who choose to use the app. | [product-flow](product-flow.md), AGENTS.md, [0017](adr/0017-orientation-mark-from-holder-scores.md) | — (a rule, not an assumption) |
 | P2 | Only the NAWA Director scholarship (first-cycle and long-cycle) is live. Health and Culture tracks are hidden. | Their scoring documents are not modelled. | [0005](adr/0005-only-nawa-director-track-is-live.md) | Their rules are modelled |
 | P3 | Applicants are selected **by their (non-Polish) country of citizenship**, and the only score rule is the merit threshold of 60. So users are compared only with their own country. | Ogłoszenie 13/2026 §2.7 and the seat limits per country. | [0015](adr/0015-compare-within-citizenship-country-without-minimum.md) (decided, task 013) | NAWA announces seat limits for groups of countries |
 | P4 | On the Director programme, passing the selection means receiving the scholarship. There is no "passed but no seat" case to track. | How the Director decision works. | [0008](adr/0008-refocus-on-score-comparison.md) | A later Ogłoszenie separates the two |
@@ -40,7 +40,10 @@ implementing task is not done yet.
 | D2 | The working intake is 2026. The maintainer closes 2026 before 2027 starts. | current | maintainer, 2026-11-22 |
 | D3 | The comparison cohort is the valid surveys of the same citizenship country, track and intake. No country groups, no whole-track fallback. | decided (task 013); today the app still uses the country → group → track ladder from 10 responses | [0015](adr/0015-compare-within-citizenship-country-without-minimum.md) |
 | D4 | No minimum number of responses for the comparison. The full position is shown from 2 surveys in the country. With 0–1, the card says `<Страна>: пока только ваша анкета в наборе 2026.` | decided (task 013) | [0015](adr/0015-compare-within-citizenship-country-without-minimum.md) |
-| D5 | Scholarship-holder results: a separate page, only for holders who answered, all countries by default with a filter by citizenship, every count from 1. | decided (task 012) | [0016](adr/0016-scholarship-holder-results-page-without-minimum.md) |
+| D5 | Scholarship-holder results: a separate page, only for holders who answered, all countries by default with a filter by citizenship, every count from 1. Exception: holder scores, as the ориентир (D12). | decided (task 012) | [0016](adr/0016-scholarship-holder-results-page-without-minimum.md) |
+| D12 | `ориентир 2026` = the lowest score snapshot among counted 2026 Director holder reports of the user's citizenship country, with their number. Shown to every user with a 2026 survey: a mark on the what-if ruler, a line on the result card, holder dots in the full distribution. Shown from 1 holder. It is an upper bound on the real cut-off. | decided (task 014) | [0017](adr/0017-orientation-mark-from-holder-scores.md) |
+| D13 | A holder report stores a snapshot of the survey score when saved; the survey stays editable. A survey below 60 cannot have a report (Ogłoszenie §2.7). | decided (task 012) | [0017](adr/0017-orientation-mark-from-holder-scores.md) |
+| D14 | Planned, not decided: freeze 2026 before 2027, publish a public "Стипендия NAWA в цифрах" page with aggregates, then allow purging 2026 participants' records while keeping their accounts. | plan | maintainer, 2026-11-22 |
 | D6 | The landing counter of responses appears only from 10 responses in the intake. | current | task 002 |
 | D7 | Surveys flagged `is_suspicious` are left out of every statistic, and their owners are not told. | current / task 010 | [0014](adr/0014-flag-per-country-spikes-for-manual-review.md) |
 | D8 | A spike is more than max(10, 5 × the 14-day hourly average) new surveys of one country in an hour. No flags in the 7 days after launch and after each intake opens. Review is manual. | task 010 | [0014](adr/0014-flag-per-country-spikes-for-manual-review.md) |
@@ -59,6 +62,7 @@ implementing task is not done yet.
 | R5 | Product events are names only, with no payload, and they are deleted with the survey. | [0011](adr/0011-documented-product-events-deleted-with-survey.md) |
 | R6 | A typed kierunek is seen only by its author and the maintainer. | [0012](adr/0012-scholarship-holder-survey.md) |
 | R7 | After a survey is deleted, the only thing kept is the trail of score-changing saves for at most 24 hours. | [0013](adr/0013-limit-on-score-changing-edits.md) |
+| R8 | Holder scores are visible to every user, as the ориентир of their country. With few holders this is one person's score. Accepted risk; no names. | [0017](adr/0017-orientation-mark-from-holder-scores.md) |
 
 ## 5. Intentionally out of scope
 

@@ -1,7 +1,7 @@
 # 0016. Scholarship-holder results on a separate page, with all countries and no minimum number of answers
 
 Status: Accepted. Changes points 5 (disclosure floor) and where the results are shown in
-[0012](0012-scholarship-holder-survey.md); the rest of 0012 stands.
+[0012](0012-scholarship-holder-survey.md); the rest of 0012 stands. Holder scores shown to everyone by [0017](0017-orientation-mark-from-holder-scores.md).
 
 ## Context
 

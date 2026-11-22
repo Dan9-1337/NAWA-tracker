@@ -22,6 +22,7 @@ Use [implementation tasks](../../tasks/README.md) for work that implements a dec
 | [0013](0013-limit-on-score-changing-edits.md) | At most three score-changing saves in 24 hours | Accepted |
 | [0014](0014-flag-per-country-spikes-for-manual-review.md) | Flag per-country spikes of new surveys and hold them for manual review | Accepted |
 | [0015](0015-compare-within-citizenship-country-without-minimum.md) | Compare within the country of citizenship, with no minimum number of responses | Accepted |
-| [0016](0016-scholarship-holder-results-page-without-minimum.md) | Scholarship-holder results on a separate page, with all countries and no minimum number of answers | Accepted |
+| [0016](0016-scholarship-holder-results-page-without-minimum.md) | Scholarship-holder results on a separate page, with all countries and no minimum number of answers | Accepted (holder scores shown to everyone by 0017) |
+| [0017](0017-orientation-mark-from-holder-scores.md) | "Ориентир 2026": the lowest reported holder score per country, shown to everyone | Accepted |
 
 To add one, copy the newest file, bump the number, and add a row above.
