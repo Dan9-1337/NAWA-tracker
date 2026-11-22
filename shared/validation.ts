@@ -169,18 +169,23 @@ export const statisticsResultSchema = z
     detailsAvailable: z.boolean(),
     totalValidResponses: z.number().int().nonnegative(),
     sameTrackCount: z.number().int().nonnegative(),
-    sameCountryCount: z.number().int().min(MIN_COHORT_SIZE).nullable(),
+    /** The country cohort size, always reported and never floored (ADR 0015). */
+    sameCountryCount: z.number().int().nonnegative(),
+    /** The country cohort size when details are available, 0 otherwise. */
     groupResponseCount: z.number().int().nonnegative(),
     medianScore: z.number().min(0).nullable(),
     lowerScorePercentage: z.number().min(0).max(100).nullable(),
     rankPosition: z.number().int().positive().nullable(),
     rankTotal: z.number().int().positive().nullable(),
-    trackWideMedian: z.number().min(0).nullable(),
+    /** Retired with the whole-track tier (ADR 0015): never sent. */
+    trackWideMedian: z.null(),
     scoreBuckets: z.array(z.number().int().nonnegative()).length(16).nullable(),
     /** Legacy: servers built before it was removed still send every score of the cohort. Ignored, never read. */
     cohortScores: z.unknown().optional(),
+    /** Only the country tier survives: group and track are never reported (ADR 0015). */
     cohortScope: z.enum(cohortScopes).nullable(),
-    cohortGroupId: z.string().min(2).max(32).nullable(),
+    /** Retired with the pooled country groups (ADR 0015): never sent. */
+    cohortGroupId: z.null(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -190,32 +195,45 @@ export const statisticsResultSchema = z
     if (value.groupResponseCount > value.sameTrackCount) {
       ctx.addIssue({ code: 'custom', path: ['groupResponseCount'], message: 'groupResponseCount cannot exceed sameTrackCount' });
     }
-    if (value.sameCountryCount !== null && value.sameCountryCount > value.sameTrackCount) {
+    if (value.sameCountryCount > value.sameTrackCount) {
       ctx.addIssue({ code: 'custom', path: ['sameCountryCount'], message: 'sameCountryCount cannot exceed sameTrackCount' });
+    }
+
+    // Two surveys in the country are the smallest cohort that yields a rank and a median; there is no floor above that.
+    const hasCountryCohort = value.sameCountryCount >= 2;
+    if (value.detailsAvailable !== hasCountryCohort) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['detailsAvailable'],
+        message: 'details are available exactly from two surveys in the country',
+      });
+      return;
     }
 
     if (value.detailsAvailable) {
       if (
-        value.groupResponseCount < MIN_COHORT_SIZE ||
+        value.groupResponseCount !== value.sameCountryCount ||
+        value.rankTotal !== value.sameCountryCount ||
+        value.cohortScope !== 'country' ||
         value.medianScore === null ||
         value.lowerScorePercentage === null ||
-        value.scoreBuckets === null ||
-        value.cohortScope === null
+        value.scoreBuckets === null
       ) {
-        ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require every detailed field' });
+        ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'detailed statistics require the country cohort fields' });
         return;
       }
       const bucketTotal = value.scoreBuckets.reduce((sum, count) => sum + count, 0);
-      if (bucketTotal !== value.groupResponseCount) {
-        ctx.addIssue({ code: 'custom', path: ['scoreBuckets'], message: 'scoreBuckets must sum to groupResponseCount' });
+      if (bucketTotal !== value.sameCountryCount) {
+        ctx.addIssue({ code: 'custom', path: ['scoreBuckets'], message: 'scoreBuckets must sum to sameCountryCount' });
       }
     } else if (
       value.groupResponseCount !== 0 ||
+      value.rankPosition !== null ||
+      value.rankTotal !== null ||
       value.medianScore !== null ||
       value.lowerScorePercentage !== null ||
       value.scoreBuckets !== null ||
-      value.cohortScope !== null ||
-      value.cohortGroupId !== null
+      value.cohortScope !== null
     ) {
       ctx.addIssue({ code: 'custom', path: ['detailsAvailable'], message: 'suppressed statistics cannot retain detailed fields' });
     }

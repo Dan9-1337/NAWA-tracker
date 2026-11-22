@@ -1,4 +1,3 @@
-import { MIN_COHORT_SIZE } from '../../shared/product-rules';
 import { nawaOrientationThreshold } from '../../shared/nawa-score';
 import type { ScholarshipTrack } from '../../shared/contracts';
 
@@ -82,8 +81,8 @@ export function bucketFillOpacity(count: number, maxCount: number): number {
   return 0.28 + ratio * 0.72;
 }
 
-export function canShowScoreDistribution(groupSize: number, buckets: number[] | null | undefined): buckets is number[] {
-  return groupSize >= MIN_COHORT_SIZE && Array.isArray(buckets) && buckets.length === FINE_BUCKET_COUNT;
+export function canShowScoreDistribution(buckets: number[] | null | undefined): buckets is number[] {
+  return Array.isArray(buckets) && buckets.length === FINE_BUCKET_COUNT;
 }
 
 export function displayBuckets(buckets: number[], groupSize: number): number[] {

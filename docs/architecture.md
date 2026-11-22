@@ -19,7 +19,7 @@ Authentication is **native Mini App**: every protected API call carries Telegram
 
 ## Decisions
 
-The reasoning behind the big choices (Mini App only, pseudonymous identity, the cohort ladder, banded outcomes, one live track, opt-in bot) is recorded in [`docs/adr/`](adr/README.md).
+The reasoning behind the big choices (Mini App only, pseudonymous identity, the country-only score comparison, banded outcomes, one live track, opt-in bot) is recorded in [`docs/adr/`](adr/README.md).
 
 ## System boundaries
 
@@ -58,7 +58,9 @@ Questionnaire fields plus:
 
 - `identity_hash text not null` — 64 hex characters (check constraint rejects raw ids); unique together with `intake_year`
 - `intake_year`, `grade_basis` (`final_certificate` | `half_year`), `applicant_kind` (`school_leaver` | `student_in_poland`, the latter scored 100)
-- `is_suspicious boolean` — sticky flag from implausible status transitions (the app no longer changes a status, so it only matters for older rows)
+- `is_suspicious boolean` — sticky exclusion from every statistic: implausible status transitions (only older rows, since the app no longer changes a status) and per-country survey spikes ([ADR 0014](adr/0014-flag-per-country-spikes-for-manual-review.md)); only the maintainer's review clears a spike flag
+- `spike_flagged_at timestamp with time zone` — when the spike rule set `is_suspicious`; null on flags from the old status-transition rule, so the review statements leave those alone
+- `spike_reviewed_at timestamp with time zone` — when the maintainer reviewed a spike flag; a reviewed survey is never flagged again
 - `study_field text not null default 'other'` — ISCED-F detailed code (`^[0-9]{4}$`) or `other`; the default only covers rows created before the field existed (`shared/study-fields.ts`)
 - `prep_course_city text` — optional; only allowed on the preparatory route with outcome `scholarship_awarded`; values from `shared/prep-course-cities.ts` or `other`
 
@@ -66,19 +68,78 @@ Questionnaire fields plus:
 
 The trail behind the score-change limit ([ADR 0013](adr/0013-limit-on-score-changing-edits.md)): `identity_hash`, `saved_at` and `counted` only, never a score, country or intake year. It is deliberately not linked to `responses`, so deleting the survey does not reset the limit. Rows older than 24 hours stop counting immediately and `purge_score_change_log()` erases them hourly. Service-role only, indexed on `(identity_hash, saved_at)`.
 
+### `season_config`
+
+One row (`id` is the single-value check). `active_intake_year` scopes every statistic and the landing counter. `public_launch_date` is the app's public launch day and stays null until the maintainer sets it; `intake_opens_on` is the day the active intake opened. Both dates bound the quiet periods of the spike rule below.
+
 ### Statistics
 
-`compute_country_statistics` compares the NAWA orientation score within the active intake year (`season_config`) through the cohort ladder: country (≥ 10 non-suspicious responses) → country group (`country_groups`, unlisted countries fall into `world-other`) → whole track. The result names the tier (`cohortScope`, `cohortGroupId`); with fewer than 10 responses on every tier `detailsAvailable` is `false`.
+`compute_country_statistics` compares the NAWA orientation score only among the non-suspicious responses of the applicant's country of citizenship (`ranking_country`) on the same track and in the active intake year (`season_config`); country groups (`country_groups`) and the whole-track tier are no longer used ([ADR 0015](adr/0015-compare-within-citizenship-country-without-minimum.md)). There is no minimum number of responses: `sameCountryCount` always reports the country count, and with 0–1 responses `detailsAvailable` is `false` and every detail field is null. From 2 responses the payload carries the rank, percentile, median, the 16-bucket distribution and `cohortScope: 'country'`; `cohortGroupId` and `trackWideMedian` are always `null`, and the payload keeps its 14 keys so old and new clients and servers parse each other during a deploy.
 
 ### RPCs (service_role)
 
-- `create_response_for_identity` — insert once per `(identity_hash, intake_year)`; existing profile or unique violation → `profile_exists`; the first create with no trail row in the last 24 hours is recorded uncounted, a create while a recent trail row exists counts like a score-changing edit, and a save over the limit → `edit_limit_reached`
+- `create_response_for_identity` — insert once per `(identity_hash, intake_year)`; existing profile or unique violation → `profile_exists`; the first create with no trail row in the last 24 hours is recorded uncounted, a create while a recent trail row exists counts like a score-changing edit, and a save over the limit → `edit_limit_reached`; after the insert it applies the spike rule below
 - `get_current_response(identity_hash, intake_year)`
 - `update_current_response(identity_hash, intake_year, …)` — allows correcting one final outcome to another; an edit that changes `nawa_orientation_score` is counted and blocked after three counted saves in a rolling 24 hours → `edit_limit_reached`
 - `get_current_statistics(identity_hash, intake_year)`
 - `get_prep_city_distribution(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; cities by the caller's study field, from ≥ 3 awarded reports with a city; walks detailed field → narrow group → broad area → all fields and names the level; cities under 3 are merged into `otherCount`; never filtered by country ([ADR 0007](adr/0007-study-field-and-prep-course-city.md))
 - `get_cohort_outcomes(identity_hash, intake_year)` — **not called by the app since [ADR 0008](adr/0008-refocus-on-score-comparison.md)**, kept for the post-award flow; walks country → group → track and discloses the first tier with ≥ 3 awarded responses: counts, awarded rate among merit-positive responses, and awarded / not-awarded score bands rounded outward to 5 points (never exact minima or maxima)
 - `compute_orientation_score` — the single SQL implementation of the published formula (mirrors `shared/nawa-score.ts`; parity is tested)
+
+### Spike flags
+
+A burst of new surveys for one `ranking_country` in the active intake year is held out of the statistics until the maintainer reviews it ([ADR 0014](adr/0014-flag-per-country-spikes-for-manual-review.md)). After every insert, `create_response_for_identity` counts the country's surveys created in the last hour (including the new one) and compares that count with the country's average hourly rate over the preceding 14 days (surveys created in the 14 days before that hour, divided by 336). A spike is `count > max(10, 5 × average)`.
+
+Nothing is flagged while `season_config.public_launch_date` is null, during the first seven days after it, or during `[intake_opens_on, intake_opens_on + 7 days)`. On a spike every unreviewed survey of that hour (`spike_reviewed_at is null`) gets `is_suspicious = true` and `spike_flagged_at = now()`; a survey already flagged by an earlier spike keeps its timestamp. Surveys of other countries, of other intake years, and flags written by the old status-transition rule (no `spike_flagged_at`) are not touched.
+
+Flagged surveys drop out of every statistic and of the landing counter through the existing `not is_suspicious` filters. Their owners are not told and still see their own score and position against the unflagged cohort.
+
+### Reviewing spike flags
+
+Review is manual in the database; there is no notification and no admin screen. List the flagged groups by country and hour:
+
+```sql
+select intake_year,
+       ranking_country,
+       date_trunc('hour', created_at) as flagged_hour,
+       count(*) as surveys,
+       min(spike_flagged_at) as first_flagged_at
+from public.responses
+where is_suspicious
+  and spike_flagged_at is not null
+  and spike_reviewed_at is null
+group by 1, 2, 3
+order by 3 desc, 1 desc, 2;
+```
+
+Clear one group (the flags are dropped, the group is reviewed):
+
+```sql
+update public.responses
+set is_suspicious = false,
+    spike_reviewed_at = now()
+where intake_year = 2026
+  and ranking_country = 'UA'
+  and created_at >= timestamptz '2026-11-22 14:00+00'  -- the flagged_hour from the list
+  and created_at <  timestamptz '2026-11-22 15:00+00'
+  and spike_flagged_at is not null
+  and spike_reviewed_at is null;
+```
+
+Keep a group flagged (the flag stays, the group stops appearing as unreviewed):
+
+```sql
+update public.responses
+set spike_reviewed_at = now()
+where intake_year = 2026
+  and ranking_country = 'UA'
+  and created_at >= timestamptz '2026-11-22 14:00+00'
+  and created_at <  timestamptz '2026-11-22 15:00+00'
+  and spike_flagged_at is not null
+  and spike_reviewed_at is null;
+```
+
+A reviewed survey is never flagged again. The `spike_flagged_at is not null` filter keeps flags from the old status-transition rule out of both statements.
 
 ### `bot_subscriptions`
 
@@ -129,9 +190,12 @@ NAWA publishes a new call:
 
 1. Add its dates to `seasons` in `shared/season.ts` (the reminder cron derives `intake_open`, `results_soon` and
    `results_out` from them) and check the copy that mentions dates.
-2. Change `currentIntakeYear` in `shared/season.ts` **and** `update public.season_config set active_intake_year = <year>` in
+2. Run `update public.season_config set intake_opens_on = '<documentsFrom>'` for the new intake, so the first seven
+   days after it are quiet for spike flags. Set `season_config.public_launch_date` on launch day only; while it is
+   null nothing is flagged.
+3. Change `currentIntakeYear` in `shared/season.ts` **and** `update public.season_config set active_intake_year = <year>` in
    the same release; the API rejects any other year (`INVALID_INTAKE_YEAR`).
-3. Past years stay in the database as an archive and drop out of live cohorts automatically. People who applied before simply
+4. Past years stay in the database as an archive and drop out of live cohorts automatically. People who applied before simply
    create a new record for the new year.
 
 ## Scheduled jobs
@@ -141,6 +205,18 @@ Supabase free-tier projects pause after roughly seven days without database acti
 The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
 
 ## Architecture changelog
+
+### 2026-12-01 — Country-only statistics
+
+- Migration `202612010001`: `compute_country_statistics` and `assert_statistics_result` keep their signatures and grants and now compare only within the applicant's country of citizenship on the same track and intake. There is no floor: with 0–1 valid surveys `detailsAvailable` is `false` and every detail field is null, while `sameCountryCount` still reports the count; from 2 surveys the payload carries the rank, percentile, median and 16-bucket distribution. `cohortScope` is only ever `'country'`, and `cohortGroupId` / `trackWideMedian` are always `null` (the 14 keys stay). Country groups and the whole-track tier are no longer read by the score statistics; `country_groups`, `country_group_id()`, `MIN_COHORT_SIZE` / `min_cohort_size()` stay for the landing counter and the outcomes flow.
+- Dashboard: the result card shows the full position from two valid surveys in the country and a single "only you" line below the score while it has fewer (no percentile, median, distribution or what-if band); the group and track notes and the all-countries benchmark are gone. Privacy and About copy rewritten in five locales.
+- Decision record: [ADR 0015](adr/0015-compare-within-citizenship-country-without-minimum.md), which supersedes [0003](adr/0003-cohort-ladder.md).
+
+### 2026-11-29 — Spike flags for manual review
+
+- Migration `202611290001`: `season_config.public_launch_date` (null until the maintainer sets it) and `season_config.intake_opens_on` (2026-03-31 for the active 2026 intake); `responses.spike_flagged_at` and `responses.spike_reviewed_at`; an index on `(intake_year, ranking_country, created_at)`. `create_response_for_identity` keeps its signature, the advisory lock and the task 009 edit limit, and after the insert flags a per-country burst of more than `max(10, 5 × average hourly rate over the preceding 14 days)` in one hour. Nothing is flagged while the launch date is null or during the seven days after the launch or an intake opening.
+- Flags are reviewed by hand: the "Reviewing spike flags" SQL lists groups by country and hour and clears or keeps them. Reviewed surveys are never flagged again; flags from the old status-transition rule have no `spike_flagged_at` and are left alone. Owners are not told.
+- Decision record: [ADR 0014](adr/0014-flag-per-country-spikes-for-manual-review.md).
 
 ### 2026-11-28 — Score-change limit
 

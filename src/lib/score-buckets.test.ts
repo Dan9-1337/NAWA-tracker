@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateBuckets,
+  canShowScoreDistribution,
   displayBinCount,
   displayBuckets,
   mergeSparseBuckets,
@@ -26,6 +27,13 @@ describe('score-buckets', () => {
     expect(displayBinCount(24)).toBe(4);
     expect(displayBinCount(80)).toBe(8);
     expect(displayBinCount(240)).toBe(16);
+  });
+
+  it('shows a distribution whenever the sixteen fine buckets are present', () => {
+    expect(canShowScoreDistribution(null)).toBe(false);
+    expect(canShowScoreDistribution([1, 2, 3])).toBe(false);
+    expect(canShowScoreDistribution(Array.from({ length: 16 }, () => 0))).toBe(true);
+    expect(canShowScoreDistribution(Array.from({ length: 16 }, () => 1))).toBe(true);
   });
 
   it('aggregates sixteen fine buckets for display', () => {

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { applicationStatuses, polishSchoolLevels, scholarshipTracks, studyRoutes } from './contracts';
+import { fineBuckets, makeStatisticsResult } from './test-statistics';
 import {
   createResponseRequestSchema,
   responseFormInputSchema,
   statisticsRequestSchema,
+  statisticsResultSchema,
 } from './validation';
 
 const validForm = {
@@ -245,5 +247,77 @@ describe('study field and prep-course city', () => {
 
   it('keeps the city optional when reporting an award', () => {
     expect(() => responseFormInputSchema.parse(awarded)).not.toThrow();
+  });
+});
+
+describe('statisticsResultSchema', () => {
+  /** Two valid surveys in the country: the smallest full position (ADR 0015). */
+  const countryCohort = makeStatisticsResult({ detailsAvailable: true });
+  const nineSurveys = {
+    ...countryCohort,
+    totalValidResponses: 9,
+    sameTrackCount: 9,
+    sameCountryCount: 9,
+    groupResponseCount: 9,
+    rankPosition: 3,
+    rankTotal: 9,
+    scoreBuckets: fineBuckets([9]),
+  };
+
+  it('accepts the full position from two surveys in the country', () => {
+    expect(statisticsResultSchema.parse(countryCohort)).toEqual(countryCohort);
+    expect(statisticsResultSchema.parse(nineSurveys)).toEqual(nineSurveys);
+  });
+
+  it('accepts the "only you" payload: one survey, every detail field empty', () => {
+    const onlyYou = makeStatisticsResult({
+      detailsAvailable: false,
+      totalValidResponses: 1,
+      sameTrackCount: 1,
+      sameCountryCount: 1,
+    });
+
+    expect(statisticsResultSchema.parse(onlyYou)).toEqual(onlyYou);
+  });
+
+  it('rejects details when the country has fewer than two surveys', () => {
+    expect(() =>
+      statisticsResultSchema.parse({ ...countryCohort, sameCountryCount: 1, groupResponseCount: 1, rankTotal: 1, scoreBuckets: fineBuckets([1]) }),
+    ).toThrow();
+
+    expect(() =>
+      statisticsResultSchema.parse({
+        ...makeStatisticsResult({ detailsAvailable: false, totalValidResponses: 2, sameTrackCount: 2, sameCountryCount: 2 }),
+      }),
+    ).toThrow();
+  });
+
+  it('rejects group and track scopes and the retired group and track fields', () => {
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, cohortScope: 'group' })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, cohortScope: 'track' })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, cohortGroupId: 'east' })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, trackWideMedian: 80 })).toThrow();
+  });
+
+  it('rejects a country count that is null, negative, or disagrees with the cohort', () => {
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, sameCountryCount: null })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, sameCountryCount: -1 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, sameCountryCount: 3 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...countryCohort, rankTotal: 3 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...nineSurveys, scoreBuckets: fineBuckets([2]) })).toThrow();
+  });
+
+  it('rejects detailed values on a payload without details', () => {
+    const onlyYou = makeStatisticsResult({
+      detailsAvailable: false,
+      totalValidResponses: 1,
+      sameTrackCount: 1,
+      sameCountryCount: 1,
+    });
+
+    expect(() => statisticsResultSchema.parse({ ...onlyYou, medianScore: 80 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...onlyYou, rankPosition: 1 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...onlyYou, rankTotal: 1 })).toThrow();
+    expect(() => statisticsResultSchema.parse({ ...onlyYou, cohortScope: 'country' })).toThrow();
   });
 });

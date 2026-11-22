@@ -77,7 +77,7 @@ function statistics(totalValidResponses: number): StatisticsResult {
     detailsAvailable: false,
     totalValidResponses,
     sameTrackCount: totalValidResponses,
-    sameCountryCount: null,
+    sameCountryCount: 0,
     groupResponseCount: 0,
     medianScore: null,
     lowerScorePercentage: null,

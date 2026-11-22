@@ -40,7 +40,7 @@ const validStatistics = {
   lowerScorePercentage: 40,
   rankPosition: 6,
   rankTotal: 10,
-  trackWideMedian: 80,
+  trackWideMedian: null,
   scoreBuckets: fineBuckets([1, 2, 3, 2, 2]),
   cohortScope: 'country',
   cohortGroupId: null,

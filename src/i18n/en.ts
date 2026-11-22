@@ -159,12 +159,12 @@ export const en = {
   privacyNotice: {
     title: 'What data is stored?',
     body:
-      'Nobody can see your individual answers, only totals and ranges for groups. Your account is stored as a code computed from your Telegram ID, not as the ID itself.',
+      'Nobody sees your individual answers — only the numbers for your country. Your account is stored as a code computed from your Telegram ID, not as the ID itself.',
     points: [
       'Each Telegram account can have one survey per intake year.',
       'Your survey answers are stored on the server and used for group statistics.',
       'We do not store your name, email, phone number or Telegram username.',
-      'Small countries are combined into groups, and scores of awarded scholarships are shown in 5-point ranges.',
+      'Statistics carry no names or Telegram accounts, but in a country with few responses acquaintances may guess whose score is whose.',
       'You can delete everything in Settings at any time.',
       'After you delete your survey, for about a day we keep only your account code and the times of recent score changes, so the limit on changes cannot be bypassed.',
       'If you turn on reminders in the bot, your Telegram ID is stored separately from your survey until you turn them off. Deleting your survey removes it too.',
@@ -203,7 +203,7 @@ export const en = {
     intro: 'NAWAmeter is an unofficial tracker for Anders NAWA candidates.',
     capabilitiesTitle: 'What the service does',
     capabilitiesBody:
-      'It shows your score and your place among the scores reported by other users in your country or country group.',
+      'It shows your score and your place among the scores reported by other users from your country.',
     dataTitle: 'Where the data comes from',
     dataBody:
       'Statistics are calculated from NAWAmeter surveys, which users fill in themselves, unless marked otherwise.',
@@ -212,10 +212,10 @@ export const en = {
       'Only NAWA decisions and published programme rules are official. NAWAmeter estimates and ranks within the sample are not official results of the competition.',
     privacyTitle: 'How your data is protected',
     privacyBody:
-      'Other users never see your survey. Small countries are combined into groups, so no single survey can be identified. Your account is stored as a code computed from your Telegram ID. Support messages use a short reference ID.',
+      'Other users never see your survey. Statistics carry no names or Telegram accounts, but in a country with few responses acquaintances may guess whose score is whose. Your account is stored as a code computed from your Telegram ID. Support messages use a short reference ID.',
     metricsTitle: 'How indicators are calculated',
     metricsBody:
-      'Your position and percentile are based on your country. If there are too few answers from your country, we use your country group, and then all countries.',
+      'Your position and percentile are based only on responses from your country of citizenship.',
     authorTitle: 'About the author',
     authorBody: 'An independent project to help candidates understand the context of the competition.',
     version: (version: string) => `App version: ${version}`,
@@ -290,20 +290,6 @@ export const en = {
     },
     formulaDisclaimer: 'Passing the threshold does not guarantee a scholarship: places are allocated by country limits.',
   },
-  cohort: {
-    trackWide: 'all countries',
-    groups: {
-      BY: 'Belarus',
-      UA: 'Ukraine',
-      LT: 'Lithuania',
-      east: 'Eastern Europe and Central Asia',
-      'europe-other': 'Rest of Europe',
-      'world-other': 'Rest of the world',
-    },
-    groupNote: (label: string) =>
-      `There are too few answers from your country, so you are compared with this group: ${label}.`,
-    trackNote: 'There are too few answers from your country and region, so you are compared with all countries.',
-  },
   dashboard: {
     position: {
       title: 'Position in group',
@@ -323,6 +309,8 @@ export const en = {
       collapseDistribution: 'Hide full score distribution',
       unofficialCountrySample: 'Unofficial · NAWAmeter sample for your country',
       unofficialSample: 'Unofficial · NAWAmeter sample',
+      onlyYou: (country: string, year: string) =>
+        `${country}: only your survey in the ${year} intake so far.`,
     },
     competitionNeighbourhood: {
       title: 'Around your result',
@@ -333,24 +321,6 @@ export const en = {
       dense: 'Your score is in a crowded part of the group.',
       moderate: 'Your score is in a moderately crowded part of the group.',
       sparse: 'Your score is in a less crowded part of the group.',
-    },
-    smallCountry: {
-      title: 'Small group in your country',
-      participants: (country: string, count: string) =>
-        plural('en', count, {
-          one: `There is currently ${count} participant in ${country}.`,
-          other: `There are currently ${count} participants in ${country}.`,
-        }),
-      remaining: (count: string) =>
-        plural('en', count, {
-          one: `${count} more response is needed for the country ranking.`,
-          other: `${count} more responses are needed for the country ranking.`,
-        }),
-      benchmarkTitle: 'Comparison with all candidates',
-      aboveTrackMedian: 'Your score is above the median for all NAWA Director scholarship candidates.',
-      aroundTrackMedian: 'Your score is close to the median for all NAWA Director scholarship candidates.',
-      belowTrackMedian: 'Your score is below the median for all NAWA Director scholarship candidates.',
-      benchmarkMedian: (median: string) => `Median for all candidates: ${median} pts`,
     },
   },
 } satisfies Messages;

@@ -97,7 +97,7 @@ try {
   const checks = [
     ['seed: demo applicant compares with their country', country.rows[0].scope === 'country'],
     ['seed: Georgian applicant\'s outcomes fall back to the "east" group', group.rows[0].scope === 'group'],
-    ['seed: Georgian applicant\'s statistics fall back to the whole track', track.rows[0].scope === 'track'],
+    ['seed: Georgian applicant compares with the two surveys of their country', track.rows[0].scope === 'country'],
     [
       'seed: software-development reporters see Kraków at the detailed level, the rest merged',
       distribution.level === 'detailed' &&

@@ -79,7 +79,7 @@ There is no separate confirm screen: the grades step saves directly — `POST` f
 
 ### Dashboard (authenticated)
 
-One screen, no tabs. The saved result card opens it: the season, the orientation score, the threshold-60 chip and then the position inside the comparison cohort — rank, percentile, median, a mini distribution and the cohort size once a cohort of ten exists. The cohort follows the ladder country → country group → whole track and says which tier it used; the card ends with one caption saying the sample is unofficial. The score and chip render even while statistics load or fail, with the status line inside the card. Below the card comes the what-if block (draggable measuring tape, input, and only while a what-if is active its own score, chip and percentile band; never saved), then the full-distribution disclosure for detailed cohorts, and the profile block with the edit rows and the formula. The score breakdown and the source badges are gone.
+One screen, no tabs. The saved result card opens it: the season, the orientation score, the threshold-60 chip and then the position inside the country cohort — rank, percentile, median, a mini distribution and the number of responses, shown from the first two valid surveys of the applicant's country of citizenship; the card ends with one caption saying the sample is unofficial. While the country has none or one valid survey the card shows one line instead: `<Страна>: пока только ваша анкета в наборе 2026.`, with no percentile, median, distribution or what-if band. Country groups and the whole-track fallback are gone. The score and chip render even while statistics load or fail, with the status line inside the card. Below the card comes the what-if block (draggable measuring tape, input, and only while a what-if is active its own score, chip and percentile band; never saved), then the full-distribution disclosure when the country cohort has a distribution, and the profile block with the edit rows and the formula. The score breakdown and the source badges are gone.
 
 Also: edit profile (same wizard), Settings, delete profile.
 
@@ -145,7 +145,7 @@ Intentionally still out of scope (confirm OK): Karta Polaka / attachments, forma
 | Dashboard | `src/features/ProfileDashboard.tsx`, `statistics/StatisticsPanel.tsx` |
 | Contracts | `shared/contracts.ts` |
 | Score formula | `shared/nawa-score.ts` |
-| Cohort ladder | `supabase/migrations/202611210001_cohort_ladder.sql` |
+| Cohort | `supabase/migrations/202612010001_country_only_statistics.sql` |
 | Bot, reminders and country links | `api/bot.ts`, `api/cron/reminders.ts`, `shared/reminders.ts`, `shared/bot-messages.ts`, `src/lib/bot-links.ts` |
 | Languages | `src/i18n/{pl,en,ru,uk,be}.ts`, `src/i18n/locales.test.ts` |
 | Season calendar | `shared/season.ts` |
@@ -159,6 +159,14 @@ The bot is how reminders and country invitations work; the app itself stays a Mi
 - Opting in stores the Telegram id in `bot_subscriptions`, separate from the answers; it is removed on `/stop`, when the bot is blocked, and when the survey is deleted.
 
 ## Changelog
+
+### Unreleased — Country-only statistics
+
+- The position is computed only among the valid surveys of the applicant's country of citizenship on the same track and intake, with no minimum number of responses: the full card (rank `N из M · <country>`, percentile, median, distribution, what-if band) appears from two surveys, and a single "only you" line while the country has fewer. Country groups, the whole-track fallback and the all-countries benchmark are gone; the privacy and About copy says that in a country with few responses acquaintances may guess whose score is whose ([ADR 0015](adr/0015-compare-within-citizenship-country-without-minimum.md)).
+
+### Unreleased — Spike flags
+
+- A burst of new surveys for one country is held out of the statistics until the maintainer reviews it by hand; nothing is flagged during the first week after the public launch and after an intake opens, and the survey's owner is not told ([ADR 0014](adr/0014-flag-per-country-spikes-for-manual-review.md)).
 
 ### Unreleased — Score-change limit
 

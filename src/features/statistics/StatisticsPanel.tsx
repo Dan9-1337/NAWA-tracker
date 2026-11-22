@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
-import { MIN_COHORT_SIZE } from '../../../shared/product-rules';
 import { isIntakeOpen, season2026 } from '../../../shared/season';
 import { useI18n } from '../../i18n/context';
 import { cohortLabel } from '../../lib/cohort-label';
@@ -8,14 +7,14 @@ import { formatDate } from '../../lib/format';
 import { trackProductEvent } from '../../lib/product-events';
 import { canShowScoreDistribution } from '../../lib/score-buckets';
 import { scoreForAverage } from '../../lib/score-tape';
-import { getCohortProgressCount } from '../../lib/stats-verdict';
 import { DistributionDetailsSection } from '../dashboard/DistributionDetailsSection';
-import { DetailedPosition, ResultCard, SmallCohortNotice } from '../dashboard/ResultHeroCard';
+import { DetailedPosition, OnlyYouNotice, ResultCard } from '../dashboard/ResultHeroCard';
 
 export type StatisticsState =
   | { status: 'unavailable' }
   | { status: 'loading' }
   | { status: 'error' }
+  /** The country has fewer than two valid surveys: the card says so and shows no position. */
   | { status: 'suppressed'; data: StatisticsResult }
   | { status: 'success'; data: StatisticsResult };
 
@@ -34,8 +33,8 @@ function statisticsData(state: StatisticsState): StatisticsResult | null {
 }
 
 /**
- * The saved result card: score and threshold chip always, then the position in the cohort,
- * the small-cohort notice or the statistics-status line.
+ * The saved result card: score and threshold chip always, then either the position in the country cohort or
+ * the "only you" line while the country has fewer than two valid surveys (ADR 0015).
  */
 export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelProps) {
   const { t, locale } = useI18n();
@@ -97,37 +96,20 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
       </p>
     );
   } else if (data && isDirector && userScore != null) {
-    const detailed = state.status === 'success' && data.groupResponseCount >= MIN_COHORT_SIZE;
-    const label = cohortLabel(t, locale, data.cohortScope, profile.rankingCountry, data.cohortGroupId);
-    const pooledNote =
-      data.cohortScope === 'group'
-        ? t.cohort.groupNote(label)
-        : data.cohortScope === 'track'
-          ? t.cohort.trackNote
-          : null;
+    const label = cohortLabel(locale, profile.rankingCountry);
 
-    caption =
-      data.cohortScope === 'country'
-        ? t.dashboard.hero.unofficialCountrySample
-        : t.dashboard.hero.unofficialSample;
+    caption = data.detailsAvailable ? t.dashboard.hero.unofficialCountrySample : null;
 
-    body = detailed ? (
+    body = data.detailsAvailable ? (
       <DetailedPosition
         data={data}
         userScore={userScore}
         rankingCountry={profile.rankingCountry}
         track={profile.scholarshipTrack}
         cohortLabel={label}
-        cohortScope={data.cohortScope}
-        pooledNote={pooledNote}
       />
     ) : (
-      <SmallCohortNotice
-        cohortLabel={label}
-        participantCount={getCohortProgressCount(data)}
-        userScore={userScore}
-        trackWideMedian={data.trackWideMedian}
-      />
+      <OnlyYouNotice cohortLabel={label} intakeYear={profile.intakeYear} />
     );
   }
 
@@ -138,15 +120,19 @@ export function StatisticsPanel({ state, profile, userScore }: StatisticsPanelPr
   );
 }
 
-/** The full-distribution disclosure; it sits between the what-if and the profile block. */
+/** The full-distribution disclosure; only a country cohort with a distribution has one. */
 export function StatisticsDistribution({ state, profile, userScore }: StatisticsPanelProps) {
-  if (state.status !== 'success' || !profile || profile.scholarshipTrack !== 'nawa_director' || userScore == null) {
+  if (
+    (state.status !== 'success' && state.status !== 'suppressed') ||
+    !profile ||
+    profile.scholarshipTrack !== 'nawa_director' ||
+    userScore == null
+  ) {
     return null;
   }
 
   const data = state.data;
-  const groupSize = data.groupResponseCount;
-  if (!canShowScoreDistribution(groupSize, data.scoreBuckets)) return null;
+  if (!data.detailsAvailable || !canShowScoreDistribution(data.scoreBuckets)) return null;
 
   return (
     <DistributionDetailsSection
@@ -154,7 +140,7 @@ export function StatisticsDistribution({ state, profile, userScore }: Statistics
       track={profile.scholarshipTrack}
       userScore={userScore}
       medianScore={data.medianScore}
-      groupSize={groupSize}
+      groupSize={data.groupResponseCount}
     />
   );
 }

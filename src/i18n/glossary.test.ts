@@ -70,16 +70,27 @@ describe('locale glossary', () => {
     expect(messages[locale].scoreScreen.whatIfNote).toContain(messages[locale].settings.editProfile);
   });
 
-  it.each(localeOrder)('%s compares the small country with all candidates', (locale) => {
-    const copy = messages[locale].dashboard.smallCountry;
-    const text = [copy.benchmarkTitle, copy.aboveTrackMedian, copy.aroundTrackMedian, copy.belowTrackMedian, copy.benchmarkMedian('X')].join('\n');
+  it.each(localeOrder)('%s says a small country can be guessed, without pooling countries', (locale) => {
+    const text = [messages[locale].privacyNotice.body, ...messages[locale].privacyNotice.points].join('\n');
     expect(text).toMatch({
-      pl: /wszystkich kandydatów/,
-      en: /all .*candidates/,
-      ru: /всех кандидатов/,
-      uk: /усіх кандидатів/,
-      be: /усіх кандыдатаў/,
+      pl: /znajomi mogą domyślić się, czyj to wynik/,
+      en: /acquaintances may guess whose score is whose/,
+      ru: /знакомые могут догадаться, чей это бал/,
+      uk: /знайомі можуть здогадатися, чий це бал/,
+      be: /знаёмыя могуць здагадацца, чый гэта бал/,
     }[locale]);
+    expect(text).not.toMatch({
+      pl: /Małe kraje|łączone w grupy|grupy krajów/i,
+      en: /Small countries|country group/i,
+      ru: /Небольшие страны|группе стран|группы стран/i,
+      uk: /Невеликі країни|групі країн|групи країн/i,
+      be: /Невялікія краіны|групе краін|групы краін/i,
+    }[locale]);
+  });
+
+  it.each(localeOrder)('%s no longer carries the country-group and small-country copy', (locale) => {
+    expect(messages[locale]).not.toHaveProperty('cohort');
+    expect(messages[locale].dashboard).not.toHaveProperty('smallCountry');
   });
 
   it.each(localeOrder)('%s treats an average above the maximum as a typo', (locale) => {

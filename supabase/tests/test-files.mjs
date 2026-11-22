@@ -2,7 +2,7 @@
 export const testFiles = [
   'supabase/tests/telegram_profiles.sql',
   'supabase/tests/statistics.sql',
-  'supabase/tests/cohort_ladder.sql',
+  'supabase/tests/country_only_statistics.sql',
   'supabase/tests/cohort_outcomes.sql',
   'supabase/tests/privacy_identity.sql',
   'supabase/tests/bot_subscriptions.sql',
@@ -10,4 +10,5 @@ export const testFiles = [
   'supabase/tests/prep_cities.sql',
   'supabase/tests/intake_summary.sql',
   'supabase/tests/score_change_limit.sql',
+  'supabase/tests/spike_flags.sql',
 ];

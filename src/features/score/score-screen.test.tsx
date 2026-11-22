@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
-import { makeStatisticsResult } from '../../../shared/test-statistics';
+import { fineBuckets, makeStatisticsResult } from '../../../shared/test-statistics';
 import { pl } from '../../i18n/pl';
 import { trackProductEvent } from '../../lib/product-events';
 import { ProfileDashboard } from '../ProfileDashboard';
@@ -39,7 +39,10 @@ const current: ResponseFormInput = {
   statusChangedAt: '2026-07-13',
 };
 
-/** Sixteen equal buckets: a what-if score of 81.9 sits at the 54.75th percentile, so the band is 50–60. */
+/**
+ * Thirty surveys in the country: sixteen buckets that sum to thirty, so a what-if score of 81.9 sits at the
+ * 58.4th percentile and the band is 50–60.
+ */
 const detailedStatistics: StatisticsResult = {
   ...makeStatisticsResult({ detailsAvailable: true }),
   totalValidResponses: 40,
@@ -50,12 +53,24 @@ const detailedStatistics: StatisticsResult = {
   lowerScorePercentage: 65,
   rankPosition: 6,
   rankTotal: 30,
-  trackWideMedian: 80,
-  scoreBuckets: Array.from({ length: 16 }, () => 10),
-  cohortScope: 'country',
+  scoreBuckets: fineBuckets([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1]),
 };
 
 const detailedState: StatisticsState = { status: 'success', data: detailedStatistics };
+
+/** Two surveys in the country: the smallest cohort that still gets a position and a what-if band. */
+const twoSurveyStatistics: StatisticsResult = {
+  ...makeStatisticsResult({ detailsAvailable: true }),
+  totalValidResponses: 3,
+  sameTrackCount: 3,
+  sameCountryCount: 2,
+  groupResponseCount: 2,
+  medianScore: 70,
+  lowerScorePercentage: 50,
+  rankPosition: 1,
+  rankTotal: 2,
+  scoreBuckets: fineBuckets([1, 1]),
+};
 
 function renderScore(statistics: StatisticsState = detailedState) {
   return render(<ScoreScreen current={current} statistics={statistics} />);
@@ -89,6 +104,16 @@ describe('ScoreScreen what-if percentile band', () => {
     );
   });
 
+  it('shows the band for a country cohort of exactly two surveys', async () => {
+    const user = userEvent.setup();
+    renderScore({ status: 'success', data: twoSurveyStatistics });
+
+    await user.click(screen.getByRole('button', { name: pl.scoreScreen.increase }));
+
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,90');
+    expect(screen.getByTestId('what-if-percentile-band')).toBeInTheDocument();
+  });
+
   it('says the score is below the axis instead of showing a band under 60', async () => {
     const user = userEvent.setup();
     renderScore();
@@ -115,23 +140,22 @@ describe('ScoreScreen what-if percentile band', () => {
     ['loading', { status: 'loading' }],
     ['error', { status: 'error' }],
     [
-      'suppressed',
+      'the "only you" card',
       {
         status: 'suppressed',
         data: makeStatisticsResult({
           detailsAvailable: false,
-          totalValidResponses: 9,
-          sameTrackCount: 9,
-          groupResponseCount: 9,
-          scoreBuckets: null,
+          totalValidResponses: 1,
+          sameTrackCount: 1,
+          sameCountryCount: 1,
         }),
       },
     ],
     [
-      'a cohort below the floor',
+      'statistics without details',
       {
         status: 'success',
-        data: { ...detailedStatistics, groupResponseCount: 9 },
+        data: { ...twoSurveyStatistics, detailsAvailable: false },
       },
     ],
     [

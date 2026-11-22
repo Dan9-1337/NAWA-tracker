@@ -158,12 +158,12 @@ export const pl = {
   privacyNotice: {
     title: 'Jakie dane są zapisywane?',
     body:
-      'Nikt nie widzi Twoich pojedynczych odpowiedzi — tylko liczby i zakresy dla grup. Twoje konto zapisujemy jako kod obliczony z Telegram ID, a nie jako sam identyfikator.',
+      'Nikt nie widzi Twoich pojedynczych odpowiedzi — tylko liczby dla Twojego kraju. Twoje konto zapisujemy jako kod obliczony z Telegram ID, a nie jako sam identyfikator.',
     points: [
       'Każde konto Telegram może mieć jedną ankietę na jeden nabór.',
       'Odpowiedzi z ankiety są przechowywane na serwerze i służą do statystyk grupowych.',
       'Nie zapisujemy imienia, e-maila, numeru telefonu ani nazwy użytkownika Telegram.',
-      'Małe kraje łączymy w grupy, a wyniki osób ze stypendium pokazujemy w przedziałach co 5 punktów.',
+      'Imion i kont Telegram w statystykach nie ma, ale w kraju, w którym odpowiedzi jest niewiele, znajomi mogą domyślić się, czyj to wynik.',
       'W każdej chwili możesz usunąć wszystko w Ustawieniach.',
       'Po usunięciu ankiety przez około dobę przechowujemy tylko kod konta i czas ostatnich zmian wyniku orientacyjnego — żeby nie można było obejść limitu zmian.',
       'Jeśli włączysz przypomnienia w bocie, Twój Telegram ID jest przechowywany osobno od ankiety, dopóki ich nie wyłączysz. Usunięcie ankiety kasuje też ten zapis.',
@@ -202,7 +202,7 @@ export const pl = {
     intro: 'NAWAmeter to nieoficjalny tracker kandydatów Anders NAWA.',
     capabilitiesTitle: 'Do czego służy aplikacja',
     capabilitiesBody:
-      'Pokazuje Twój wynik i Twoje miejsce wśród wyników podanych przez innych użytkowników z Twojego kraju lub grupy krajów.',
+      'Pokazuje Twój wynik i Twoje miejsce wśród wyników podanych przez innych użytkowników z Twojego kraju.',
     dataTitle: 'Skąd pochodzą dane',
     dataBody:
       'Statystyki liczymy z ankiet NAWAmeter, które wypełniają sami użytkownicy, chyba że oznaczono inaczej.',
@@ -211,10 +211,10 @@ export const pl = {
       'Oficjalne są tylko decyzje NAWA i opublikowane zasady programu. Szacunki NAWAmeter i pozycje w próbie nie są oficjalnym wynikiem naboru.',
     privacyTitle: 'Jak chronimy Twoje dane',
     privacyBody:
-      'Inni użytkownicy nie widzą Twojej ankiety. Małe kraje są łączone w grupy, więc nie da się wskazać pojedynczej ankiety. Konto zapisujemy jako kod obliczony z Telegram ID; wiadomości do wsparcia zawierają krótki identyfikator.',
+      'Inni użytkownicy nie widzą Twojej ankiety. Imion i kont Telegram w statystykach nie ma, ale w kraju, w którym odpowiedzi jest niewiele, znajomi mogą domyślić się, czyj to wynik. Konto zapisujemy jako kod obliczony z Telegram ID; wiadomości do wsparcia zawierają krótki identyfikator.',
     metricsTitle: 'Jak liczymy wskaźniki',
     metricsBody:
-      'Pozycję i percentyl liczymy dla Twojego kraju, a gdy odpowiedzi jest za mało — dla grupy krajów, a potem dla wszystkich krajów.',
+      'Pozycję i percentyl liczymy tylko wśród odpowiedzi z Twojego kraju obywatelstwa.',
     authorTitle: 'O autorze',
     authorBody: 'Niezależny projekt, który ma pomóc kandydatom lepiej rozumieć kontekst naboru.',
     version: (version: string) => `Wersja aplikacji: ${version}`,
@@ -289,20 +289,6 @@ export const pl = {
     },
     formulaDisclaimer: 'Przekroczenie progu nie gwarantuje stypendium — miejsca są dzielone według limitów dla krajów.',
   },
-  cohort: {
-    trackWide: 'wszystkie kraje',
-    groups: {
-      BY: 'Białoruś',
-      UA: 'Ukraina',
-      LT: 'Litwa',
-      east: 'Europa Wschodnia i Azja Środkowa',
-      'europe-other': 'Reszta Europy',
-      'world-other': 'Reszta świata',
-    },
-    groupNote: (label: string) =>
-      `Z Twojego kraju jest za mało odpowiedzi, więc porównujemy Cię w grupie: ${label}.`,
-    trackNote: 'Z Twojego kraju i regionu jest za mało odpowiedzi, więc porównujemy Cię ze wszystkimi krajami.',
-  },
   dashboard: {
     position: {
       title: 'Miejsce w grupie',
@@ -322,6 +308,8 @@ export const pl = {
       collapseDistribution: 'Ukryj pełny rozkład wyników',
       unofficialCountrySample: 'Nieoficjalnie · próba NAWAmeter w Twoim kraju',
       unofficialSample: 'Nieoficjalnie · próba NAWAmeter',
+      onlyYou: (country: string, year: string) =>
+        `${country}: na razie tylko Twoja ankieta w naborze ${year}.`,
     },
     competitionNeighbourhood: {
       title: 'Wokół Twojego wyniku',
@@ -332,28 +320,6 @@ export const pl = {
       dense: 'Jesteś w gęsto obsadzonej części grupy.',
       moderate: 'Jesteś w średnio zagęszczonej części grupy.',
       sparse: 'Jesteś w rzadziej obsadzonej części grupy.',
-    },
-    smallCountry: {
-      title: 'Mała grupa z Twojego kraju',
-      participants: (country: string, count: string) =>
-        `${country}: na razie ${count} ${plural('pl', count, {
-          one: 'uczestnik',
-          few: 'uczestników',
-          many: 'uczestników',
-          other: 'uczestnika',
-        })}.`,
-      remaining: (count: string) =>
-        `Do rankingu krajowego potrzeba jeszcze ${count} ${plural('pl', count, {
-          one: 'ankiety',
-          few: 'ankiet',
-          many: 'ankiet',
-          other: 'ankiety',
-        })}.`,
-      benchmarkTitle: 'Porównanie ze wszystkimi kandydatami',
-      aboveTrackMedian: 'Twój wynik jest powyżej mediany wszystkich kandydatów na stypendium Dyrektora NAWA.',
-      aroundTrackMedian: 'Twój wynik jest blisko mediany wszystkich kandydatów na stypendium Dyrektora NAWA.',
-      belowTrackMedian: 'Twój wynik jest poniżej mediany wszystkich kandydatów na stypendium Dyrektora NAWA.',
-      benchmarkMedian: (median: string) => `Mediana wszystkich kandydatów: ${median} pkt`,
     },
   },
 } as const;

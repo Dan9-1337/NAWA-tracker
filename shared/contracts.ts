@@ -57,26 +57,33 @@ export type ResponseFormInput = {
   statusChangedAt: string;
 };
 
-export const cohortScopes = ['country', 'group', 'track'] as const;
+/**
+ * The comparison cohort is the applicant's country of citizenship; country groups and the whole track are no
+ * longer used for the score comparison (ADR 0015).
+ */
+export const cohortScopes = ['country'] as const;
 export type CohortScope = (typeof cohortScopes)[number];
 
 export type StatisticsResult = {
   detailsAvailable: boolean;
   totalValidResponses: number;
   sameTrackCount: number;
-  sameCountryCount: number | null;
+  /** Valid surveys of the applicant's country of citizenship on the same track and intake, with no floor. */
+  sameCountryCount: number;
+  /** The country cohort size when `detailsAvailable`; 0 otherwise. */
   groupResponseCount: number;
   medianScore: number | null;
   lowerScorePercentage: number | null;
   rankPosition: number | null;
   rankTotal: number | null;
-  trackWideMedian: number | null;
+  /** Always null: the whole-track median is no longer computed (ADR 0015). */
+  trackWideMedian: null;
   /** Sixteen fine bucket counts for the cohort score distribution (low → high). */
   scoreBuckets: number[] | null;
-  /** Which tier of country -> country group -> track the comparison cohort resolved to. */
+  /** The applicant's country of citizenship, or null when `detailsAvailable` is false. */
   cohortScope: CohortScope | null;
-  /** Id of the pooled country group when `cohortScope` is 'group'. */
-  cohortGroupId: string | null;
+  /** Always null: pooled country groups are no longer used for the score comparison (ADR 0015). */
+  cohortGroupId: null;
 };
 
 /** The landing counter: valid responses of the active intake, hidden below the cohort floor. */

@@ -1,6 +1,6 @@
 # 013 — Compare only within the country of citizenship, with no minimum number of responses
 
-**Status:** Ready
+**Status:** In review
 
 ## Goal
 
@@ -87,15 +87,31 @@ Intended behavior:
 
 | Scenario | Evidence (command, test assertion, or manual check) | Result |
 | --- | --- | --- |
-| A1 | | |
-| A2 | | |
-| A3 | | |
-| A4 | | |
-| A5 | | |
-| A6 | | |
-| A7 | | |
-| A8 | | |
+| A1 | `npm run test:db:pglite` → `country_only_statistics.sql` (39 assertions): "three surveys in the country show the full position", "sameCountryCount is the country cohort size" (3), "the cohort size equals the country count, not the larger track" (3 of 18), "rankTotal is the country cohort size", "the median comes from the three country scores only" (71), "the score buckets sum to the country cohort" (3) | pass |
+| A2 | SQL: "a single survey in the country shows no position", "the country count is reported without a floor" (1), "a payload without details has no median", "…no percentile", "…no distribution", "…names no cohort scope", "the retired track-wide median is always null"; `npm test -- src/features/statistics` → `shows the score, the chip and one line when the country has only this survey` asserts `Ukraina: na razie tylko Twoja ankieta w naborze 2026.` and no rank, percentile, median, strip or caption | pass |
+| A3 | SQL: "two surveys in the country show the full position", "the median is the middle of the two country scores" (75), "the score buckets sum to two"; `statistics-panel.test.tsx` → `shows the full position when the country has exactly two surveys` (`1. z 2 · Ukraina`, `Wyżej niż 50% grupy`, mini distribution, country caption); `score-screen.test.tsx` → `shows the band for a country cohort of exactly two surveys` | pass |
+| A4 | SQL: "nine surveys in the country show the full position", "nine surveys are reported as the country count", "the east group of KZ and RU is not pooled into the Georgian cohort" (9 of 44); `statistics-panel.test.tsx` → `treats nine surveys the same as a larger country cohort` (no "Do rankingu krajowego", no group or track note) | pass |
+| A5 | SQL: "a suspicious survey in the country is excluded from the cohort" (3, not 4), "a suspicious survey is excluded from the valid intake" (18, not 19), "a suspicious survey does not move the median" (71) | pass |
+| A6 | SQL `statistics.sql` throws for `cohortScope` `'group'`, `'track'` and an unknown value, for `cohortGroupId '"east"'`, `trackWideMedian 80`, `sameCountryCount` null / -1 / 1 with details, and details `false` with detail values; `npm test -- shared/validation.test.ts` → `statisticsResultSchema` (group/track scopes and retired fields rejected, null/negative/mismatched country count rejected, bucket total enforced); `migration-contracts.test.ts` → `keeps the fourteen-key assertion with the country-only rules` and `keeps the signatures and grants of the functions it replaces` | pass |
+| A7 | `npm test -- src/i18n` → `glossary.test.ts` `says a small country can be guessed, without pooling countries` (five locales: the new sentence is present and the old pooling sentences are absent) and `no longer carries the country-group and small-country copy` (`cohort` and `dashboard.smallCountry` gone); `locales.test.ts` key parity, function arity and banned-term checks pass | pass |
+| A8 | `npm run test:db:pglite` → `intake_summary.sql` (6 assertions) unchanged and passing; full `npm test` → `src/pages/home-page.test.tsx` and `src/features/StartScreen.test.tsx` pass. Only the local `StatisticsResult` fixture in `home-page.test.tsx` changed (`sameCountryCount: null` → `0`); the landing counter, `MIN_COHORT_SIZE` and `min_cohort_size()` are untouched (`migration-contracts.test.ts` still pins 10) | pass |
 
 - Changed files:
+  - `supabase/migrations/202612010001_country_only_statistics.sql` (new): `compute_country_statistics` and `assert_statistics_result` redefined with the same signatures and grants; country-of-citizenship cohort, no floor, details from 2, `sameCountryCount` always a number, `cohortScope` only `'country'`, `cohortGroupId` / `trackWideMedian` always null, 14 keys.
+  - `supabase/tests/country_only_statistics.sql` (new; scenarios A1–A5) and `supabase/tests/cohort_ladder.sql` (deleted; replaced by the new file) registered in `supabase/tests/test-files.mjs`.
+  - `supabase/tests/statistics.sql`: statistics expectations and assertion cases rewritten for the country-only rules; the mutation, suspicious-flag and rollback cases stay unchanged. `supabase/tests/migration-contracts.test.ts`: new `country-only statistics migration contract` block.
+  - `supabase/tests/run-pglite-tests.mjs`: the seed check that expected the Georgian applicant's statistics to fall back to the whole track now expects the country (mechanical follow-up of the new rule; not in the assigned file list).
+  - `shared/contracts.ts` (`cohortScopes` = only `country`, `sameCountryCount: number`, `trackWideMedian`/`cohortGroupId` typed null), `shared/validation.ts` (`statisticsResultSchema`), `shared/test-statistics.ts` (schema-valid two-survey and "only you" bases), `shared/product-rules.ts` (removed the now-wrong `canShowCohortDetails`; `MIN_COHORT_SIZE` stays 10 for the landing counter), and their tests.
+  - `src/features/statistics/StatisticsPanel.tsx` (+ test), `src/features/dashboard/ResultHeroCard.tsx` (`DetailedPosition` without scope/pooled note; new `OnlyYouNotice` replaces `SmallCohortNotice`), `src/features/score/ScoreScreen.tsx` (+ test), `src/lib/score-buckets.ts` (`canShowScoreDistribution(buckets)`; `displayBinCount` unchanged) (+ test), `src/lib/stats-verdict.ts` (removed the unused benchmark/cohort-progress helpers; `formatPercentileValue` unchanged), `src/lib/cohort-label.ts` (+ test).
+  - `src/i18n/{pl,en,ru,uk,be}.ts` (privacy body and points, About copy, new `dashboard.hero.onlyYou`, `cohort` and `dashboard.smallCountry` removed), `src/i18n/glossary.test.ts`.
+  - `api/responses.test.ts`, `shared/api-contracts.test.ts`, `src/pages/home-page.test.tsx`: statistics fixtures only, required by the stricter schema and the non-null count (not in the assigned file list).
+  - `docs/architecture.md` (Statistics paragraph, Decisions sentence, changelog entry), `docs/product-flow.md` (Dashboard paragraph, implementation pointer, changelog), `README.md` (statistics paragraph, Privacy And Limits).
+  - `tasks/013-country-only-statistics.md` (status and this handoff only).
 - Checks not run, blockers, or open questions:
-- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0015](../docs/adr/0015-compare-within-citizenship-country-without-minimum.md).
+  - `make check` left to the orchestrator as instructed.
+  - Manual `make dev` seeding 1 / 2 / 9 surveys and opening the dashboard as a returning and a first-time user: not run — this subagent must not run `make dev*` or touch `.env.local`. Covered by the SQL scenarios and the statistics-panel / score-screen component tests above.
+  - Real PostgreSQL pgTAP (`npm run test:db`) was not run locally (CI only); the PGlite runner passed all SQL files and seed checks.
+  - The concurrent task 010 files (`202611290001_spike_flags.sql`, `spike_flags.sql`, docs hunks) were present in the working tree; `spike_flags.sql` (29 assertions) and all seed checks passed together with this change, with no rerun needed.
+  - Open question for the reviewer: `dashboard.hero.unofficialSample` (the generic caption) is now unused. It was not in the brief's removal list, so it was left in all five locales.
+  - Note for the reviewer: because A6 requires the zod schema to reject a non-null `trackWideMedian` / `cohortGroupId` and a null or floored `sameCountryCount`, a **mixed** deploy (new client with a server built before this migration) is rejected by the client, even though the 14 keys themselves stay compatible. Both sides of this repository change together; if mixed-version tolerance matters more than enforcement, the schema needs an explicit legacy branch.
+- LLM contributions: Claude Opus 5.5 (Claude Code) — specification of this brief and [ADR 0015](../docs/adr/0015-compare-within-citizenship-country-without-minimum.md). DeepSeek V4.1 Flash — implementation.

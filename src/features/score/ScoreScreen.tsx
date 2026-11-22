@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../../shared/contracts';
 import { nawaOrientationThreshold } from '../../../shared/nawa-score';
-import { MIN_COHORT_SIZE } from '../../../shared/product-rules';
 import { ScoreTape } from '../../components/ScoreTape';
 import { useI18n } from '../../i18n/context';
 import { formatGrade, formatPrecise, parseLocalizedNumber } from '../../lib/format';
@@ -67,8 +66,8 @@ export function ScoreScreen({ current, statistics, onWhatIfUsed }: ScoreScreenPr
   const band =
     isWhatIf &&
     statsData &&
-    statsData.groupResponseCount >= MIN_COHORT_SIZE &&
-    canShowScoreDistribution(statsData.groupResponseCount, statsData.scoreBuckets)
+    statsData.detailsAvailable &&
+    canShowScoreDistribution(statsData.scoreBuckets)
       ? percentileBand(score, statsData.scoreBuckets, current.scholarshipTrack)
       : null;
 

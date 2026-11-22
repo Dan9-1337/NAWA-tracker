@@ -41,6 +41,10 @@ const limitMigration = readFileSync(
   join(process.cwd(), 'supabase/migrations/202611280001_score_change_limit.sql'),
   'utf8',
 );
+const countryOnlyMigration = readFileSync(
+  join(process.cwd(), 'supabase/migrations/202612010001_country_only_statistics.sql'),
+  'utf8',
+);
 const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
 
 function functionDefinition(name: string, source = migration): string {
@@ -406,6 +410,60 @@ describe('cleanup and thresholds migration contract', () => {
     );
     expect(fieldMigration).toContain(
       'grant execute on function public.get_prep_city_distribution(text, integer) to service_role;',
+    );
+  });
+});
+
+describe('country-only statistics migration contract', () => {
+  it('compares only within the country of citizenship on the same track and intake', () => {
+    const definition = functionDefinition('compute_country_statistics', countryOnlyMigration);
+
+    expect(definition).toContain('public.active_intake_year()');
+    expect(definition).toContain('scholarship_track = p_scholarship_track');
+    expect(definition).toContain('ranking_country = p_ranking_country');
+    expect(definition).toMatch(/c_details_from constant integer := 2;/);
+    expect(definition).not.toContain('country_group_id');
+    expect(definition).not.toContain("'group'");
+    expect(definition).not.toContain("'track'");
+    expect(definition).not.toContain('public.min_cohort_size()');
+  });
+
+  it('reports the country count without a floor and retires the group and track fields', () => {
+    const definition = functionDefinition('compute_country_statistics', countryOnlyMigration);
+
+    expect(definition).toContain("'sameCountryCount', v_same_country_count");
+    expect(definition).toContain("'groupResponseCount', case when v_details_available then v_same_country_count else 0 end");
+    expect(definition).toContain("'rankTotal', case when v_details_available then v_same_country_count else null end");
+    expect(definition).toContain("'trackWideMedian', null");
+    expect(definition).toContain("'cohortScope', case when v_details_available then 'country' else null end");
+    expect(definition).toContain("'cohortGroupId', null");
+  });
+
+  it('keeps the fourteen-key assertion with the country-only rules', () => {
+    const assertion = functionDefinition('assert_statistics_result', countryOnlyMigration);
+
+    expect(assertion).toContain('jsonb_object_keys(p_statistics)) <> 14');
+    expect(assertion).toContain("v_scope <> 'country'");
+    expect(assertion).toContain('v_same_country_count < 2');
+    expect(assertion).toContain('v_group_count <> v_same_country_count');
+    expect(assertion).toContain("jsonb_typeof(p_statistics->'trackWideMedian') <> 'null'");
+    expect(assertion).toContain("jsonb_typeof(p_statistics->'cohortGroupId') <> 'null'");
+    expect(assertion).not.toContain('country_group_id');
+    expect(assertion).not.toContain("in ('country', 'group', 'track')");
+  });
+
+  it('keeps the signatures and grants of the functions it replaces', () => {
+    expect(countryOnlyMigration).toMatch(
+      /create or replace function public\.compute_country_statistics\(\s*p_scholarship_track text,\s*p_ranking_country text,\s*p_metric_value numeric,\s*p_as_of timestamp with time zone default null\s*\) returns jsonb/,
+    );
+    expect(countryOnlyMigration).toMatch(
+      /create or replace function public\.assert_statistics_result\(p_statistics jsonb\) returns jsonb/,
+    );
+    expect(countryOnlyMigration).toContain(
+      'revoke all on function public.compute_country_statistics(text, text, numeric, timestamp with time zone) from public, anon, authenticated, service_role;',
+    );
+    expect(countryOnlyMigration).toContain(
+      'revoke all on function public.assert_statistics_result(jsonb) from public, anon, authenticated, service_role;',
     );
   });
 });
