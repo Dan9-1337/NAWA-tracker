@@ -12,13 +12,13 @@ NAWA Tracker is a Telegram Mini App for scholarship questionnaires and community
 | Schema, RPCs, statistics | `supabase/migrations/`, `supabase/tests/` | [Architecture](docs/architecture.md), [ADR index](docs/adr/README.md) |
 | Local setup and test commands | `Makefile`, `package.json` | [README](README.md), [Testing](docs/testing.md) |
 
-## Orchestrator and implementation agents
+## Task author, implementation agents, and reviewer
 
-- The orchestrator (Opus 5.5) writes an implementation brief in [`tasks/`](tasks/README.md) before delegating coding work. Resolve product decisions before handing off the task; do not leave them for the implementation agent to infer.
-- Link the relevant [ADRs](docs/adr/README.md) from the task. If the task changes an accepted decision or introduces a lasting product or architecture rule, record the decision in a new ADR before marking the task `Ready`. Routine fixes and refactors do not need a new ADR.
-- Implementation agents (DeepSeek V4.1 Flash) follow the task and this file, implement only the assigned scope, and report changed files, verification results, and blockers.
+- **Task author (Opus 5.5 in Claude Code): specification only.** Read the repository for context and create or revise individual task briefs in [`tasks/`](tasks/README.md). Do not write or edit implementation code, tests, migrations, configuration, ADRs, or any other files outside the task brief. Do not implement the task, review implementation diffs, or run acceptance checks. Ask the maintainer to resolve open product decisions before marking the task `Ready`; do not leave them for the implementation agent to infer.
+- Link the relevant [ADRs](docs/adr/README.md) from the task. If the task changes an accepted decision or introduces a lasting product or architecture rule, the maintainer records the decision in a new ADR before the task author marks it `Ready`. Routine fixes and refactors do not need a new ADR.
+- **Implementation agent (DeepSeek V4.1 Flash by default):** follow the `Ready` task and this file, implement only the assigned scope, run verification, and report changed files, results, and blockers.
 - Delegate in parallel only when file ownership does not overlap. If tasks depend on a shared contract or migration, settle that dependency first.
-- The orchestrator reviews the diff against the acceptance criteria and verifies the integrated result. Model assignments are workflow conventions, not runtime configuration.
+- **Reviewer (maintainer or assigned reviewer, not Opus):** review the diff against the acceptance criteria, verify the integrated result, and mark the task `Done`. Send code changes back to the implementation agent. Role assignments are workflow instructions, not tool permissions.
 - Record the actual LLM model(s) and what each contributed (for example, specification, implementation, or review edits) in the task's `LLM contributions` handoff. For changes without a task, record this in the PR description or, if there is no PR, in the change summary. Use `None` if no LLM contributed; don't guess attribution for past work.
 
 ## Guardrails

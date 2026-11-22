@@ -1,12 +1,14 @@
 # Implementation tasks
 
-Use this directory for handoffs from the orchestrator to implementation agents. A task is a brief for one reviewable change, not a substitute for product documentation or an ADR.
+Use this directory for handoffs from the task author to implementation agents. A task is a brief for one reviewable change, not a substitute for product documentation or an ADR.
 
 Start with [AGENTS.md](../AGENTS.md) for **how to work**, check the [ADR index](../docs/adr/README.md) for **what was decided and why**, then write a task for **what to implement and how to verify it**.
 
-1. The orchestrator copies [the template](TEMPLATE.md) to `tasks/NNN-short-title.md`, resolves open decisions, writes observable acceptance scenarios, and marks the task `Ready`.
-2. The implementation agent reads the task and [repository instructions](../AGENTS.md). It works within the assigned scope and reports changed files, per-scenario evidence, and blockers. If a requirement is unclear or conflicts with the repository, it asks the orchestrator rather than making a product decision.
-3. The orchestrator reviews the diff, checks the evidence against the scenarios, runs the necessary integration checks, and marks the task `Done` when the acceptance scenarios pass and the unchanged behavior still holds.
+1. **Task author (Opus 5.5):** copy [the template](TEMPLATE.md) to `tasks/NNN-short-title.md`, write observable acceptance scenarios, and mark the task `Ready` once the maintainer has resolved open decisions and recorded any required ADR. Opus edits only individual task briefs; it does not implement or review the change.
+2. **Implementation agent:** read the `Ready` task and [repository instructions](../AGENTS.md), work within the assigned scope, and report changed files, per-scenario evidence, and blockers. Move the task to `In review` when ready for review.
+3. **Reviewer (not Opus):** review the diff, check the evidence against the scenarios, run the necessary integration checks, and mark the task `Done` when the acceptance scenarios pass and the unchanged behavior still holds.
+
+The implementation agent and reviewer update status and handoff evidence, not the requirements or acceptance scenarios.
 
 ## Ready
 
@@ -32,7 +34,7 @@ A passing suite is not evidence for a scenario unless the handoff names the asse
 
 ## If expected behavior is unclear
 
-Do not infer a product decision from code, copy, or existing tests. Ask the orchestrator. If the decision is not settled, leave the task in `Draft` before handoff or move it to `Blocked` during work, and record the question under **Open decisions**. If the answer changes scope or expected behavior, the orchestrator updates the task and confirms it is `Ready` again before implementation continues.
+Do not infer a product decision from code, copy, or existing tests. Ask the maintainer to decide. If the decision is not settled, leave the task in `Draft` before handoff or move it to `Blocked` during work, and record the question under **Open decisions**. If the answer changes scope or expected behavior, the task author updates the brief and confirms it is `Ready` again before implementation continues.
 
 ## LLM contributions
 
