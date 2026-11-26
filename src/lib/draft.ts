@@ -1,0 +1,166 @@
+import type { ApplicantKind, ApplicationStatus, GradeBasis, PolishSchoolLevel, ResponseFormInput, ScholarshipTrack, StudyRoute } from '../../shared/contracts';
+import { getTelegramUserId } from './telegram';
+
+export const DRAFT_STORAGE_KEY_PREFIX = 'nawa-wizard-draft';
+const SESSION_VERSION = 2 as const;
+/** Version 1 had a first wizard step (university and field) that no longer exists, so its step index is one too high. */
+const LEGACY_SESSION_VERSION = 1 as const;
+
+// Scoped by Telegram user id so drafts never leak between accounts sharing a device/browser.
+function draftStorageKey(): string {
+  return `${DRAFT_STORAGE_KEY_PREFIX}:${getTelegramUserId() ?? 'anon'}`;
+}
+
+export type WizardDraft = {
+  hasPolishCitizenship: boolean;
+  rankingCountry: string;
+  schoolCountry: string;
+  scholarshipTrack: ScholarshipTrack;
+  studyRoute: StudyRoute;
+  targetUniversity: string;
+  /** ISCED-F code or "other"; empty until picked. */
+  studyField: string;
+  /** Only set while reporting an award on the preparatory-course path. */
+  prepCourseCity: string;
+  gradeBasis: GradeBasis;
+  applicantKind: ApplicantKind;
+  averageGrade: number | null;
+  maximumGrade: number | null;
+  polishSchoolLevel: PolishSchoolLevel;
+  currentStatus: ApplicationStatus;
+  statusChangedAt: string;
+};
+
+export type WizardScreen = 'start' | 'wizard';
+
+/**
+ * Sessions saved before the confirm screen was removed still say `'confirm'`. They were written on top of
+ * the last wizard step, so they resume on grades — the second and last step.
+ */
+const GRADES_STEP_INDEX = 1;
+
+export type WizardSession = {
+  version: typeof SESSION_VERSION;
+  draft: WizardDraft;
+  screen: WizardScreen;
+  stepIndex: number;
+};
+
+export function responseToDraft(value: ResponseFormInput): WizardDraft {
+  return {
+    hasPolishCitizenship: value.hasPolishCitizenship,
+    rankingCountry: value.rankingCountry,
+    schoolCountry: value.schoolCountry,
+    scholarshipTrack: value.scholarshipTrack,
+    studyRoute: value.studyRoute,
+    targetUniversity: value.targetUniversity ?? '',
+    studyField: value.studyField,
+    prepCourseCity: value.prepCourseCity ?? '',
+    gradeBasis: value.gradeBasis,
+    applicantKind: value.applicantKind,
+    averageGrade: value.averageGrade,
+    maximumGrade: value.maximumGrade,
+    polishSchoolLevel: value.polishSchoolLevel ?? 'none',
+    currentStatus: value.currentStatus,
+    statusChangedAt: value.statusChangedAt,
+  };
+}
+
+function normalizeWizardDraft(draft: WizardDraft): WizardDraft {
+  return {
+    ...draft,
+    targetUniversity: draft.targetUniversity ?? '',
+    studyField: draft.studyField ?? '',
+    prepCourseCity: draft.prepCourseCity ?? '',
+    gradeBasis: draft.gradeBasis ?? 'final_certificate',
+    applicantKind: draft.applicantKind ?? 'school_leaver',
+  };
+}
+
+function isWizardDraft(value: unknown): value is WizardDraft {
+  return typeof value === 'object' && value != null && 'scholarshipTrack' in value;
+}
+
+function isWizardSession(value: unknown): value is WizardSession {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'version' in value &&
+    ((value as WizardSession).version === SESSION_VERSION ||
+      (value as { version: unknown }).version === LEGACY_SESSION_VERSION) &&
+    'draft' in value &&
+    isWizardDraft((value as WizardSession).draft)
+  );
+}
+
+/** Only `wizard` and `start` exist now; a stored `confirm` screen resumes on the grades step. */
+function normalizeWizardScreen(screen: unknown): WizardScreen {
+  return screen === 'wizard' || screen === 'confirm' ? 'wizard' : 'start';
+}
+
+function isLegacyConfirmScreen(screen: unknown): boolean {
+  return screen === 'confirm';
+}
+
+export function loadWizardSession(): WizardSession | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(draftStorageKey());
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (isWizardSession(parsed)) {
+      const legacy = (parsed as { version: unknown }).version === LEGACY_SESSION_VERSION;
+      const storedScreen = (parsed as { screen?: unknown }).screen;
+      return {
+        ...parsed,
+        version: SESSION_VERSION,
+        draft: normalizeWizardDraft(parsed.draft),
+        screen: normalizeWizardScreen(storedScreen),
+        stepIndex: isLegacyConfirmScreen(storedScreen)
+          ? GRADES_STEP_INDEX
+          : legacy
+            ? Math.max(0, parsed.stepIndex - 1)
+            : parsed.stepIndex,
+      };
+    }
+    if (isWizardDraft(parsed)) {
+      return {
+        version: SESSION_VERSION,
+        draft: normalizeWizardDraft(parsed),
+        screen: 'wizard',
+        stepIndex: 0,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveWizardSession(session: WizardSession): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(
+    draftStorageKey(),
+    JSON.stringify({ ...session, version: SESSION_VERSION }),
+  );
+}
+
+export function saveWizardDraft(draft: WizardDraft): void {
+  const existing = loadWizardSession();
+  saveWizardSession({
+    version: SESSION_VERSION,
+    draft,
+    screen: existing?.screen ?? 'wizard',
+    stepIndex: existing?.stepIndex ?? 0,
+  });
+}
+
+export function clearWizardDraft(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(draftStorageKey());
+}
+
+/** True when a saved session should prompt resume instead of jumping into the wizard. */
+export function hasRestoredWizardSession(session: WizardSession | null): boolean {
+  return session?.screen === 'wizard';
+}

@@ -1,0 +1,353 @@
+begin;
+
+create extension if not exists pgtap with schema extensions;
+
+create function pg_temp.h(bigint) returns text language sql immutable as $$ select lpad(to_hex($1), 64, '0') $$;
+
+
+truncate table public.responses restart identity cascade;
+
+select plan(52);
+
+do $$
+begin
+  perform public.create_response_for_identity(
+    pg_temp.h(820000001),
+    2026,
+    false, 'UA', 'UA',
+    'nawa_director', 'direct_studies', 'science-096',
+    '0613', null,
+    'final_certificate', 'school_leaver',
+    50, 100, 'none',
+    'submitted', current_date
+  );
+end;
+$$;
+
+insert into public.responses (
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
+)
+select
+  pg_temp.h(820000000 + value),
+  false, 'UA', 'UA',
+  'nawa_director', 'direct_studies',
+  value, 100, value, 'none', round(value * 0.9, 2),
+  case
+    when value <= 20 then 'submitted'
+    when value <= 40 then 'formal_review_positive'
+    when value <= 60 then 'merit_review_positive'
+    else 'merit_review_positive'
+  end,
+  current_date,
+  false
+from generate_series(10, 80, 10) as value;
+
+-- Nine valid UA surveys: the full position appears without any floor (ADR 0015).
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'detailsAvailable')::boolean,
+  true,
+  'details appear with fewer than ten responses in the country'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
+  9,
+  'the country count is reported without a floor'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'groupResponseCount')::integer,
+  9,
+  'the cohort size is the country count'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'rankTotal')::integer,
+  9,
+  'rankTotal is the country count'
+);
+select is(
+  public.get_current_statistics(pg_temp.h(820000001), 2026)->>'cohortScope',
+  'country',
+  'the cohort scope is the country'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'medianScore')::numeric,
+  45::numeric,
+  'median score uses orientation scores for nawa_director responses'
+);
+select is(
+  round((public.get_current_statistics(pg_temp.h(820000001), 2026)->>'lowerScorePercentage')::numeric, 2),
+  44.44::numeric,
+  'percentile counts only strictly lower orientation scores'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'rankPosition')::integer,
+  4,
+  'rank counts only strictly higher orientation scores'
+);
+select is(
+  (select sum(value::numeric) from jsonb_array_elements_text(public.get_current_statistics(pg_temp.h(820000001), 2026)->'scoreBuckets') as t(value)),
+  9::numeric,
+  'the score buckets sum to the country cohort'
+);
+select is(
+  public.get_current_statistics(pg_temp.h(820000001), 2026)->>'trackWideMedian',
+  null,
+  'the retired track-wide median is always null'
+);
+select is(
+  public.get_current_statistics(pg_temp.h(820000001), 2026)->>'cohortGroupId',
+  null,
+  'the retired group id is always null'
+);
+
+insert into public.responses (
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
+) values (
+  pg_temp.h(820000090), false, 'UA', 'UA',
+  'nawa_director', 'direct_studies',
+  90, 100, 90, 'none', 81, 'scholarship_awarded', current_date, false
+);
+
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
+  10,
+  'the country count includes every valid matching response'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'groupResponseCount')::integer,
+  10,
+  'the cohort size follows the country count'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'medianScore')::numeric,
+  45::numeric,
+  'the median is unchanged by a new highest score'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'lowerScorePercentage')::numeric,
+  40::numeric,
+  'the percentile counts the strictly lower share'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'rankPosition')::integer,
+  5,
+  'the rank counts the strictly higher share plus one'
+);
+
+insert into public.responses (
+  identity_hash, has_polish_citizenship, ranking_country, school_country,
+  scholarship_track, study_route, average_grade, maximum_grade, grade_percentage,
+  polish_school_level, nawa_orientation_score, current_status, status_changed_at, is_suspicious
+) values (
+  pg_temp.h(820000999), false, 'UA', 'UA',
+  'nawa_director', 'direct_studies',
+  0, 100, 0, 'none', 0, 'submitted', current_date, true
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'totalValidResponses')::integer,
+  10,
+  'suspicious responses are excluded from aggregate counts'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
+  10,
+  'suspicious responses are excluded from the country cohort'
+);
+
+update public.responses
+set ranking_country = 'DE'
+where identity_hash in (pg_temp.h(820000070), pg_temp.h(820000080), pg_temp.h(820000090));
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'sameCountryCount')::integer,
+  7,
+  'the country count follows the country below ten responses'
+);
+select is(
+  (public.get_current_statistics(pg_temp.h(820000001), 2026)->>'detailsAvailable')::boolean,
+  true,
+  'seven responses in the country still show the full position'
+);
+select is(
+  public.get_current_statistics(pg_temp.h(820000001), 2026)->>'cohortScope',
+  'country',
+  'the cohort does not grow when other countries have more responses'
+);
+
+select lives_ok(
+  $$select public.update_current_response(
+      pg_temp.h(820000001),
+      2026,
+      false, 'UA', 'UA',
+      'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
+      50, 100, 'none',
+      'formal_review_positive', current_date
+    )$$,
+  'formal review transition succeeds'
+);
+
+with mutation as (
+  select public.update_current_response(
+    pg_temp.h(820000001),
+    2026,
+    false, 'UA', 'UA',
+    'nawa_director', 'direct_studies', 'science-096',
+    '0613', null,
+    'final_certificate', 'school_leaver',
+    50, 100, 'none',
+    'merit_review_positive', current_date - 1
+  ) as result
+)
+select ok(
+  (result->>'updated')::boolean and result->'statistics' is not null,
+  'authenticated response update returns success with in-transaction statistics'
+)
+from mutation;
+select is(
+  (select is_suspicious from public.responses where identity_hash = pg_temp.h(820000001)),
+  true,
+  'backdated status changes mark a response suspicious'
+);
+select lives_ok(
+  $$select public.update_current_response(
+      pg_temp.h(820000001),
+      2026,
+      false, 'UA', 'UA',
+      'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
+      51, 100, 'none',
+      'merit_review_positive', current_date
+    )$$,
+  'ordinary update after suspicious flag still succeeds'
+);
+select is(
+  (select is_suspicious from public.responses where identity_hash = pg_temp.h(820000001)),
+  true,
+  'suspicious status remains set after a later ordinary update'
+);
+
+create temporary table valid_statistics(result jsonb) on commit drop;
+insert into valid_statistics values (
+  '{
+    "detailsAvailable": true,
+    "totalValidResponses": 20,
+    "sameTrackCount": 15,
+    "sameCountryCount": 2,
+    "groupResponseCount": 2,
+    "medianScore": 50,
+    "lowerScorePercentage": 40,
+    "rankPosition": 1,
+    "rankTotal": 2,
+    "trackWideMedian": null,
+    "scoreBuckets": [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "cohortScores": null,
+    "cohortScope": "country",
+    "cohortGroupId": null
+  }'::jsonb
+);
+select is(
+  public.assert_statistics_result((select result from valid_statistics)),
+  (select result from valid_statistics),
+  'statistics assertion accepts a valid detailed country result'
+);
+select is(
+  public.assert_statistics_result('{
+    "detailsAvailable": false,
+    "totalValidResponses": 1,
+    "sameTrackCount": 1,
+    "sameCountryCount": 1,
+    "groupResponseCount": 0,
+    "medianScore": null,
+    "lowerScorePercentage": null,
+    "rankPosition": null,
+    "rankTotal": null,
+    "trackWideMedian": null,
+    "scoreBuckets": null,
+    "cohortScores": null,
+    "cohortScope": null,
+    "cohortGroupId": null
+  }'::jsonb),
+  '{
+    "detailsAvailable": false,
+    "totalValidResponses": 1,
+    "sameTrackCount": 1,
+    "sameCountryCount": 1,
+    "groupResponseCount": 0,
+    "medianScore": null,
+    "lowerScorePercentage": null,
+    "rankPosition": null,
+    "rankTotal": null,
+    "trackWideMedian": null,
+    "scoreBuckets": null,
+    "cohortScores": null,
+    "cohortScope": null,
+    "cohortGroupId": null
+  }'::jsonb,
+  'statistics assertion accepts the "only you" payload'
+);
+select throws_ok($$select public.assert_statistics_result(null)$$, 'P0001', 'statistics_unavailable', 'null statistics are unavailable');
+select throws_ok($$select public.assert_statistics_result('[]'::jsonb)$$, 'P0001', 'statistics_invalid', 'statistics must be an object');
+select throws_ok($$select public.assert_statistics_result((select result - 'scoreBuckets' from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject missing keys');
+select throws_ok($$select public.assert_statistics_result((select result || '{"extra":1}'::jsonb from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject extra keys');
+
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', '"planet"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject unknown cohort scopes');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', '"group"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject the retired country-group scope');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', '"track"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject the retired whole-track scope');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortScope}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'detailed statistics must name the country scope');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{totalValidResponses}', '1.5') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be integers');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics counts must be nonnegative');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '-1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'the country count must be nonnegative');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'the country count is never null');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameCountryCount}', '1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'details require at least two surveys in the country');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{sameTrackCount}', '1') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'the country count cannot exceed the track count');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{lowerScorePercentage}', '101') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics percentages must stay within bounds');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{detailsAvailable}', 'false') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'suppressed statistics cannot retain detailed values');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{trackWideMedian}', '80') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject a track-wide median');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{cohortGroupId}', '"east"') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'statistics reject a country-group id');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{groupResponseCount}', '3') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'the cohort size must equal the country count');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{rankTotal}', '3') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'rankTotal must equal the country count');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{rankTotal}', 'null') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'detailed statistics need a rank total');
+select throws_ok($$select public.assert_statistics_result((select jsonb_set(result, '{scoreBuckets}', '[1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]') from valid_statistics))$$, 'P0001', 'statistics_invalid', 'the score buckets must sum to the country count');
+
+create temporary table response_before_failed_statistics(result jsonb) on commit drop;
+insert into response_before_failed_statistics
+select to_jsonb(r) from public.responses r where identity_hash = pg_temp.h(820000001);
+
+create or replace function public.get_response_statistics(p_response_id uuid)
+returns jsonb
+language sql
+volatile
+security invoker
+set search_path = pg_catalog
+as $$
+  select '{"detailsAvailable":false,"extra":"private"}'::jsonb;
+$$;
+
+select throws_ok(
+  $$select public.update_current_response(
+      pg_temp.h(820000001),
+      2026,
+      false, 'DE', 'DE',
+      'nawa_director', 'direct_studies', 'science-096',
+      '0613', null,
+      'final_certificate', 'school_leaver',
+      9, 10, 'none',
+      'merit_review_positive', current_date
+    )$$,
+  'P0001',
+  'statistics_invalid',
+  'malformed non-null update statistics fail inside the transaction'
+);
+select is(
+  (select to_jsonb(r) from public.responses r where identity_hash = pg_temp.h(820000001)),
+  (select result from response_before_failed_statistics),
+  'malformed statistics roll back every update change'
+);
+
+select * from finish();
+rollback;

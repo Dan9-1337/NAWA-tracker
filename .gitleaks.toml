@@ -1,0 +1,18 @@
+title = "NAWA Tracker gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders and fixtures, never real secrets"
+paths = [
+  '''\.env\.example$''',
+  '''scripts/write-local-env\.mjs$''',
+  '''supabase/seed\.sql$''',
+  '''.*\.test\.(ts|tsx)$''',
+  '''supabase/tests/.*''',
+  '''package-lock\.json$''',
+]
+regexes = [
+  '''local-dev-[a-z-]+-[0-9]+''',
+]
