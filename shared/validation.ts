@@ -556,6 +556,10 @@ export const productEventNames = [
   'survey_updated',
   'reminders_link_opened',
   'invite_link_opened',
+  'invite_main_button_opened',
+  'wizard_average_above_maximum_shown',
+  'wizard_low_score_warning_shown',
+  'wizard_save_failed',
 ] as const;
 
 /** Product analytics never carry free text or a payload: an event is just its name. */

@@ -10,7 +10,7 @@ Statistics compare the NAWA orientation score only with the valid surveys of the
 
 ### Languages
 
-Polish, English, Russian, Ukrainian, and Belarusian (official orthography). The interface starts in the stored choice, then the Telegram language, then the browser language. The Ukrainian and Belarusian texts are drafts that still need a native-speaker review.
+Polish, English, Russian, Ukrainian, and Belarusian (official orthography). The interface starts in the stored choice, then the Telegram language, then the browser language. The Ukrainian and Belarusian texts are drafts that still need a native-speaker review. Browsers ship no Belarusian region data, so the Belarusian country names are generated from CLDR (`scripts/generate-country-names-be.mjs` writes `shared/country-names-be.ts`) and also await a native-speaker review.
 
 ### Not asked at the start
 
@@ -35,7 +35,7 @@ Copy `.env.example` to `.env.local` and set these values:
 | `TELEGRAM_BOT_TOKEN` | Server | Bot token from BotFather; used to verify Mini App `initData` HMAC. Minimum 32 characters. |
 | `SUPABASE_URL` | Server | Supabase project URL. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server | Supabase secret/service-role key used only by Vercel Functions. |
-| `IDENTITY_PEPPER` | Server | Secret pepper for the pseudonymous account key (HMAC-SHA256 of the Telegram id). Minimum 32 characters; generate with `openssl rand -base64 32`. Changing it orphans every stored profile. |
+| `IDENTITY_PEPPER` | Server | Secret pepper for the pseudonymous account key (HMAC-SHA256 of the Telegram id). Minimum 32 characters; generate with `openssl rand -base64 32`. Changing it orphans every stored profile; see [Keeping `IDENTITY_PEPPER`](docs/architecture.md#keeping-identity_pepper). |
 | `APP_PUBLIC_URL` | Server | Exact HTTPS origin of the Mini App used for Origin checks. |
 | `TELEGRAM_WEBHOOK_SECRET` | Server | Secret Telegram echoes back in `X-Telegram-Bot-Api-Secret-Token` on every webhook call; minimum 32 characters. Without it `POST /api/bot` answers 503. |
 | `CRON_SECRET` | Server (production) | Secret for Vercel Cron auth on `/api/cron/keep-alive` and `/api/cron/reminders`; minimum 32 characters. Generate with `openssl rand -base64 32`. |

@@ -43,7 +43,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/responses` | PUT | initData + Origin | Update owned profile |
 | `/api/responses/current` | POST | initData | Load owned profile |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
-| `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor) |
+| `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor), and the active `intakeYear` the client saves new surveys with |
 | `/api/orientation-mark` | GET | initData | The caller's country `ориентир 2026`: `{ mark, n }`; `?distribution=1` adds the ascending holder score list for the dots |
 | `/api/scholarship-report` | GET | initData | Own scholarship-holder report, or `{ report: null }`; `?summary=1[&country=XX]` returns the contributors-only results |
 | `/api/scholarship-report` | POST | initData + Origin | Create the scholarship-holder report (2026 Director survey, score ≥ 60) |
@@ -224,6 +224,10 @@ order by r.ranking_country, sr.score_snapshot;
 | `survey_updated` | Saving an edit through `PUT /api/responses` succeeds | Once per successful save | `src/features/ProfileDashboard.tsx` |
 | `reminders_link_opened` | The user taps Settings → "Reminders in the bot" | Once per tap | `src/components/settings/MainMenu.tsx` |
 | `invite_link_opened` | The user taps Settings → "Invite people from my country" | Once per tap | `src/components/settings/MainMenu.tsx` |
+| `invite_main_button_opened` | The user presses the Telegram main button "Invite people from my country" on the dashboard | Once per press | `src/features/ProfileDashboard.tsx` |
+| `wizard_average_above_maximum_shown` | The "average above the maximum" error first becomes visible on the Grades step of the new-survey wizard | Once per mount of the create flow | `src/features/CreateProfileFlow.tsx` (visibility reported by `src/features/wizard/GradesStep.tsx`) |
+| `wizard_low_score_warning_shown` | The low-score warning first becomes visible on the Grades step of the new-survey wizard | Once per mount of the create flow | `src/features/CreateProfileFlow.tsx` (visibility reported by `src/features/wizard/GradesStep.tsx`) |
+| `wizard_save_failed` | Saving the new survey fails and the error is shown to the user, whatever the error code | Once per failed save | `src/features/CreateProfileFlow.tsx` |
 
 ## Security and privacy
 
@@ -236,6 +240,20 @@ order by r.ranking_country, sr.score_snapshot;
 **Client requirements:** Mini App must be opened inside Telegram so `initData` is present. Opening the hosted URL in a normal browser shows a gate screen, not the full product.
 
 **Hosting:** CSP allows Telegram embedding (`frame-ancestors` includes `https://web.telegram.org`). `X-Frame-Options: DENY` is removed.
+
+### Keeping `IDENTITY_PEPPER`
+
+Every survey is keyed by `HMAC-SHA256(IDENTITY_PEPPER, telegram id)` ([ADR 0002](adr/0002-pseudonymous-identity.md)). If the pepper is lost or changed, every stored profile is orphaned: users can no longer reach their surveys, and the statistics fill with duplicates as they answer again. There is no way to recompute the old hashes without the old value.
+
+**Status: no backup yet, to be made by the maintainer.** The maintainer removes this line after making the backup.
+
+- **Where it lives.** The Vercel Production environment variable is the primary copy. Staging has its own, different value ([ADR 0009](adr/0009-staging-environment-on-free-tiers.md)). Local development uses its own `local-dev-identity-pepper-…` value; the API refuses to start in production with a value that has that prefix (`api/_lib/env.ts`), and any value shorter than 32 characters is refused everywhere.
+- **Backup is required.** The maintainer keeps one offline copy of the Production value outside Vercel (for example in a password manager), never in the repository, an issue, a chat or a log.
+  - To make it once: read the value from the Vercel dashboard (project settings, Environment Variables, Production), or run `vercel env pull` for Production into a temporary file outside the repository. Store the value in the offline copy, then delete the temporary file. Do not paste the value into a terminal command line, a note or a shared document.
+  - To check it later without exposing it: compute a SHA-256 hash of the stored copy and of the Vercel value (read the same way) and compare the two hashes, never the values.
+- **Who has access.** The maintainer only. Anyone added to the Vercel project can read the Production value, so add people to the project with that in mind.
+- **Never rotate casually.** Changing the value is not a routine secret rotation. If the value leaks, whoever holds it can match known Telegram IDs to surveys (assumption R1), which is the pseudonymity limit already stated above. A rotation would need a re-keying migration that does not exist, so every profile would be orphaned. A suspected leak must be discussed before any change.
+- **Restore.** If the Vercel variable is lost, set it back from the backup and redeploy. With no backup, the stored profiles cannot be recovered.
 
 ## Questionnaire scope
 
@@ -256,8 +274,12 @@ NAWA publishes a new call:
 2. Run `update public.season_config set intake_opens_on = '<documentsFrom>'` for the new intake, so the first seven
    days after it are quiet for spike flags. Set `season_config.public_launch_date` on launch day only; while it is
    null nothing is flagged.
-3. Change `currentIntakeYear` in `shared/season.ts` **and** `update public.season_config set active_intake_year = <year>` in
-   the same release; the API rejects any other year (`INVALID_INTAKE_YEAR`).
+3. Run `update public.season_config set active_intake_year = <year>`. That one statement is the whole switch
+   ([ADR 0018](adr/0018-intake-year-from-the-database.md)): the API reads the year from the database on every
+   request that needs it (`get_active_intake_year()`), the client takes it from the server (the intake summary for a
+   new survey, the saved response for an edit), and a save for any other year is rejected with `INVALID_INTAKE_YEAR`.
+   No code release is needed for the year. A year without an entry in `seasons` still works: the season copy reads
+   "intake closed" with the year and no dates until step 1 is released.
 4. Past years stay in the database as an archive and drop out of live cohorts automatically. People who applied before simply
    create a new record for the new year.
 
@@ -268,6 +290,14 @@ Supabase free-tier projects pause after roughly seven days without database acti
 The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
 
 ## Architecture changelog
+
+### 2026-12-04 — Active intake year from the database
+
+- Migration `202612040001`: new `get_active_intake_year()` RPC returns `season_config.active_intake_year`; execute is granted to the service role only (`anon` and `authenticated` cannot call it, and the internal `active_intake_year()` stays revoked from every role).
+- API: `POST /api/responses` (create and update), `POST /api/responses/current` and `POST /api/statistics` read the year through that RPC (`readActiveIntakeYear` in `api/_lib/questionnaire.ts`) instead of the `currentIntakeYear` constant, which is removed. A save for a different year is still rejected with `INVALID_INTAKE_YEAR`. Each of these requests makes one extra small read.
+- Client: a new survey is saved with the `intakeYear` returned by `POST /api/intake-summary` (the create flow asks for it when it opens; concurrent callers share one request, and the save is never sent before the year is known); an edit keeps the year of the saved response. The result card finds the season dates in `seasons` by that year and falls back to the "intake closed" text without dates.
+- Season rollover is one `update public.season_config set active_intake_year = <year>`; see "Season rollover".
+- Decision record: [ADR 0018](adr/0018-intake-year-from-the-database.md).
 
 ### 2026-12-03 — "Ориентир 2026"
 

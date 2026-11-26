@@ -113,9 +113,9 @@ export function StartScreen({
       ) : null}
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-helper)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--text-helper)]">
           {t.start.kicker}{' '}
-          <span className="text-[0.625rem] font-medium normal-case tracking-normal opacity-80">
+          <span className="text-sm font-medium normal-case tracking-normal opacity-80">
             ({t.start.kickerNote})
           </span>
         </p>
@@ -129,7 +129,7 @@ export function StartScreen({
 
       {intakeSummary ? (
         <p
-          className="text-center text-xs font-medium text-[var(--text-secondary)]"
+          className="text-center text-sm font-medium text-[var(--text-secondary)]"
           data-testid="intake-response-count"
         >
           <span className="text-[var(--color-accent-ink)]" aria-hidden="true">
@@ -148,7 +148,7 @@ export function StartScreen({
       >
         {t.start.cta}
       </button>
-      <p className="text-center text-xs font-medium text-[var(--text-helper)]">{t.start.timePromise}</p>
+      <p className="text-center text-sm font-medium text-[var(--text-helper)]">{t.start.timePromise}</p>
 
       <div className="overflow-hidden rounded-2xl border border-[var(--section-divider-color)]">
         <FaqRow title={t.start.whatYouSee} open={openFaq === 'what'} onToggle={() => toggle('what')}>

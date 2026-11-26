@@ -118,8 +118,26 @@ export function getStatistics(): Promise<StatisticsResult> {
   return request('/api/statistics', 'POST', {}, statisticsResultSchema);
 }
 
+let intakeSummaryInFlight: Promise<IntakeSummaryResult> | null = null;
+
+/**
+ * The active intake year and the landing counter. The start screen and the create flow both ask for it when they
+ * mount (the flow needs the year for the save, ADR 0018), so concurrent callers share one request. Nothing is
+ * cached once it settles: the count is read fresh the next time the start screen opens.
+ */
 export function getIntakeSummary(): Promise<IntakeSummaryResult> {
-  return request('/api/intake-summary', 'POST', {}, intakeSummaryResultSchema);
+  if (!intakeSummaryInFlight) {
+    const pending: Promise<IntakeSummaryResult> = request(
+      '/api/intake-summary',
+      'POST',
+      {},
+      intakeSummaryResultSchema,
+    ).finally(() => {
+      if (intakeSummaryInFlight === pending) intakeSummaryInFlight = null;
+    });
+    intakeSummaryInFlight = pending;
+  }
+  return intakeSummaryInFlight;
 }
 
 /**

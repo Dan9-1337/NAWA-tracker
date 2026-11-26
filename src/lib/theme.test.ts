@@ -42,6 +42,7 @@ describe('THEME_PALETTES', () => {
     expect(LIGHT_SEMANTIC.accentInk).toBe('#14161a');
     expect(LIGHT_SEMANTIC.median).toBe('#14161a');
     expect(LIGHT_SEMANTIC.positive).toBe('#1e7a3c');
+    expect(LIGHT_SEMANTIC.warning).toBe('#8a5a00');
   });
 
   it('keeps canonical dark palette in sync with index.css FOUC defaults', () => {
@@ -53,6 +54,7 @@ describe('THEME_PALETTES', () => {
     expect(DARK_SEMANTIC.accentInk).toBe('#ffc72c');
     expect(DARK_SEMANTIC.median).toBe('#f2f3f0');
     expect(DARK_SEMANTIC.positive).toBe('#7ed957');
+    expect(DARK_SEMANTIC.warning).toBe('#ffc72c');
   });
 });
 
@@ -70,6 +72,7 @@ describe('applyTelegramTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--color-accent').trim()).toBe('#ffc72c');
     expect(document.documentElement.style.getPropertyValue('--color-accent-ink').trim()).toBe('#ffc72c');
     expect(document.documentElement.style.getPropertyValue('--color-median').trim()).toBe('#f2f3f0');
+    expect(document.documentElement.style.getPropertyValue('--color-warning').trim()).toBe('#ffc72c');
   });
 
   it('keeps brand button colours and only takes background and text from Telegram', () => {
@@ -99,6 +102,7 @@ describe('applyTelegramTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--tg-theme-subtitle-text-color').trim()).toBe('#555a64');
     expect(document.documentElement.style.getPropertyValue('--color-accent').trim()).toBe('#ffc72c');
     expect(document.documentElement.style.getPropertyValue('--color-accent-ink').trim()).toBe('#14161a');
+    expect(document.documentElement.style.getPropertyValue('--color-warning').trim()).toBe('#8a5a00');
   });
 });
 

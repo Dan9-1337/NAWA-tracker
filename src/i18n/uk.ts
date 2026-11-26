@@ -5,9 +5,6 @@ import type { Messages } from './types';
 const pointsWord = (value: string): string =>
   /[.,]/.test(value) ? 'бала' : plural('uk', value, { one: 'бал', few: 'бали', many: 'балів', other: 'бала' });
 
-const participantsWord = (count: string): string =>
-  plural('uk', count, { one: 'учасник', few: 'учасники', many: 'учасників', other: 'учасника' });
-
 export const uk = {
   app: {
     title: 'NAWAmeter',
@@ -62,6 +59,8 @@ export const uk = {
     schoolCountryHint: 'Від цього залежить шкала оцінок (наприклад, 12-бальна в Україні або 5-бальна в Казахстані).',
     maximumGradeLockedHint: 'Шкалу визначено за країною закінчення середньої школи.',
     averageAboveMaximum: 'Ого, середній бал вищий за максимум шкали! Схоже на помилку — перевірте значення.',
+    averageBelowThreshold: (max: string, score: string) =>
+      `Перевірте середній бал: за шкалою до ${max} це ${score} ${pointsWord(score)} з 90, нижче за поріг 60. Можливо, оцінку введено за іншою шкалою.`,
     belarusPoloniaBonusNotice:
       'Згідно з документом Ogłoszenie nr 13/2026, пункт 2.7 (критерій 2), бонус за закінчення польської школи не стосується громадян Білорусі.',
     summaryTitle: 'Підсумок',
@@ -131,6 +130,7 @@ export const uk = {
       primary: 'Так, початкову школу',
       secondary: 'Так, середню школу',
     },
+    polishSchoolBonusBadge: (value: string) => `+${value} ${pointsWord(value)}`,
   },
   countries: {
     placeholder: 'Оберіть країну',
@@ -184,9 +184,9 @@ export const uk = {
     close: 'Закрити',
   },
   scholarshipReport: {
-    title: 'Стипендіати Dyrektora NAWA 2026',
+    title: 'Стипендіати Директора NAWA 2026',
     invitationBody:
-      'Отримали стипендію Dyrektora NAWA? Розкажіть, куди вас направили, і подивіться, що обирали інші стипендіати.',
+      'Отримали стипендію Директора NAWA? Розкажіть, куди вас направили, і подивіться, що обирали інші стипендіати.',
     start: 'Я отримав(ла) стипендію',
     routeLabel: 'Шлях навчання',
     centreLabel: 'Центр підготовчого курсу',
@@ -211,7 +211,7 @@ export const uk = {
       scoreBelowThreshold: 'Ваш орієнтовний бал нижчий за 60, тому ця анкета недоступна.',
       exists: 'Ви вже зберегли відповіді.',
       notFound: 'Відповідей не знайдено.',
-      profileNotFound: 'Анкету Dyrektora NAWA за 2026 рік не знайдено.',
+      profileNotFound: 'Анкету щодо стипендії Директора NAWA за 2026 рік не знайдено.',
       delete: 'Не вдалося видалити відповіді.',
     },
     flow: {
@@ -397,7 +397,7 @@ export const uk = {
       aboveMedianBy: (delta: string) => `На ${delta} ${pointsWord(delta)} вище за медіану`,
       belowMedianBy: (delta: string) => `На ${delta} ${pointsWord(delta)} нижче за медіану`,
       aroundMedian: 'Близько до медіани групи',
-      cohortMeta: (count: string, median: string) => `${count} у вибірці · медіана ${median}`,
+      cohortMeta: (count: string, median: string) => `${count} у вибірці · медіана ${median} ${pointsWord(median)}`,
       cohortSizeOnly: (count: string) => `${count} у вибірці`,
       expandDistribution: 'Показати повний розподіл балів',
       collapseDistribution: 'Сховати повний розподіл балів',
@@ -410,16 +410,6 @@ export const uk = {
       orientationMarkInvitation: 'Отримали стипендію? Розкажіть — і він з’явиться.',
       onlyYou: (country: string, year: string) =>
         `${country}: наразі лише ваша анкета в наборі ${year}.`,
-    },
-    competitionNeighbourhood: {
-      title: 'Поруч із вашим результатом',
-      distanceHigher: (delta: string) => `Відстань до найближчого вищого бала: ${delta}`,
-      distanceLower: (delta: string) => `Відстань до найближчого нижчого бала: ${delta}`,
-      withinOnePoint: (count: string) => `У межах ±1 бала: ${count} ${participantsWord(count)}`,
-      tied: (count: string) => `Учасників із таким самим балом: ${count}`,
-      dense: 'Ви в щільній частині групи.',
-      moderate: 'Ви в помірно щільній частині групи.',
-      sparse: 'Ви в менш щільній частині групи.',
     },
   },
 } satisfies Messages;

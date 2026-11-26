@@ -23,11 +23,13 @@ export const seasons: readonly SeasonCalendar[] = [
 ];
 
 /**
- * The intake the app records against. Records are keyed by (account, intake year) and statistics are scoped
- * to `season_config.active_intake_year`, so rolling over to a new intake means changing this constant and that
- * row together (see docs/architecture.md, "Season rollover").
+ * The calendar of an intake, or undefined when the year is not listed. The active intake year itself comes from
+ * the database (`season_config.active_intake_year`, ADR 0018); the client learns it from the server and looks
+ * its dates up here, so a year without an entry renders as "intake closed" without dates.
  */
-export const currentIntakeYear: number = season2026.year;
+export function seasonForYear(year: number): SeasonCalendar | undefined {
+  return seasons.find((season) => season.year === year);
+}
 
 function isoToday(now: Date): string {
   return now.toISOString().slice(0, 10);

@@ -1,5 +1,4 @@
 import type { CreateResponseResult, DeleteResponseResult, UpdateResponseResult } from '../shared/contracts.js';
-import { currentIntakeYear } from '../shared/season.js';
 import {
   createResponseRequestSchema,
   createResponseResultSchema,
@@ -20,6 +19,7 @@ import {
   normalizeQuestionnaire,
   parseCreateMutationResult,
   parseUpdateMutationResult,
+  readActiveIntakeYear,
   type RpcClient,
   type RpcError,
 } from './_lib/questionnaire.js';
@@ -97,8 +97,8 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
         dependencies.assertSameOrigin(request);
         const identity = dependencies.requireTelegramIdentity(request);
         const input = parseJsonBody(request, createResponseRequestSchema);
-        if (input.response.intakeYear !== currentIntakeYear) throw invalidIntakeYear();
         const client = dependencies.getClient();
+        if (input.response.intakeYear !== (await readActiveIntakeYear(client))) throw invalidIntakeYear();
         const createResult = await client.rpc('create_response_for_identity', {
           p_identity_hash: dependencies.hashIdentity(identity),
           ...normalizeQuestionnaire(input.response),
@@ -117,8 +117,8 @@ export function createResponsesHandler(overrides: Partial<ResponsesHandlerDepend
         dependencies.assertSameOrigin(request);
         const identity = dependencies.requireTelegramIdentity(request);
         const input = parseJsonBody(request, updateResponseRequestSchema);
-        if (input.response.intakeYear !== currentIntakeYear) throw invalidIntakeYear();
         const client = dependencies.getClient();
+        if (input.response.intakeYear !== (await readActiveIntakeYear(client))) throw invalidIntakeYear();
         const updateResult = await client.rpc('update_current_response', {
           p_identity_hash: dependencies.hashIdentity(identity),
           ...normalizeQuestionnaire(input.response),

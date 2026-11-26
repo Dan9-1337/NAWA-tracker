@@ -5,6 +5,7 @@ describe('formatCountryLabel', () => {
   it('localizes ISO country codes', () => {
     expect(formatCountryLabel('UA', 'pl')).toBe('Ukraina');
     expect(formatCountryLabel('UA', 'ru')).toBe('Украина');
+    expect(formatCountryLabel('UA', 'be')).toBe('Украіна');
   });
 
   it('falls back for unknown values', () => {

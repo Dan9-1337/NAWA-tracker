@@ -26,8 +26,9 @@ type ScoreScreenProps = {
 };
 
 /**
- * The what-if block: the tape, the average input and, only while a what-if is active,
- * its own score, threshold chip and percentile band. Nothing here touches the saved card.
+ * The what-if block: the tape, the score row (the saved score until the ruler moves), the average input and,
+ * only while a what-if is active, the saved-score line, reset, percentile band and note.
+ * Nothing here touches the saved card.
  */
 export function ScoreScreen({ current, statistics, orientationMark, onWhatIfUsed }: ScoreScreenProps) {
   const { t, locale } = useI18n();
@@ -123,26 +124,24 @@ export function ScoreScreen({ current, statistics, orientationMark, onWhatIfUsed
           onStep={(steps) => applyAverage(stepAverage(average, steps, maximumGrade))}
         />
       </div>
-      <p className="-mt-1 text-center text-[13px] text-[var(--text-secondary)]">
+      <p className="-mt-1 text-center text-sm text-[var(--text-secondary)]">
         {copy.tapeHint(formatPrecise(AVERAGE_STEP, locale))}
       </p>
 
-      {isWhatIf ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="what-if-result">
-          <span
-            className="font-display text-[40px] font-semibold leading-[0.95] tracking-[-0.02em] tabular-nums"
-            data-testid="what-if-score-value"
-          >
-            {formatPrecise(score, locale)}
-          </span>
-          <span className="font-display text-[18px] font-medium text-[var(--text-secondary)]">
-            {copy.scaleMax}
-          </span>
-          <ThresholdChip score={score} size="small" testId="what-if-threshold-chip" />
-        </div>
-      ) : null}
+      <div className="mt-4 flex flex-wrap items-center gap-2" data-testid="what-if-result">
+        <span
+          className="font-display text-[40px] font-semibold leading-[0.95] tracking-[-0.02em] tabular-nums"
+          data-testid="what-if-score-value"
+        >
+          {formatPrecise(score, locale)}
+        </span>
+        <span className="font-display text-[18px] font-medium text-[var(--text-secondary)]">
+          {copy.scaleMax}
+        </span>
+        <ThresholdChip score={score} size="small" testId="what-if-threshold-chip" />
+      </div>
 
-      <div className="mt-4 rounded-2xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3">
+      <div className="mt-6 rounded-2xl border border-[var(--section-divider-color)] bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3">
         <label htmlFor="what-if-average" className="text-sm text-[var(--text-secondary)]">
           {copy.averageInputLabel}
         </label>
@@ -196,12 +195,12 @@ export function ScoreScreen({ current, statistics, orientationMark, onWhatIfUsed
           </div>
         ) : null}
         {band ? (
-          <p className="mt-1 text-[13px] font-medium text-[var(--text-secondary)]" data-testid="what-if-percentile-band">
+          <p className="mt-1 text-sm font-medium text-[var(--text-secondary)]" data-testid="what-if-percentile-band">
             {band.kind === 'band' ? copy.percentileBand(band.from, band.to) : copy.belowAxis}
           </p>
         ) : null}
         {isWhatIf ? (
-          <p className="mt-1 text-[13px] text-[var(--text-helper)]">{copy.whatIfNote}</p>
+          <p className="mt-1 text-sm text-[var(--text-helper)]">{copy.whatIfNote}</p>
         ) : null}
       </div>
     </section>

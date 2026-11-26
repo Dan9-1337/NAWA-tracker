@@ -46,6 +46,8 @@ describe('StatisticsPanel', () => {
 
     rerender(<StatisticsPanel state={{ status: 'loading' }} profile={profile} />);
     expect(screen.getByRole('status')).toHaveTextContent('Wczytywanie statystyk…');
+    expect(screen.getByRole('status', { name: pl.stats.loadingAriaLabel })).toBeInTheDocument();
+    expect(screen.getByRole('status').querySelectorAll('[aria-hidden="true"].skeleton-block').length).toBeGreaterThan(0);
     expect(screen.getByTestId('saved-score-value')).toHaveTextContent('81,00');
     expect(screen.getByTestId('saved-score-value').closest('section')).toContainElement(
       screen.getByRole('status'),
@@ -57,6 +59,23 @@ describe('StatisticsPanel', () => {
     expect(screen.getByTestId('saved-score-value').closest('section')).toContainElement(
       screen.getByRole('alert'),
     );
+  });
+
+  it('labels the season by the year the server reported, with the 2026 closing copy unchanged', () => {
+    render(<StatisticsPanel state={{ status: 'unavailable' }} profile={profile} />);
+
+    expect(screen.getByText(pl.scoreScreen.seasonClosed('2026'))).toBeInTheDocument();
+  });
+
+  it('shows "intake closed" without dates for a server year that has none, and does not crash', () => {
+    const { rerender } = render(
+      <StatisticsPanel state={{ status: 'unavailable' }} profile={{ ...profile, intakeYear: 2027 }} />,
+    );
+    expect(screen.getByText(pl.scoreScreen.seasonClosed('2027'))).toBeInTheDocument();
+
+    // A year that is not listed in `seasons` at all falls back the same way.
+    rerender(<StatisticsPanel state={{ status: 'unavailable' }} profile={{ ...profile, intakeYear: 2031 }} />);
+    expect(screen.getByText(pl.scoreScreen.seasonClosed('2031'))).toBeInTheDocument();
   });
 
   it('shows the score, the chip and one line when the country has only this survey', () => {

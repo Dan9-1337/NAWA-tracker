@@ -117,6 +117,20 @@ export function parseUpdateMutationResult(value: unknown) {
   return parseMutationResult(value, 'updated') as z.infer<typeof updateMutationResultSchema>;
 }
 
+/**
+ * The active intake year, read from `season_config` through the service-role-only RPC (ADR 0018). Every handler
+ * that scopes by year calls this instead of carrying its own copy of the year.
+ */
+export async function readActiveIntakeYear(client: RpcClient): Promise<number> {
+  const result = await client.rpc('get_active_intake_year', {});
+  assertRpcSucceeded(result.error);
+  const year = result.data;
+  if (typeof year !== 'number' || !Number.isInteger(year)) {
+    throw new HttpError(500, 'INTERNAL_ERROR', 'An unexpected error occurred.');
+  }
+  return year;
+}
+
 export function assertRpcSucceeded(error: RpcError | null): void {
   if (!error) return;
   // The database raises edit_limit_reached with the retry instant in the exception detail (ADR 0013).

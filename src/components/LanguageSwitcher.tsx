@@ -11,7 +11,7 @@ const localeCodes: Record<Locale, string> = {
 };
 
 const headerButtonClass =
-  'flex h-11 shrink-0 items-center justify-center rounded-xl border text-xs font-semibold tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-ink)]';
+  'flex h-11 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent-ink)]';
 
 type LanguageSwitcherProps = {
   fullWidth?: boolean;

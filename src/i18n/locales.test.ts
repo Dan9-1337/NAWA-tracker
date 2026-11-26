@@ -105,6 +105,23 @@ describe('locales', () => {
   });
 });
 
+describe('cohort sample line', () => {
+  it('ends with the points unit in uk and be (A5)', () => {
+    expect(messages.uk.dashboard.hero.cohortMeta('18', '76,6')).toBe('18 у вибірці · медіана 76,6 бала');
+    expect(messages.be.dashboard.hero.cohortMeta('18', '76,6')).toBe('18 у выбарцы · медыяна 76,6 бала');
+  });
+
+  it.each([
+    ['1', 'бал', 'бал'],
+    ['2', 'бали', 'балы'],
+    ['5', 'балів', 'балаў'],
+    ['21', 'бал', 'бал'],
+  ])('uses the plural form for the integer median %s in uk and be (A5)', (median, uk, be) => {
+    expect(messages.uk.dashboard.hero.cohortMeta('18', median)).toBe(`18 у вибірці · медіана ${median} ${uk}`);
+    expect(messages.be.dashboard.hero.cohortMeta('18', median)).toBe(`18 у выбарцы · медыяна ${median} ${be}`);
+  });
+});
+
 describe('locale detection', () => {
   it('maps language tags to supported locales', () => {
     expect(localeFromLanguageTag('uk')).toBe('uk');

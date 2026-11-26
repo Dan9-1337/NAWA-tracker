@@ -442,6 +442,23 @@ describe('scholarship-holder results', () => {
   );
 
   it(
+    'shows a skeleton with the loading status while the results summary is pending',
+    async () => {
+      const user = userEvent.setup();
+      api.getScholarshipReport.mockResolvedValue({ report: savedReport });
+      api.getScholarshipReportSummary.mockReturnValueOnce(new Promise(() => {}));
+      renderDashboard();
+
+      await openResults(user);
+
+      const status = screen.getByRole('status', { name: pl.scholarshipReport.results.loading });
+      expect(status).toHaveTextContent(pl.scholarshipReport.results.loading);
+      expect(status.querySelectorAll('[aria-hidden="true"].skeleton-block').length).toBeGreaterThan(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'sorts the country filter, shows counts from one, filters to BY and resets on reopening',
     async () => {
       const user = userEvent.setup();

@@ -46,7 +46,7 @@ export function HelpView({ current }: { current: ResponseFormInput | null }) {
         />
         <SettingsMenuRow label={t.support.reportBug} icon={<ShieldIcon size={17} />} onClick={() => openSupport('bug')} />
       </SettingsMenuGroup>
-      <p className="px-1 text-xs leading-5 text-[var(--text-helper)]">{t.support.hint}</p>
+      <p className="px-1 text-sm leading-5 text-[var(--text-helper)]">{t.support.hint}</p>
     </div>
   );
 }

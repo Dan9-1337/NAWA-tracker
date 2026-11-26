@@ -93,7 +93,7 @@ function SummaryBlock({
 function Row({ label, value, leading }: { label: string; value: string; leading?: ReactNode }) {
   return (
     <div className="rounded-2xl border border-[var(--tg-theme-hint-color)] bg-[var(--tg-theme-section-bg-color)] px-4 py-3">
-      <dt className="text-xs font-medium text-[var(--tg-theme-subtitle-text-color)]">
+      <dt className="text-sm font-medium text-[var(--tg-theme-subtitle-text-color)]">
         {label}
       </dt>
       <dd className="mt-1 flex items-center gap-2 text-sm font-medium">

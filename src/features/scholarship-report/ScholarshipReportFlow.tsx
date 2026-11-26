@@ -162,7 +162,7 @@ function ProgrammeStep({ controller }: { controller: ScholarshipReportController
         />
         <p
           id="scholarship-custom-programme-hint"
-          className="text-xs text-[var(--tg-theme-subtitle-text-color)]"
+          className="text-sm text-[var(--tg-theme-subtitle-text-color)]"
         >
           {t.scholarshipReport.flow.manualHint}
         </p>
@@ -251,7 +251,7 @@ export function ScholarshipReportFlow({ controller }: { controller: ScholarshipR
 
   return (
     <div className="space-y-4" data-testid="scholarship-flow">
-      <p className="text-xs font-medium text-[var(--tg-theme-subtitle-text-color)]">
+      <p className="text-sm font-medium text-[var(--tg-theme-subtitle-text-color)]">
         {t.scholarshipReport.flow.stepOf(controller.stepIndex + 1, controller.steps.length)}
       </p>
 

@@ -30,7 +30,7 @@ export function DistributionDetailsSection({
     <DashboardCard className="!space-y-0">
       <button
         type="button"
-        className="disclosure-row flex w-full items-center justify-between gap-3 !px-0 !py-0"
+        className="disclosure-row flex w-full items-center justify-between gap-3"
         aria-expanded={expanded}
         onClick={() => setExpanded((value) => !value)}
       >

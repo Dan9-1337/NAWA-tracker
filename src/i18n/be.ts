@@ -3,7 +3,6 @@ import type { Messages } from './types';
 
 const POINTS: PluralForms = { one: 'бал', few: 'балы', many: 'балаў', other: 'бала' };
 const ANSWERS: PluralForms = { one: 'адказ', few: 'адказы', many: 'адказаў', other: 'адказу' };
-const PARTICIPANTS: PluralForms = { one: 'удзельнік', few: 'удзельнікі', many: 'удзельнікаў', other: 'удзельніка' };
 
 /** A score string with a decimal separator ("5,0") is fractional even when its value is whole. */
 const forNumber = (count: string, forms: PluralForms) =>
@@ -62,8 +61,10 @@ export const be = {
     schoolCountryHint: 'Ад гэтага залежыць шкала адзнак (напрыклад, 12-бальная ва Украіне або 5-бальная ў Казахстане).',
     maximumGradeLockedHint: 'Шкала задана паводле краіны заканчэння сярэдняй школы.',
     averageAboveMaximum: 'Ого, сярэдні бал вышэйшы за максімум шкалы! Падобна на памылку — праверце значэнне.',
+    averageBelowThreshold: (max: string, score: string) =>
+      `Праверце сярэдні бал: па шкале да ${max} гэта ${score} ${forNumber(score, POINTS)} з 90, ніжэй за парог 60. Магчыма, бал уведзены па іншай шкале.`,
     belarusPoloniaBonusNotice:
-      'Паводле документа Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2), бонус за польскую школу не датычыцца грамадзян Беларусі.',
+      'Паводле документа Ogłoszenie nr 13/2026, пункт 2.7 (крытэрый 2), бонус за польскую школу не датычыцца грамадзян Беларусі.',
     summaryTitle: 'Падсумаванне',
     summaryDescription: 'Праверце, з кім вас будуць параўноўваць і што будзе захавана.',
     cohortTitle: 'Вас будуць параўноўваць з кандыдатамі:',
@@ -131,6 +132,7 @@ export const be = {
       primary: 'Так, пачатковую школу',
       secondary: 'Так, сярэднюю школу',
     },
+    polishSchoolBonusBadge: (value: string) => `+${value} ${forNumber(value, POINTS)}`,
   },
   countries: {
     placeholder: 'Абярыце краіну',
@@ -140,7 +142,7 @@ export const be = {
   nawaScore: {
     preview: (score: string) => `Арыентыровачны бал: ${score}`,
     previewNote:
-      'Арыентыровачны бал па формуле з документа Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2): адзнакі 0–90 балаў + бонус за польскую школу 0/5/10. Гэта не афіцыйны вынік NAWA.',
+      'Арыентыровачны бал па формуле з документа Ogłoszenie nr 13/2026, пункт 2.7 (крытэрый 2): адзнакі 0–90 балаў + бонус за польскую школу 0/5/10. Гэта не афіцыйны вынік NAWA.',
   },
   stats: {
     heroLabel: 'Ваш вынік',
@@ -184,9 +186,9 @@ export const be = {
     close: 'Закрыць',
   },
   scholarshipReport: {
-    title: 'Стыпендыяты Dyrektora NAWA 2026',
+    title: 'Стыпендыяты Дырэктара NAWA 2026',
     invitationBody:
-      'Атрымалі стыпендыю Dyrektora NAWA? Раскажыце, куды вас накіравалі, і паглядзіце, што выбіралі іншыя стыпендыяты.',
+      'Атрымалі стыпендыю Дырэктара NAWA? Раскажыце, куды вас накіравалі, і паглядзіце, што выбіралі іншыя стыпендыяты.',
     start: 'Я атрымаў(ла) стыпендыю',
     routeLabel: 'Шлях навучання',
     centreLabel: 'Цэнтр падрыхтоўчага курса',
@@ -211,7 +213,7 @@ export const be = {
       scoreBelowThreshold: 'Ваш арыентыровачны бал ніжэйшы за 60, таму гэтая анкета недаступная.',
       exists: 'Вы ўжо захавалі адказы.',
       notFound: 'Адказы не знойдзены.',
-      profileNotFound: 'Анкета Dyrektora NAWA за 2026 год не знойдзена.',
+      profileNotFound: 'Анкета па стыпендыі Дырэктара NAWA за 2026 год не знойдзена.',
       delete: 'Не ўдалося выдаліць адказы.',
     },
     flow: {
@@ -397,7 +399,7 @@ export const be = {
       aboveMedianBy: (delta: string) => `На ${delta} ${forNumber(delta, POINTS)} вышэй за медыяну`,
       belowMedianBy: (delta: string) => `На ${delta} ${forNumber(delta, POINTS)} ніжэй за медыяну`,
       aroundMedian: 'Блізка да медыяны групы',
-      cohortMeta: (count: string, median: string) => `${count} у выбарцы · медыяна ${median}`,
+      cohortMeta: (count: string, median: string) => `${count} у выбарцы · медыяна ${median} ${forNumber(median, POINTS)}`,
       cohortSizeOnly: (count: string) => `${count} у выбарцы`,
       expandDistribution: 'Паказаць поўнае размеркаванне балаў',
       collapseDistribution: 'Схаваць поўнае размеркаванне балаў',
@@ -410,16 +412,6 @@ export const be = {
       orientationMarkInvitation: 'Атрымалі стыпендыю? Раскажыце — і ён з’явіцца.',
       onlyYou: (country: string, year: string) =>
         `${country}: пакуль толькі ваша анкета ў наборы ${year}.`,
-    },
-    competitionNeighbourhood: {
-      title: 'Побач з вашым вынікам',
-      distanceHigher: (delta: string) => `Адлегласць да бліжэйшага вышэйшага бала: ${delta}`,
-      distanceLower: (delta: string) => `Адлегласць да бліжэйшага ніжэйшага бала: ${delta}`,
-      withinOnePoint: (count: string) => `У межах ±1 бала: ${count} ${forNumber(count, PARTICIPANTS)}`,
-      tied: (count: string) => `Аднолькавых балаў: ${count}`,
-      dense: 'Вы ў шчыльнай частцы групы.',
-      moderate: 'Вы ў умерана шчыльнай частцы групы.',
-      sparse: 'Вы ў менш шчыльнай частцы групы.',
     },
   },
 } satisfies Messages;

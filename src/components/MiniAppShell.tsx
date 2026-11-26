@@ -5,6 +5,7 @@ import { getDevChromeState, getTelegramWebApp } from '../lib/telegram';
 import { APP_SCROLL_ATTRIBUTE } from '../lib/useScrollToTop';
 
 function DevActionBar({ hidden }: { hidden: boolean }) {
+  const { t } = useI18n();
   const app = getTelegramWebApp();
   const [state, setState] = useState(getDevChromeState);
 
@@ -31,7 +32,7 @@ function DevActionBar({ hidden }: { hidden: boolean }) {
             className="rounded-2xl border border-[var(--tg-theme-hint-color)] px-4 py-3 text-sm font-semibold"
             onClick={() => state.triggerBack()}
           >
-            ← Back
+            ← {t.settings.back}
           </button>
         ) : null}
         {state.secondaryVisible ? (
@@ -89,7 +90,7 @@ export function MiniAppShell({
           <div className="min-w-0">
             <h1 className="text-lg font-semibold leading-tight">{title}</h1>
             {subtitle ? (
-              <p className="mt-0.5 truncate text-xs text-[var(--text-disabled)]">{subtitle}</p>
+              <p className="mt-0.5 truncate text-sm text-[var(--text-disabled)]">{subtitle}</p>
             ) : null}
           </div>
           <div className="flex items-center gap-2">

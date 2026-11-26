@@ -31,8 +31,8 @@ export function ThresholdChip({ score, size = 'default', testId }: ThresholdChip
     <div
       className={`inline-flex items-center rounded-full font-semibold ${
         compact
-          ? 'gap-1.5 px-2.5 py-[5px] text-[12.5px]'
-          : 'gap-2 px-3.5 py-[7px] text-[13.5px]'
+          ? 'gap-1.5 px-2.5 py-[5px] text-sm'
+          : 'gap-2 px-3.5 py-[7px] text-sm'
       }`}
       style={{
         background: 'var(--tg-theme-button-color)',

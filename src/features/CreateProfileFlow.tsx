@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { responseFormInputSchema } from '../../shared/validation';
 import { useI18n } from '../i18n/context';
+import { getIntakeSummary } from '../lib/api-client';
 import {
   clearWizardDraft,
   hasRestoredWizardSession,
@@ -14,13 +15,14 @@ import { trackProductEvent } from '../lib/product-events';
 import { getTelegramStartCountry, getTelegramWebApp } from '../lib/telegram';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome } from '../lib/useMiniAppChrome';
-import { useScrollToTopOnChange } from '../lib/useScrollToTop';
+import { useScrollIntoViewWhenShown, useScrollToTopOnChange } from '../lib/useScrollToTop';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
   toResponseInput,
 } from './ResponseWizardSteps';
 import { StartScreen } from './StartScreen';
+import { GradesStepVisibilityContext } from './wizard/GradesStep';
 import { useWizardSteps } from './useWizardSteps';
 
 function todayIsoDate(): string {
@@ -82,8 +84,30 @@ export function CreateProfileFlow({
   const [dirty, setDirty] = useState(() => restoredSession.current != null);
   const [showResumePrompt, setShowResumePrompt] = useState(pendingResume);
   const [startCtaInView, setStartCtaInView] = useState(true);
+  // The active intake year as the server reports it (ADR 0018); null until the first answer arrives.
+  const [intakeYear, setIntakeYear] = useState<number | null>(null);
+  const [intakeYearError, setIntakeYearError] = useState(false);
   const startCtaRef = useRef<HTMLButtonElement>(null);
   const educationCompleted = useRef(false);
+  const averageAboveMaximumReported = useRef(false);
+  const lowScoreWarningReported = useRef(false);
+
+  // Each warning is recorded the first time it becomes visible in this mount of the create flow.
+  const gradesVisibility = useMemo(
+    () => ({
+      onAverageAboveMaximumShown: () => {
+        if (averageAboveMaximumReported.current) return;
+        averageAboveMaximumReported.current = true;
+        void trackProductEvent({ name: 'wizard_average_above_maximum_shown' });
+      },
+      onLowScoreWarningShown: () => {
+        if (lowScoreWarningReported.current) return;
+        lowScoreWarningReported.current = true;
+        void trackProductEvent({ name: 'wizard_low_score_warning_shown' });
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (screen === 'wizard') {
@@ -92,7 +116,22 @@ export function CreateProfileFlow({
     }
   }, [draft, screen, stepIndex]);
 
+  useEffect(() => {
+    let mounted = true;
+    getIntakeSummary()
+      .then((summary) => {
+        if (mounted) setIntakeYear(summary.intakeYear);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   useScrollToTopOnChange(screen, stepIndex);
+  // A failed year lookup is shown like a failed save: the draft stays and the same button retries.
+  const saveError = actionError ?? (intakeYearError ? t.form.saveError : null);
+  const saveErrorRef = useScrollIntoViewWhenShown<HTMLDivElement>(saveError);
 
   useEffect(() => {
     if (screen !== 'start') return undefined;
@@ -153,16 +192,37 @@ export function CreateProfileFlow({
 
   const handleSubmit = useCallback(async () => {
     if (disabled) return;
-    const result = responseFormInputSchema.safeParse(toResponseInput(draft));
-    if (!result.success) return;
 
     await runGuarded(async () => {
-      await onSubmit(result.data);
+      // The save never goes out with a guessed year: if the first request failed, ask the server again.
+      let year = intakeYear;
+      if (year === null) {
+        try {
+          year = (await getIntakeSummary()).intakeYear;
+        } catch (error) {
+          setIntakeYearError(true);
+          void trackProductEvent({ name: 'wizard_save_failed' });
+          throw error;
+        }
+        setIntakeYear(year);
+        setIntakeYearError(false);
+      }
+
+      const result = responseFormInputSchema.safeParse(toResponseInput(draft, year));
+      // The button is disabled until the draft is valid; failing here only gives the error haptic.
+      if (!result.success) throw new Error('invalid response');
+
+      try {
+        await onSubmit(result.data);
+      } catch (error) {
+        void trackProductEvent({ name: 'wizard_save_failed' });
+        throw error;
+      }
       void trackProductEvent({ name: 'wizard_completed' });
       clearWizardDraft();
       setDirty(false);
     });
-  }, [disabled, draft, onSubmit, runGuarded]);
+  }, [disabled, draft, intakeYear, onSubmit, runGuarded]);
 
   const onGradesStep = currentStep === 'grades';
 
@@ -210,11 +270,13 @@ export function CreateProfileFlow({
 
   return (
     <>
-      <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />
-      {actionError ? (
-        <div role="alert" className="mt-4 space-y-1">
+      <GradesStepVisibilityContext.Provider value={gradesVisibility}>
+        <ResponseWizardSteps draft={draft} onDraftChange={setDraft} stepIndex={stepIndex} />
+      </GradesStepVisibilityContext.Provider>
+      {saveError ? (
+        <div ref={saveErrorRef} role="alert" className="mt-4 space-y-1">
           <p className="text-sm font-medium text-[var(--tg-theme-destructive-text-color)]">
-            {actionError}
+            {saveError}
           </p>
           <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.form.saveErrorDraft}</p>
         </div>

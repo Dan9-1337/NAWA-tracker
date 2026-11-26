@@ -200,4 +200,15 @@ describe('StartScreen', () => {
     expect(screen.queryByText(/48/)).not.toBeInTheDocument();
     expect(screen.queryByText(/w tym tygodniu/)).not.toBeInTheDocument();
   });
+
+  it('has no language switcher: the language is chosen only in Settings', () => {
+    setup();
+
+    expect(screen.queryByRole('group', { name: pl.language.label })).not.toBeInTheDocument();
+    const labels = screen.getAllByRole('button').map((button) => button.textContent);
+    for (const code of ['POL', 'ENG', 'RUS', 'UKR', 'BEL']) {
+      expect(labels).not.toContain(code);
+    }
+    expect(screen.getByRole('button', { name: pl.start.cta })).toBeInTheDocument();
+  });
 });

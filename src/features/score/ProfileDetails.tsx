@@ -81,7 +81,7 @@ export function ProfileDetails({ current, onEditSection }: ProfileDetailsProps) 
         />
       </div>
 
-      <p className="mt-2.5 px-1 text-[13px] tabular-nums text-[var(--text-secondary)]">
+      <p className="mt-2.5 px-1 text-sm tabular-nums text-[var(--text-secondary)]">
         {formula}. {copy.formulaDisclaimer}
       </p>
     </section>

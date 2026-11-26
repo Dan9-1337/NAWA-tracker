@@ -92,7 +92,7 @@ export function ScholarshipReportCard({ controller }: ScholarshipReportCardProps
           <dd className="text-right font-medium">
             {reportProgramme(report)}
             {report.customProgramme ? (
-              <span className="mt-0.5 block text-xs font-normal text-[var(--text-secondary)]">
+              <span className="mt-0.5 block text-sm font-normal text-[var(--text-secondary)]">
                 {copy.typedByHand}
               </span>
             ) : null}

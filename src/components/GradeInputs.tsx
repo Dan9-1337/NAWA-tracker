@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useI18n } from '../i18n/context';
+import type { Locale } from '../i18n/types';
 import { parseLocalizedNumber } from '../lib/format';
 
 type GradeInputsProps = {
@@ -20,9 +21,10 @@ function normalizeAverage(value: number | null): number | null {
   return value < 0 ? 0 : value;
 }
 
-function formatInputValue(value: number | null): string {
+/** The stored value as typed: only the decimal separator follows the locale, so nothing is rounded or grouped. */
+function formatInputValue(value: number | null, locale: Locale): string {
   if (value == null) return '';
-  return String(value);
+  return locale === 'en' ? String(value) : String(value).replace('.', ',');
 }
 
 export function GradeInputs({
@@ -37,13 +39,14 @@ export function GradeInputs({
   averageExceedsWarning,
   averageRequiredError,
 }: GradeInputsProps) {
-  const { t } = useI18n();
-  const [averageRaw, setAverageRaw] = useState(() => formatInputValue(averageGrade));
-  const [maximumRaw, setMaximumRaw] = useState(() => formatInputValue(maximumGrade));
+  const { t, locale } = useI18n();
+  const [averageRaw, setAverageRaw] = useState(() => formatInputValue(averageGrade, locale));
+  const [maximumRaw, setMaximumRaw] = useState(() => formatInputValue(maximumGrade, locale));
+  const [averageTouched, setAverageTouched] = useState(false);
 
   const averageInvalid =
     averageGrade != null && maximumGrade != null && maximumGrade > 0 && averageGrade > maximumGrade;
-  const averageMissing = averageGrade == null && Boolean(averageRequiredError);
+  const averageMissing = averageTouched && averageGrade == null && Boolean(averageRequiredError);
 
   return (
     <>
@@ -60,7 +63,7 @@ export function GradeInputs({
               ? 'cursor-default bg-[var(--tg-theme-secondary-bg-color)]'
               : 'bg-[var(--tg-theme-section-bg-color)]'
           }`}
-          value={maximumReadOnly ? formatInputValue(maximumGrade) : maximumRaw}
+          value={maximumReadOnly ? formatInputValue(maximumGrade, locale) : maximumRaw}
           onChange={(event) => {
             const raw = event.target.value;
             setMaximumRaw(raw);
@@ -68,11 +71,11 @@ export function GradeInputs({
             onMaximumChange(nextMaximum);
           }}
           onBlur={() => {
-            if (maximumGrade != null) setMaximumRaw(formatInputValue(maximumGrade));
+            if (maximumGrade != null) setMaximumRaw(formatInputValue(maximumGrade, locale));
           }}
         />
         {maximumHint ? (
-          <p className="text-xs font-normal text-[var(--tg-theme-subtitle-text-color)]">{maximumHint}</p>
+          <p className="text-sm font-normal text-[var(--tg-theme-subtitle-text-color)]">{maximumHint}</p>
         ) : null}
       </label>
       <label className="space-y-2 text-sm font-medium">
@@ -94,16 +97,17 @@ export function GradeInputs({
             onAverageChange(normalizeAverage(parseLocalizedNumber(raw)));
           }}
           onBlur={() => {
-            if (averageGrade != null) setAverageRaw(formatInputValue(averageGrade));
+            setAverageTouched(true);
+            if (averageGrade != null) setAverageRaw(formatInputValue(averageGrade, locale));
           }}
         />
         {averageMissing ? (
-          <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
+          <p className="text-sm font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
             {averageRequiredError}
           </p>
         ) : null}
         {averageInvalid && averageExceedsWarning ? (
-          <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
+          <p className="text-sm font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
             {averageExceedsWarning}
           </p>
         ) : null}

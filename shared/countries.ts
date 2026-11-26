@@ -1,3 +1,5 @@
+import { countryNamesBe } from './country-names-be';
+
 /** ISO 3166-1 alpha-2 codes offered in country pickers. Poland (PL) is excluded — Polish citizenship is a separate wizard question. */
 export const countryCodes = [
   'AD',
@@ -294,6 +296,8 @@ export function defaultMaximumGradeForSchoolCountry(schoolCountry: string): numb
 
 export function getCountryDisplayName(code: string, locale: string): string | null {
   if (!code) return null;
+  // Browsers have no Belarusian region data (Chrome answers in English), so `be` uses the generated table.
+  if (locale === 'be' && Object.prototype.hasOwnProperty.call(countryNamesBe, code)) return countryNamesBe[code];
   try {
     const name = new Intl.DisplayNames([locale], { type: 'region' }).of(code);
     if (!name || name === code) return null;

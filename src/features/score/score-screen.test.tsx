@@ -107,7 +107,7 @@ describe('ScoreScreen what-if percentile band', () => {
     renderScore();
 
     expect(screen.queryByTestId('what-if-percentile-band')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
 
     // One step: 4.50 → 4.55 average, 81.00 → 81.90 score.
     await user.click(screen.getByRole('button', { name: pl.scoreScreen.increase }));
@@ -144,12 +144,24 @@ describe('ScoreScreen what-if percentile band', () => {
     expect(line).not.toHaveTextContent('%');
   });
 
-  it('shows neither a what-if score nor a band for the saved average', () => {
+  it('shows the saved score and its chip, but no band, for the saved average', () => {
     renderScore();
 
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('what-if-threshold-chip')).not.toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
+    expect(screen.getByTestId('what-if-threshold-chip')).toHaveTextContent(
+      pl.scoreScreen.aboveThreshold('21,00', '60'),
+    );
     expect(screen.queryByTestId('what-if-percentile-band')).not.toBeInTheDocument();
+  });
+
+  it('shows the saved score and the below-threshold chip when the saved score is under 60', () => {
+    render(<ScoreScreen current={{ ...current, averageGrade: 3 }} statistics={detailedState} />);
+
+    expect(screen.getByTestId('what-if-result')).toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('54,00');
+    expect(screen.getByTestId('what-if-threshold-chip')).toHaveTextContent(
+      pl.scoreScreen.belowThreshold('6,00', '60'),
+    );
   });
 
   const hiddenBandStates: Array<[string, StatisticsState]> = [
@@ -211,7 +223,7 @@ describe('ScoreScreen what-if percentile band', () => {
     await user.click(screen.getByRole('button', { name: pl.scoreScreen.reset }));
 
     expect(screen.queryByTestId('what-if-percentile-band')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
     expect(screen.queryByText(pl.scoreScreen.savedScore('81,00'))).not.toBeInTheDocument();
   });
 });
@@ -249,6 +261,28 @@ describe('what-if analytics', () => {
     await user.keyboard('{ArrowRight}{ArrowRight}{ArrowLeft}');
 
     expect(countTracked('what_if_used')).toBe(1);
+  });
+});
+
+describe('median line colour', () => {
+  it('uses the warning colour below the median', () => {
+    renderDashboard();
+
+    const line = screen.getByText('Poniżej mediany o 1,5 pkt');
+    expect(line).toHaveClass('text-[var(--color-warning)]');
+    expect(line).not.toHaveClass('text-[var(--color-positive)]');
+  });
+
+  it('keeps the positive colour above the median and close to it', () => {
+    const { unmount } = renderDashboard({
+      status: 'success',
+      data: { ...detailedStatistics, medianScore: 79.5 },
+    });
+    expect(screen.getByText('Powyżej mediany o 1,5 pkt')).toHaveClass('text-[var(--color-positive)]');
+    unmount();
+
+    renderDashboard({ status: 'success', data: { ...detailedStatistics, medianScore: 81 } });
+    expect(screen.getByText(pl.dashboard.hero.aroundMedian)).toHaveClass('text-[var(--color-positive)]');
   });
 });
 
@@ -311,7 +345,7 @@ describe('dashboard layout', () => {
     expect(screen.getAllByText(pl.dashboard.hero.densityHint)).toHaveLength(stripCount);
   });
 
-  it('shows only the tape, hint and input when no what-if is active', () => {
+  it('shows the tape, hint, input and the saved score row when no what-if is active', () => {
     renderDashboard();
 
     const whatIf = screen.getByTestId('what-if-block');
@@ -319,8 +353,15 @@ describe('dashboard layout', () => {
     expect(whatIf).toContainElement(screen.getByText(pl.scoreScreen.tapeHint('0,05')));
     expect(whatIf).toContainElement(screen.getByLabelText(pl.scoreScreen.averageInputLabel));
 
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('what-if-threshold-chip')).not.toBeInTheDocument();
+    expect(whatIf).toContainElement(screen.getByTestId('what-if-result'));
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
+    expect(screen.getByTestId('what-if-threshold-chip')).toHaveTextContent(
+      pl.scoreScreen.aboveThreshold('21,00', '60'),
+    );
+    expect(screen.queryByText(pl.scoreScreen.savedScore('81,00'))).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: pl.scoreScreen.reset })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('what-if-percentile-band')).not.toBeInTheDocument();
+    expect(screen.queryByText(pl.scoreScreen.whatIfNote)).not.toBeInTheDocument();
 
     // D1: the saved score is a display size between 56 and 64 px.
     expect(screen.getByTestId('saved-score-value')).toHaveClass('text-[clamp(56px,16vw,64px)]');

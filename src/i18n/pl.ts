@@ -54,6 +54,8 @@ export const pl = {
     schoolCountryHint: 'Od tego zależy skala ocen przy obliczaniu wyniku (np. 12-punktowa na Ukrainie lub 5-punktowa w Kazachstanie).',
     maximumGradeLockedHint: 'Skala jest ustawiona według kraju ukończenia szkoły.',
     averageAboveMaximum: 'Ups — średnia jest wyższa niż maksimum skali. Chyba wkradła się pomyłka — sprawdź wartość.',
+    averageBelowThreshold: (max: string, score: string) =>
+      `Sprawdź średnią: w skali do ${max} daje to ${score} pkt z 90, poniżej progu 60. Możliwe, że ocena została wpisana w innej skali.`,
     belarusPoloniaBonusNotice:
       'Zgodnie z Ogłoszeniem nr 13/2026, pkt 2.7 (kryterium 2) bonus za ukończenie polskiej szkoły nie dotyczy obywateli Białorusi.',
     summaryTitle: 'Podsumowanie',
@@ -123,6 +125,7 @@ export const pl = {
       primary: 'Tak, szkoła podstawowa',
       secondary: 'Tak, szkoła średnia',
     },
+    polishSchoolBonusBadge: (value: string) => `+${value} pkt`,
   },
   countries: {
     placeholder: 'Wybierz kraj',
@@ -402,16 +405,6 @@ export const pl = {
       orientationMarkInvitation: 'Masz stypendium? Opowiedz o nim — a punkt odniesienia się pojawi.',
       onlyYou: (country: string, year: string) =>
         `${country}: na razie tylko Twoja ankieta w naborze ${year}.`,
-    },
-    competitionNeighbourhood: {
-      title: 'Wokół Twojego wyniku',
-      distanceHigher: (delta: string) => `Do najbliższego wyniku powyżej: ${delta} pkt`,
-      distanceLower: (delta: string) => `Do najbliższego wyniku poniżej: ${delta} pkt`,
-      withinOnePoint: (count: string) => `Uczestników w odległości ±1 pkt: ${count}`,
-      tied: (count: string) => `Osób z identycznym wynikiem: ${count}`,
-      dense: 'Jesteś w gęsto obsadzonej części grupy.',
-      moderate: 'Jesteś w średnio zagęszczonej części grupy.',
-      sparse: 'Jesteś w rzadziej obsadzonej części grupy.',
     },
   },
 } as const;

@@ -55,6 +55,8 @@ export const en = {
     schoolCountryHint: 'Sets the grading scale used in the calculation (for example, a 12-point scale in Ukraine or a 5-point scale in Kazakhstan).',
     maximumGradeLockedHint: 'The scale is set by the country where you completed secondary school.',
     averageAboveMaximum: 'That average is above the top of the scale — looks like a typo. Please check it.',
+    averageBelowThreshold: (max: string, score: string) =>
+      `Check your average: on a scale up to ${max} it gives ${score} of 90 points, below the threshold of 60. It may have been entered on a different scale.`,
     belarusPoloniaBonusNotice:
       'Under Ogłoszenie nr 13/2026, section 2.7 (criterion 2), the bonus for a Polish school does not apply to citizens of Belarus.',
     summaryTitle: 'Summary',
@@ -124,6 +126,7 @@ export const en = {
       primary: 'Yes, primary school',
       secondary: 'Yes, secondary school',
     },
+    polishSchoolBonusBadge: (value: string) => `+${value} pts`,
   },
   countries: {
     placeholder: 'Select a country',
@@ -402,16 +405,6 @@ export const en = {
       orientationMarkInvitation: 'Received the scholarship? Tell us — and the reference will appear.',
       onlyYou: (country: string, year: string) =>
         `${country}: only your survey in the ${year} intake so far.`,
-    },
-    competitionNeighbourhood: {
-      title: 'Around your result',
-      distanceHigher: (delta: string) => `Distance to the nearest score above: ${delta} pts`,
-      distanceLower: (delta: string) => `Distance to the nearest score below: ${delta} pts`,
-      withinOnePoint: (count: string) => `Within ±1 point: ${count} ${plural('en', count, { one: 'participant', other: 'participants' })}`,
-      tied: (count: string) => `Participants with the same score: ${count}`,
-      dense: 'Your score is in a crowded part of the group.',
-      moderate: 'Your score is in a moderately crowded part of the group.',
-      sparse: 'Your score is in a less crowded part of the group.',
     },
   },
 } satisfies Messages;

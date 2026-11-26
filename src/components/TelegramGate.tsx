@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { generate } from 'lean-qr';
+import { toSvgPath } from 'lean-qr/extras/svg';
 import { useI18n } from '../i18n/context';
 
 const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME?.trim() || 'nawa_tracker_bot';
@@ -11,7 +13,13 @@ export function TelegramGate({ botUsername = BOT_USERNAME }: TelegramGateProps) 
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const telegramUrl = `https://t.me/${botUsername.replace(/^@/, '')}`;
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(telegramUrl)}`;
+  const qr = useMemo(() => {
+    const code = generate(telegramUrl);
+    return { size: code.size, path: toSvgPath(code) };
+  }, [telegramUrl]);
+  // Four-module quiet zone around the code, as the QR specification asks.
+  const quietZone = 4;
+  const viewBoxSize = qr.size + quietZone * 2;
 
   async function copyBot() {
     try {
@@ -44,12 +52,19 @@ export function TelegramGate({ botUsername = BOT_USERNAME }: TelegramGateProps) 
         </button>
       </div>
 
-      <img
-        src={qrUrl}
-        alt={t.telegram.qrAlt}
-        className="mx-auto mt-5 h-44 w-44 rounded-2xl border border-[var(--tg-theme-hint-color)] bg-white p-2"
-        loading="lazy"
-      />
+      <svg
+        role="img"
+        aria-label={t.telegram.qrAlt}
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox={`${-quietZone} ${-quietZone} ${viewBoxSize} ${viewBoxSize}`}
+        width={180}
+        height={180}
+        shapeRendering="crispEdges"
+        className="mx-auto mt-5 rounded-2xl border border-[var(--tg-theme-hint-color)]"
+      >
+        <rect x={-quietZone} y={-quietZone} width={viewBoxSize} height={viewBoxSize} fill="#ffffff" />
+        <path d={qr.path} fill="#000000" />
+      </svg>
     </section>
   );
 }

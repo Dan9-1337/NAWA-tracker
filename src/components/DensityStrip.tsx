@@ -123,7 +123,7 @@ function DensityStripAxis({ from, to }: { from: number; to: number }) {
 
   return (
     <div
-      className="relative mt-1 h-4 text-[0.6875rem] tabular-nums text-[var(--text-helper)]"
+      className="relative mt-1 h-4 text-[0.75rem] tabular-nums text-[var(--text-helper)]"
       aria-hidden="true"
     >
       {ticks.map((tick) => {
@@ -149,7 +149,7 @@ export function DensityStrip({ variant, ...props }: DensityStripProps) {
   if (variant === 'mini') {
     return (
       <div aria-hidden="true">
-        <p className="mb-1.5 text-[0.6875rem] text-[var(--text-helper)]">{t.dashboard.hero.densityHint}</p>
+        <p className="mb-1.5 text-sm text-[var(--text-helper)]">{t.dashboard.hero.densityHint}</p>
         <DensityStripChart
           {...layout}
           youLabel={t.stats.chartYouLabel}
@@ -157,7 +157,7 @@ export function DensityStrip({ variant, ...props }: DensityStripProps) {
         />
         <DensityStripAxis from={layout.merged.from} to={layout.merged.to} />
 
-        <div className="mt-2 flex items-center justify-between gap-3 text-[0.6875rem] text-[var(--text-helper)]">
+        <div className="mt-2 flex items-center justify-between gap-3 text-sm text-[var(--text-helper)]">
           <span className="inline-flex items-center gap-1.5">
             <span className="density-strip__median-marker density-strip__median-marker--on-chart" />
             {t.stats.chartMedianLabel}

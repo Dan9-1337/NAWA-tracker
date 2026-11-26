@@ -24,5 +24,7 @@ Use [implementation tasks](../../tasks/README.md) for work that implements a dec
 | [0015](0015-compare-within-citizenship-country-without-minimum.md) | Compare within the country of citizenship, with no minimum number of responses | Accepted |
 | [0016](0016-scholarship-holder-results-page-without-minimum.md) | Scholarship-holder results on a separate page, with all countries and no minimum number of answers | Accepted (holder scores shown to everyone by 0017) |
 | [0017](0017-orientation-mark-from-holder-scores.md) | "Ориентир 2026": the lowest reported holder score per country, shown to everyone | Accepted |
+| [0018](0018-intake-year-from-the-database.md) | The active intake year comes from the database, not from a code constant | Accepted |
+| [0019](0019-minimum-text-size-14px.md) | No text smaller than 14px, except ruler labels and badges | Accepted |
 
 To add one, copy the newest file, bump the number, and add a row above.

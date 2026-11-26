@@ -119,7 +119,7 @@ describe('university search', () => {
       currentStatus: 'submitted' as const,
       statusChangedAt: '2026-01-01',
     };
-    expect(toResponseInput(draft).targetUniversity).toBe('science-049');
+    expect(toResponseInput(draft, 2026).targetUniversity).toBe('science-049');
   });
 
   it('ensures every university has searchable terms', () => {

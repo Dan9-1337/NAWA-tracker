@@ -17,6 +17,8 @@ export type SemanticColors = {
   accentInk: string;
   median: string;
   positive: string;
+  /** Amber text for a caution such as a score below the group median. */
+  warning: string;
   reliability: string;
 };
 
@@ -45,6 +47,7 @@ export const LIGHT_SEMANTIC: SemanticColors = {
   accentInk: '#14161a',
   median: '#14161a',
   positive: '#1e7a3c',
+  warning: '#8a5a00',
   reliability: '#8a5a00',
 };
 
@@ -74,6 +77,7 @@ export const DARK_SEMANTIC: SemanticColors = {
   accentInk: '#ffc72c',
   median: '#f2f3f0',
   positive: '#7ed957',
+  warning: '#ffc72c',
   reliability: '#ffc72c',
 };
 
@@ -136,6 +140,7 @@ function applySemanticColors(semantic: SemanticColors): void {
   setCssVar('--color-accent-ink', semantic.accentInk);
   setCssVar('--color-median', semantic.median);
   setCssVar('--color-positive', semantic.positive);
+  setCssVar('--color-warning', semantic.warning);
   setCssVar('--color-reliability', semantic.reliability);
   setCssVar('--tg-theme-success-text-color', semantic.positive);
 }

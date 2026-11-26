@@ -7,12 +7,13 @@ import {
 } from '../../shared/scholarship-report';
 import { useI18n } from '../i18n/context';
 import { cohortFieldsChanged } from '../lib/cohort-fields';
-import { saveWizardDraft, responseToDraft, type WizardDraft } from '../lib/draft';
+import { openCountryInvite } from '../lib/country-invite';
+import { responseToDraft, type WizardDraft } from '../lib/draft';
 import { trackProductEvent } from '../lib/product-events';
 import { canShowScoreDistribution } from '../lib/score-buckets';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
-import { scrollAppToTop, useScrollToTopOnChange } from '../lib/useScrollToTop';
+import { scrollAppToTop, useScrollIntoViewWhenShown, useScrollToTopOnChange } from '../lib/useScrollToTop';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
@@ -56,7 +57,7 @@ export function ProfileDashboard({
   editRequestNonce = 0,
   onStatsUpdatedAt,
 }: ProfileDashboardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [view, setView] = useState<View>('dashboard');
   const [editDraft, setEditDraft] = useState<WizardDraft>(() => responseToDraft(current));
   const {
@@ -157,7 +158,7 @@ export function ProfileDashboard({
 
   const submitEdit = useCallback(async () => {
     if (disabled || !canAdvanceWizardStep('grades', editDraft)) return;
-    const next = toResponseInput(editDraft);
+    const next = toResponseInput(editDraft, current.intakeYear);
     if (cohortFieldsChanged(current, next).length > 0 && !cohortWarning) {
       setCohortWarning(true);
       return;
@@ -188,8 +189,13 @@ export function ProfileDashboard({
     setView('edit-wizard');
   }, [current, resetEditSteps]);
 
+  // Each Settings request opens the wizard once. `startEdit` changes with `current`, so without the ref every save
+  // (and every dashboard that mounts after an earlier request) would replay the request.
+  const handledEditRequest = useRef(editRequestNonce);
   useEffect(() => {
-    if (editRequestNonce > 0) startEdit();
+    if (editRequestNonce === handledEditRequest.current) return;
+    handledEditRequest.current = editRequestNonce;
+    startEdit();
   }, [editRequestNonce, startEdit]);
 
   const cancelCohortWarning = useCallback(() => {
@@ -227,7 +233,19 @@ export function ProfileDashboard({
       return { back: { visible: true, onClick: scholarship.closeResults } };
     }
 
-    if (view === 'dashboard') return {};
+    if (view === 'dashboard') {
+      return {
+        main: {
+          text: t.settings.invite,
+          visible: true,
+          enabled: true,
+          onClick: () => {
+            void trackProductEvent({ name: 'invite_main_button_opened' });
+            openCountryInvite(current.rankingCountry, locale, t.settings.inviteText);
+          },
+        },
+      };
+    }
     const onGradesStep = editCurrentStep === 'grades';
     return {
       main: {
@@ -258,11 +276,7 @@ export function ProfileDashboard({
 
   useMiniAppChrome(chromeConfig());
 
-  useEffect(() => {
-    if (view === 'edit-wizard') {
-      saveWizardDraft(editDraft);
-    }
-  }, [editDraft, view]);
+  const editErrorRef = useScrollIntoViewWhenShown<HTMLParagraphElement>(actionError);
 
   if (scholarship.mode === 'flow') {
     return <ScholarshipReportFlow controller={scholarship} />;
@@ -284,7 +298,7 @@ export function ProfileDashboard({
       <>
         <ResponseWizardSteps draft={editDraft} onDraftChange={setEditDraft} stepIndex={editStepIndex} />
         {actionError ? (
-          <p className="mt-4 text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
+          <p ref={editErrorRef} className="mt-4 text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
             {actionError}
           </p>
         ) : null}

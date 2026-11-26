@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { rankSearchMatches } from './rank-search-matches';
 
 export type SearchableSelectOption = {
   value: string;
@@ -67,7 +68,10 @@ export function SearchableSelect({
     const match =
       matchesQuery ??
       ((option, q) => option.label.toLowerCase().includes(q.trim().toLowerCase()));
-    return options.filter((option) => match(option, normalized));
+    return rankSearchMatches(
+      options.filter((option) => match(option, normalized)),
+      normalized,
+    );
   }, [options, query, matchesQuery, filterOptions]);
 
   const grouped = useMemo(() => {
@@ -133,7 +137,7 @@ export function SearchableSelect({
   return (
     <div ref={rootRef} className="space-y-2 text-sm font-medium">
       <label htmlFor={controlId}>{label}</label>
-      {hint ? <p className="text-xs font-normal text-[var(--tg-theme-subtitle-text-color)]">{hint}</p> : null}
+      {hint ? <p className="text-sm font-normal text-[var(--tg-theme-subtitle-text-color)]">{hint}</p> : null}
 
       <button
         id={controlId}
@@ -164,7 +168,7 @@ export function SearchableSelect({
       </button>
 
       {error ? (
-        <p className="text-xs font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
+        <p className="text-sm font-normal text-[var(--tg-theme-destructive-text-color)]" role="alert">
           {error}
         </p>
       ) : null}
@@ -191,7 +195,7 @@ export function SearchableSelect({
               [...grouped.entries()].map(([groupName, groupOptions]) => (
                 <li key={groupName || 'default'}>
                   {groupName ? (
-                    <div className="px-4 pb-1 pt-2 text-xs font-semibold text-[var(--tg-theme-subtitle-text-color)]">
+                    <div className="px-4 pb-1 pt-2 text-sm font-semibold text-[var(--tg-theme-subtitle-text-color)]">
                       {groupName}
                     </div>
                   ) : null}
@@ -218,7 +222,7 @@ export function SearchableSelect({
                               </span>
                               {option.subtitle ? (
                                 <span
-                                  className="mt-0.5 block truncate text-xs text-[var(--tg-theme-subtitle-text-color)]"
+                                  className="mt-0.5 block truncate text-sm text-[var(--tg-theme-subtitle-text-color)]"
                                 >
                                   {option.subtitle}
                                 </span>

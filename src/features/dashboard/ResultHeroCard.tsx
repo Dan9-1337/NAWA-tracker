@@ -18,12 +18,12 @@ function medianPositionLine(
   locale: ReturnType<typeof useI18n>['locale'],
   userScore: number,
   medianScore: number | null | undefined,
-): string | null {
+): { text: string; below: boolean } | null {
   if (medianScore == null) return null;
   const delta = Math.round((userScore - medianScore) * 10) / 10;
-  if (Math.abs(delta) < 0.1) return t.dashboard.hero.aroundMedian;
-  if (delta > 0) return t.dashboard.hero.aboveMedianBy(formatScore(delta, locale));
-  return t.dashboard.hero.belowMedianBy(formatScore(Math.abs(delta), locale));
+  if (Math.abs(delta) < 0.1) return { text: t.dashboard.hero.aroundMedian, below: false };
+  if (delta > 0) return { text: t.dashboard.hero.aboveMedianBy(formatScore(delta, locale)), below: false };
+  return { text: t.dashboard.hero.belowMedianBy(formatScore(Math.abs(delta), locale)), below: true };
 }
 
 type ResultCardProps = {
@@ -46,8 +46,8 @@ export function ResultCard({ score, seasonLabel, children, caption }: ResultCard
         titleId="dashboard-result-hero-title"
         title={t.dashboard.hero.title}
         icon={<TargetIcon size={16} />}
-        badge={<span className="text-xs text-[var(--text-secondary)]">{seasonLabel}</span>}
-        titleClassName="text-xs font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
+        badge={<span className="text-sm text-[var(--text-secondary)]">{seasonLabel}</span>}
+        titleClassName="text-sm font-medium uppercase tracking-[0.08em] text-[var(--tg-theme-subtitle-text-color)]"
       />
 
       <div className="flex items-baseline gap-2">
@@ -67,7 +67,7 @@ export function ResultCard({ score, seasonLabel, children, caption }: ResultCard
       {children}
 
       {caption ? (
-        <p className="text-[11px] text-[var(--text-helper)]" data-testid="result-card-caption">
+        <p className="text-sm text-[var(--text-helper)]" data-testid="result-card-caption">
           {caption}
         </p>
       ) : null}
@@ -180,7 +180,15 @@ export function DetailedPosition({
         </p>
       ) : null}
 
-      {medianLine ? <p className="text-sm font-medium text-[var(--color-positive)]">{medianLine}</p> : null}
+      {medianLine ? (
+        <p
+          className={`text-sm font-medium ${
+            medianLine.below ? 'text-[var(--color-warning)]' : 'text-[var(--color-positive)]'
+          }`}
+        >
+          {medianLine.text}
+        </p>
+      ) : null}
 
       {showStrip && data.scoreBuckets ? (
         <DensityStrip
@@ -193,7 +201,7 @@ export function DetailedPosition({
         />
       ) : null}
 
-      <p className="text-xs text-[var(--text-helper)]">
+      <p className="text-sm text-[var(--text-helper)]">
         {data.medianScore != null
           ? t.dashboard.hero.cohortMeta(String(groupSize), formatScore(data.medianScore, locale))
           : t.dashboard.hero.cohortSizeOnly(String(groupSize))}

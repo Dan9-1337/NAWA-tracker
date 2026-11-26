@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../i18n/context';
 import { pl } from '../i18n/pl';
-import { botSubscribeLink } from '../lib/bot-links';
+import { botCountryLink, botSubscribeLink, telegramShareLink } from '../lib/bot-links';
 import { trackProductEvent } from '../lib/product-events';
 import { SettingsSheet } from './SettingsSheet';
 
@@ -113,6 +113,9 @@ describe('SettingsSheet', () => {
 
     await user.click(screen.getByRole('button', { name: new RegExp(pl.settings.invite) }));
     expect(botLinks.openTelegramUrl).toHaveBeenCalledTimes(2);
+    expect(botLinks.openTelegramUrl.mock.calls[1]?.[0]).toBe(
+      telegramShareLink(botCountryLink('UA'), pl.settings.inviteText('Ukraina')),
+    );
     expect(decodeURIComponent(String(botLinks.openTelegramUrl.mock.calls[1]?.[0]))).toContain('startapp=c_UA');
     expect(countTracked('reminders_link_opened')).toBe(1);
     expect(countTracked('invite_link_opened')).toBe(1);

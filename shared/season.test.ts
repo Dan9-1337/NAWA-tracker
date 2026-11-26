@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentIntakeYear, isIntakeOpen, seasons } from './season';
+import { isIntakeOpen, seasonForYear, seasons } from './season';
 
 describe('season calendar', () => {
   it('is open between the document dates, inclusive', () => {
@@ -27,8 +27,12 @@ describe('seasons', () => {
     expect(years).toEqual([...years].sort());
   });
 
-  it('records against a season that has dates', () => {
-    const current = seasons.find((season) => season.year === currentIntakeYear);
-    expect(current?.documentsTo).toBeTruthy();
+  it('has dates for the 2026 intake, which is the active year in the database today', () => {
+    expect(seasonForYear(2026)?.documentsTo).toBeTruthy();
+  });
+
+  it('lists a known intake whose dates are not announced, and nothing for an unknown year', () => {
+    expect(seasonForYear(2027)).toEqual({ year: 2027, documentsFrom: null, documentsTo: null, resultsBy: null });
+    expect(seasonForYear(2099)).toBeUndefined();
   });
 });

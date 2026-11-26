@@ -31,7 +31,7 @@ export function WizardProgressBar({ steps, currentStep }: WizardProgressBarProps
           );
         })}
       </div>
-      <div className="flex justify-between gap-2 text-[11px] font-medium">
+      <div className="flex justify-between gap-2 text-sm font-medium">
         {steps.map((step, index) => {
           let labelClass = 'text-[var(--tg-theme-subtitle-text-color)]';
           if (index === currentIndex) labelClass = 'text-[var(--tg-theme-text-color)]';

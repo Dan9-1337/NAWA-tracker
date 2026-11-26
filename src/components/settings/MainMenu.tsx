@@ -1,7 +1,7 @@
 import type { ResponseFormInput } from '../../../shared/contracts';
 import { useI18n } from '../../i18n/context';
-import { botCountryLink, botSubscribeLink, openTelegramUrl, telegramShareLink } from '../../lib/bot-links';
-import { formatCountryLabel } from '../../lib/country-label';
+import { botSubscribeLink, openTelegramUrl } from '../../lib/bot-links';
+import { openCountryInvite } from '../../lib/country-invite';
 import { trackProductEvent } from '../../lib/product-events';
 import type { ThemePreference } from '../../lib/theme';
 import { ChatIcon, DocumentIcon, GlobeIcon, InfoIcon, PaletteIcon, ShieldIcon, UserEditIcon, UsersIcon } from '../icons';
@@ -73,12 +73,7 @@ export function MainMenu({ current, themePreference, onNavigate, onEditProfile, 
             icon={<UsersIcon size={17} />}
             onClick={() => {
               void trackProductEvent({ name: 'invite_link_opened' });
-              openTelegramUrl(
-                telegramShareLink(
-                  botCountryLink(current.rankingCountry),
-                  t.settings.inviteText(formatCountryLabel(current.rankingCountry, locale)),
-                ),
-              );
+              openCountryInvite(current.rankingCountry, locale, t.settings.inviteText);
             }}
           />
         ) : null}

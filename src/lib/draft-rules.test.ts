@@ -3,6 +3,7 @@ import type { WizardDraft } from './draft';
 import {
   isMaximumGradeLocked,
   isPolishSchoolBonusApplicable,
+  lowGradesScore,
   normalizeDraft,
   previewOrientationScore,
   withSchoolCountry,
@@ -92,7 +93,43 @@ describe('previewOrientationScore', () => {
     expect(previewOrientationScore({ ...base, maximumGrade: 0 })).toBeNull();
   });
 
+  it('is empty while the average is above the maximum, and scores it when it equals the maximum', () => {
+    expect(previewOrientationScore({ ...base, averageGrade: 5.5 })).toBeNull();
+    expect(previewOrientationScore({ ...base, averageGrade: 5, polishSchoolLevel: 'none' })).toBe(90);
+  });
+
   it('gives students in Poland the maximum', () => {
     expect(previewOrientationScore({ ...base, applicantKind: 'student_in_poland', averageGrade: 4.8 })).toBe(100);
+  });
+});
+
+describe('lowGradesScore', () => {
+  it('flags a grades score below 60 and reports the scale and the score', () => {
+    expect(lowGradesScore({ ...base, maximumGrade: 12, averageGrade: 3.2, polishSchoolLevel: 'none' })).toEqual({
+      maximum: 12,
+      score: 24,
+    });
+  });
+
+  it('does not count the Polish-school bonus (A3)', () => {
+    const draft = { ...base, maximumGrade: 5, averageGrade: 3.3, polishSchoolLevel: 'secondary' as const };
+    expect(previewOrientationScore(draft)).toBe(69.4);
+    expect(lowGradesScore(draft)).toEqual({ maximum: 5, score: 59.4 });
+  });
+
+  it('is empty once the grades score reaches 60 (A4)', () => {
+    expect(lowGradesScore({ ...base, maximumGrade: 5, averageGrade: 3.34, polishSchoolLevel: 'none' })).toBeNull();
+    expect(lowGradesScore({ ...base, maximumGrade: 12, averageGrade: 10.5 })).toBeNull();
+  });
+
+  it('is empty for students in Poland (A5)', () => {
+    expect(lowGradesScore({ ...base, applicantKind: 'student_in_poland', maximumGrade: 5, averageGrade: 4.8 })).toBeNull();
+  });
+
+  it('is empty while the average or the scale is missing, or the average is above the maximum (A6)', () => {
+    expect(lowGradesScore({ ...base, averageGrade: null })).toBeNull();
+    expect(lowGradesScore({ ...base, maximumGrade: null, averageGrade: 3 })).toBeNull();
+    expect(lowGradesScore({ ...base, maximumGrade: 0, averageGrade: 3 })).toBeNull();
+    expect(lowGradesScore({ ...base, maximumGrade: 12, averageGrade: 13 })).toBeNull();
   });
 });

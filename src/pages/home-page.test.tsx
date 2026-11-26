@@ -181,6 +181,24 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: 'Otwórz w Telegramie' })).toBeInTheDocument();
   });
 
+  it('shows a skeleton with the loading status while the current survey is pending', async () => {
+    api.getCurrentResponse.mockReturnValueOnce(new Promise(() => {}));
+    render(<HomePage />);
+
+    const status = screen.getByRole('status', { name: pl.home.loading });
+    expect(status.querySelectorAll('[aria-hidden="true"].skeleton-block').length).toBeGreaterThan(0);
+  });
+
+  it('shows the load error alert and hint when the current survey request fails', async () => {
+    api.getCurrentResponse.mockRejectedValue(new ApiClientError(500, 'SERVER_ERROR', 'boom'));
+    render(<HomePage />);
+
+    const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+    expect(alert).toHaveTextContent(pl.home.loadError);
+    expect(alert).toHaveTextContent(pl.home.loadErrorHint);
+    expect(screen.queryByRole('status', { name: pl.home.loading })).not.toBeInTheDocument();
+  });
+
   it('opens create mode with start screen when no profile exists', async () => {
     api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
     render(<HomePage />);
@@ -194,7 +212,7 @@ describe('HomePage', () => {
 
       expect(countTracked('wizard_education_completed')).toBe(1);
 
-      await user.click(await screen.findByRole('button', { name: '← Back' }, { timeout: UI_TIMEOUT }));
+      await user.click(await screen.findByRole('button', { name: `← ${pl.settings.back}` }, { timeout: UI_TIMEOUT }));
       expect(
         await screen.findByLabelText(pl.labels.rankingCountry, {}, { timeout: UI_TIMEOUT }),
       ).toBeInTheDocument();
@@ -277,7 +295,7 @@ describe('HomePage', () => {
 
       expect(
         await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT }),
-      ).toHaveValue('9.5');
+      ).toHaveValue('9,5');
       // The draft is intact and the session resumes on grades, not on a summary screen.
       expect(screen.queryByText(pl.wizard.summaryTitle)).not.toBeInTheDocument();
     },
@@ -301,7 +319,7 @@ describe('HomePage', () => {
     render(<HomePage />);
 
     expect(await screen.findByTestId('saved-score-value')).toHaveTextContent('81,00');
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
 
     await user.click(screen.getByRole('button', { name: 'Zwiększ średnią' }));
     expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,90');
@@ -309,7 +327,7 @@ describe('HomePage', () => {
     expect(screen.getByText('Zapisany wynik: 81,00')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Wróć do zapisanej' }));
-    expect(screen.queryByTestId('what-if-score-value')).not.toBeInTheDocument();
+    expect(screen.getByTestId('what-if-score-value')).toHaveTextContent('81,00');
     expect(screen.getByTestId('saved-score-value')).toHaveTextContent('81,00');
     expect(api.updateResponse).not.toHaveBeenCalled();
   });
@@ -376,6 +394,45 @@ describe('HomePage', () => {
   );
 
   it(
+    'saves a new survey with the intake year the server reported, not one from the code (ADR 0018)',
+    async () => {
+      api.getIntakeSummary.mockResolvedValue({ intakeYear: 2027, responseCount: null });
+      api.createResponse.mockResolvedValue({ created: true, statistics: statistics(12) } satisfies CreateResponseResult);
+      const user = await openCreateGradesStep();
+
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+      await clickMain(user);
+
+      await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      const [{ response: saved }] = api.createResponse.mock.calls[0];
+      expect(saved.intakeYear).toBe(2027);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'never sends a save before the year is known: a failed year lookup shows the save error and the button retries it',
+    async () => {
+      api.getIntakeSummary.mockRejectedValue(new Error('offline'));
+      api.createResponse.mockResolvedValue({ created: true, statistics: statistics(12) } satisfies CreateResponseResult);
+      const user = await openCreateGradesStep();
+
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+      await clickMain(user);
+
+      expect(await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT })).toHaveTextContent(pl.form.saveError);
+      expect(api.createResponse).not.toHaveBeenCalled();
+
+      api.getIntakeSummary.mockResolvedValue({ intakeYear: 2027, responseCount: null });
+      await clickMain(user);
+
+      await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(api.createResponse.mock.calls[0][0].response.intakeYear).toBe(2027);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'keeps the save button disabled on grades while the average is empty or above the scale',
     async () => {
       const user = await openCreateGradesStep();
@@ -405,7 +462,7 @@ describe('HomePage', () => {
       const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
       expect(alert).toHaveTextContent(pl.form.saveError);
       expect(alert).toHaveTextContent(pl.form.saveErrorDraft);
-      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4.5');
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4,5');
       expect(api.createResponse).toHaveBeenCalledTimes(1);
 
       await clickMain(user);
@@ -421,12 +478,12 @@ describe('HomePage', () => {
     async () => {
       const user = await openCreateGradesStep();
 
-      await user.click(await screen.findByRole('button', { name: '← Back' }, { timeout: UI_TIMEOUT }));
+      await user.click(await screen.findByRole('button', { name: `← ${pl.settings.back}` }, { timeout: UI_TIMEOUT }));
       expect(
         await screen.findByLabelText(pl.labels.rankingCountry, {}, { timeout: UI_TIMEOUT }),
       ).toBeInTheDocument();
 
-      await user.click(await screen.findByRole('button', { name: '← Back' }, { timeout: UI_TIMEOUT }));
+      await user.click(await screen.findByRole('button', { name: `← ${pl.settings.back}` }, { timeout: UI_TIMEOUT }));
       expect(await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
     },
     TEST_TIMEOUT,
@@ -493,7 +550,7 @@ describe('HomePage', () => {
 
       const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
       expect(alert).toHaveTextContent(pl.form.editLimitToday(formatClockTime(retryAt, 'pl')));
-      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4.8');
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4,8');
       expect(countTracked('survey_updated')).toBe(0);
       expect(api.updateResponse).toHaveBeenCalledTimes(1);
     },
@@ -552,7 +609,7 @@ describe('HomePage', () => {
 
       const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
       expect(alert).toHaveTextContent(pl.form.editLimitToday(formatClockTime(retryAt, 'pl')));
-      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4.5');
+      expect(screen.getByLabelText(pl.labels.averageGrade)).toHaveValue('4,5');
       expect(countTracked('wizard_completed')).toBe(0);
       expect(api.createResponse).toHaveBeenCalledTimes(1);
 
@@ -562,6 +619,238 @@ describe('HomePage', () => {
         localStorage.getItem(`${DRAFT_STORAGE_KEY_PREFIX}:${userId}`) ?? 'null',
       ) as { draft?: { averageGrade?: number } } | null;
       expect(stored?.draft?.averageGrade).toBe(4.5);
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+function wizardDraftKeys(): string[] {
+  return Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index) ?? '').filter((key) =>
+    key.startsWith(`${DRAFT_STORAGE_KEY_PREFIX}:`),
+  );
+}
+
+function appScrollContainer(): HTMLElement {
+  return document.querySelector<HTMLElement>('[data-app-scroll]')!;
+}
+
+async function openSettings(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: pl.settings.open }, { timeout: UI_TIMEOUT }));
+}
+
+/** Settings -> "edit the survey": the request that bumps `editRequestNonce`. */
+async function openEditFromSettings(user: ReturnType<typeof userEvent.setup>) {
+  await openSettings(user);
+  await user.click(await screen.findByRole('button', { name: pl.settings.editProfile }, { timeout: UI_TIMEOUT }));
+  await screen.findByLabelText(pl.labels.rankingCountry, {}, { timeout: UI_TIMEOUT });
+}
+
+/** From education (step 1) of the edit wizard to a saved survey. */
+async function saveEditFromFirstStep(user: ReturnType<typeof userEvent.setup>) {
+  await clickMain(user);
+  await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT });
+  await clickMain(user);
+}
+
+async function renderReturningUser() {
+  api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+  api.getStatistics.mockResolvedValue(statistics(12));
+  // A real request settles in a later task than the click, not in the same microtask run.
+  api.updateResponse.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        setTimeout(() => resolve({ updated: true, statistics: statistics(12) }), 20);
+      }),
+  );
+  const user = userEvent.setup();
+  const view = render(<HomePage />);
+  await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT });
+  return { user, view };
+}
+
+describe('HomePage save flow returns to the dashboard', () => {
+  it(
+    'shows the dashboard at its top with the saved line after an edit opened from Settings, then opens the wizard again on request',
+    async () => {
+      const { user } = await renderReturningUser();
+      await openEditFromSettings(user);
+      appScrollContainer().scrollTop = 400;
+
+      await saveEditFromFirstStep(user);
+
+      await waitFor(() => expect(api.updateResponse).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(await screen.findByText(new RegExp(pl.form.saved), {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.getByTestId('saved-score-value')).toBeInTheDocument();
+      expect(screen.queryByLabelText(pl.labels.averageGrade)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: pl.form.submitUpdate })).not.toBeInTheDocument();
+      expect(appScrollContainer().scrollTop).toBe(0);
+
+      // One request opens the wizard once: it stays on screen after the next renders.
+      await openEditFromSettings(user);
+      expect(screen.queryByTestId('saved-score-value')).not.toBeInTheDocument();
+      await clickMain(user);
+      expect(await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.queryByTestId('saved-score-value')).not.toBeInTheDocument();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'shows the new survey dashboard at its top after Settings edit, delete and create in one session',
+    async () => {
+      api.deleteResponse.mockResolvedValue(undefined);
+      api.createResponse.mockResolvedValue({ created: true, statistics: statistics(12) });
+      const { user } = await renderReturningUser();
+      await openEditFromSettings(user);
+      await saveEditFromFirstStep(user);
+      await screen.findByText(new RegExp(pl.form.saved), {}, { timeout: UI_TIMEOUT });
+
+      await openSettings(user);
+      await user.click(await screen.findByRole('button', { name: pl.settings.viewData }));
+      await user.click(await screen.findByRole('button', { name: pl.settings.deleteData }));
+      await user.click(await screen.findByRole('button', { name: pl.form.deleteConfirmPermanent }));
+      await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT });
+
+      await clickMain(user);
+      await pickSearchableOption(user, pl.labels.rankingCountry, 'Ukraina');
+      await pickSearchableOption(user, pl.labels.schoolCountry, 'Ukraina');
+      await clickMain(user);
+      await user.type(await screen.findByLabelText(pl.labels.averageGrade, {}, { timeout: UI_TIMEOUT }), '4.5');
+      appScrollContainer().scrollTop = 400;
+      await clickMain(user);
+
+      await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(1), { timeout: UI_TIMEOUT });
+      expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.queryByLabelText(pl.labels.averageGrade)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: pl.form.submitCreate })).not.toBeInTheDocument();
+      expect(appScrollContainer().scrollTop).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'leaves no wizard draft after an edit is saved or left with Back',
+    async () => {
+      const { user } = await renderReturningUser();
+
+      await openEditFromSettings(user);
+      await saveEditFromFirstStep(user);
+      await screen.findByText(new RegExp(pl.form.saved), {}, { timeout: UI_TIMEOUT });
+      expect(wizardDraftKeys()).toEqual([]);
+
+      await openEditFromSettings(user);
+      await user.click(await screen.findByRole('button', { name: `← ${pl.settings.back}` }, { timeout: UI_TIMEOUT }));
+      expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(wizardDraftKeys()).toEqual([]);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'does not offer an interrupted edit as saved progress once the survey is gone',
+    async () => {
+      const { user, view } = await renderReturningUser();
+      await openEditFromSettings(user);
+      view.unmount();
+
+      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      render(<HomePage />);
+
+      expect(await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.queryByText(pl.start.resumeTitle)).not.toBeInTheDocument();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'brings the save error into view once when a create fails',
+    async () => {
+      const scrollIntoView = vi.fn();
+      const original = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollIntoView;
+      try {
+        api.createResponse.mockRejectedValue(new Error('offline'));
+        const user = await openCreateGradesStep();
+        await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+        await clickMain(user);
+
+        const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+        expect(scrollIntoView).toHaveBeenCalledTimes(1);
+        expect(scrollIntoView.mock.contexts[0]).toBe(alert);
+      } finally {
+        Element.prototype.scrollIntoView = original;
+      }
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+describe('HomePage new-survey wizard product events for validation and save errors', () => {
+  it(
+    'records the average-above-maximum error once however often it reappears (A1)',
+    async () => {
+      const user = await openCreateGradesStep();
+      const average = screen.getByLabelText(pl.labels.averageGrade);
+
+      await user.type(average, '13');
+      expect(await screen.findByText(pl.wizard.averageAboveMaximum, { selector: '[role="alert"]' })).toBeInTheDocument();
+      expect(countTracked('wizard_average_above_maximum_shown')).toBe(1);
+
+      await user.clear(average);
+      await user.type(average, '14');
+      await user.clear(average);
+      await user.type(average, '15');
+      expect(screen.getByText(pl.wizard.averageAboveMaximum, { selector: '[role="alert"]' })).toBeInTheDocument();
+      expect(countTracked('wizard_average_above_maximum_shown')).toBe(1);
+      expect(countTracked('wizard_low_score_warning_shown')).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'records the low-score warning once when it becomes visible twice (A2)',
+    async () => {
+      const user = await openCreateGradesStep();
+      const average = screen.getByLabelText(pl.labels.averageGrade);
+      const lowScoreNotice = () => screen.queryByText(/poniżej progu 60/);
+
+      await user.type(average, '3,2');
+      expect(countTracked('wizard_low_score_warning_shown')).toBe(0);
+      await user.tab();
+      expect(lowScoreNotice()).toBeInTheDocument();
+      expect(countTracked('wizard_low_score_warning_shown')).toBe(1);
+
+      await user.clear(average);
+      await user.type(average, '10');
+      expect(lowScoreNotice()).not.toBeInTheDocument();
+
+      await user.clear(average);
+      await user.type(average, '3,2');
+      expect(lowScoreNotice()).toBeInTheDocument();
+      expect(countTracked('wizard_low_score_warning_shown')).toBe(1);
+      expect(countTracked('wizard_average_above_maximum_shown')).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'records wizard_save_failed once per failed save and wizard_completed on none of them (A3)',
+    async () => {
+      api.createResponse
+        .mockRejectedValueOnce(new ApiClientError(500, 'INTERNAL_ERROR', 'boom'))
+        .mockRejectedValueOnce(new ApiClientError(429, 'SCORE_CHANGE_LIMIT', 'limit'));
+      const user = await openCreateGradesStep();
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+
+      await clickMain(user);
+      await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+      expect(api.createResponse).toHaveBeenCalledTimes(1);
+      expect(countTracked('wizard_save_failed')).toBe(1);
+
+      await clickMain(user);
+      await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(2), { timeout: UI_TIMEOUT });
+      await waitFor(() => expect(countTracked('wizard_save_failed')).toBe(2), { timeout: UI_TIMEOUT });
+      expect(countTracked('wizard_completed')).toBe(0);
     },
     TEST_TIMEOUT,
   );

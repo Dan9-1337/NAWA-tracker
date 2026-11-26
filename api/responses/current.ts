@@ -1,11 +1,11 @@
 import { currentResponseRequestSchema, currentResponseResultSchema } from '../../shared/validation.js';
-import { currentIntakeYear } from '../../shared/season.js';
 import { unauthorized } from '../_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from '../_lib/http.js';
 import { assertSameOrigin } from '../_lib/origin.js';
 import {
   assertRpcSucceeded,
   parseCurrentResponse,
+  readActiveIntakeYear,
   type RpcClient,
 } from '../_lib/questionnaire.js';
 import { hashIdentity } from '../_lib/identity.js';
@@ -44,7 +44,7 @@ export function createCurrentResponseHandler(overrides: Partial<CurrentDependenc
       const client = dependencies.getClient();
       const currentResult = await client.rpc('get_current_response', {
         p_identity_hash: dependencies.hashIdentity(identity),
-        p_intake_year: currentIntakeYear,
+        p_intake_year: await readActiveIntakeYear(client),
       });
       assertRpcSucceeded(currentResult.error);
       if (currentResult.data === null) throw unauthorized();

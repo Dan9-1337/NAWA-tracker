@@ -1,5 +1,4 @@
 import type { ResponseFormInput } from '../../shared/contracts';
-import { currentIntakeYear } from '../../shared/season';
 import { WizardProgressBar } from '../components/WizardProgressBar';
 import { useI18n } from '../i18n/context';
 import type { Messages } from '../i18n/types';
@@ -75,9 +74,13 @@ export function wizardStepValidationHint(step: WizardStep, draft: WizardDraft, t
   }
 }
 
-export function toResponseInput(draft: WizardDraft): ResponseFormInput {
+/**
+ * The survey to save. `intakeYear` is the year the server reported (the intake summary for a new survey, the
+ * saved response for an edit); the client never decides it (ADR 0018).
+ */
+export function toResponseInput(draft: WizardDraft, intakeYear: number): ResponseFormInput {
   return {
-    intakeYear: currentIntakeYear,
+    intakeYear,
     hasPolishCitizenship: draft.hasPolishCitizenship,
     rankingCountry: draft.rankingCountry,
     schoolCountry: draft.schoolCountry,

@@ -3,8 +3,6 @@ import { plural } from './plural';
 
 const points = (count: string) =>
   plural('ru', count, { one: 'балл', few: 'балла', many: 'баллов', other: 'балла' });
-const participants = (count: string) =>
-  plural('ru', count, { one: 'участник', few: 'участника', many: 'участников', other: 'участника' });
 
 export const ru = {
   app: {
@@ -60,8 +58,10 @@ export const ru = {
     schoolCountryHint: 'От этого зависит шкала оценок (например, 12-балльная в Украине или 5-балльная в Казахстане).',
     maximumGradeLockedHint: 'Шкала определяется страной окончания школы.',
     averageAboveMaximum: 'Ого, выше максимума шкалы! Похоже на опечатку — проверьте значение.',
+    averageBelowThreshold: (max: string, score: string) =>
+      `Проверьте среднюю: по шкале до ${max} это ${score} ${points(score)} из 90, ниже порога 60. Возможно, оценка введена по другой шкале.`,
     belarusPoloniaBonusNotice:
-      'Согласно документу Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2), бонус за окончание польской школы не распространяется на граждан Беларуси.',
+      'Согласно документу Ogłoszenie nr 13/2026, пункт 2.7 (критерий 2), бонус за окончание польской школы не распространяется на граждан Беларуси.',
     summaryTitle: 'Сводка',
     summaryDescription: 'Проверьте, с какой группой вас сравнят и что будет сохранено.',
     cohortTitle: 'Вас будут сравнивать с кандидатами:',
@@ -129,6 +129,7 @@ export const ru = {
       primary: 'Да, начальную школу',
       secondary: 'Да, среднюю школу',
     },
+    polishSchoolBonusBadge: (value: string) => `+${value} ${points(value)}`,
   },
   countries: {
     placeholder: 'Выберите страну',
@@ -138,7 +139,7 @@ export const ru = {
   nawaScore: {
     preview: (score: string) => `Ориентировочный балл: ${score} ${points(score)}`,
     previewNote:
-      'Ориентировочный балл по формуле из документа Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2): оценки — 0–90 баллов + бонус за польскую школу 0/5/10. Это не официальный результат NAWA.',
+      'Ориентировочный балл по формуле из документа Ogłoszenie nr 13/2026, пункт 2.7 (критерий 2): оценки — 0–90 баллов + бонус за польскую школу 0/5/10. Это не официальный результат NAWA.',
   },
   stats: {
     heroLabel: 'Ваш результат',
@@ -182,9 +183,9 @@ export const ru = {
     close: 'Закрыть',
   },
   scholarshipReport: {
-    title: 'Стипендиаты Dyrektora NAWA 2026',
+    title: 'Стипендиаты Директора NAWA 2026',
     invitationBody:
-      'Получили стипендию Dyrektora NAWA? Расскажите, куда вас направили, и посмотрите, что выбирали другие стипендиаты.',
+      'Получили стипендию Директора NAWA? Расскажите, куда вас направили, и посмотрите, что выбирали другие стипендиаты.',
     start: 'Я получил(а) стипендию',
     routeLabel: 'Путь обучения',
     centreLabel: 'Центр подготовительного курса',
@@ -209,7 +210,7 @@ export const ru = {
       scoreBelowThreshold: 'Ваш ориентировочный балл ниже 60, поэтому эта анкета недоступна.',
       exists: 'Вы уже сохранили ответы.',
       notFound: 'Ответы не найдены.',
-      profileNotFound: 'Анкета Dyrektora NAWA за 2026 год не найдена.',
+      profileNotFound: 'Анкета по стипендии Директора NAWA за 2026 год не найдена.',
       delete: 'Не удалось удалить ответы.',
     },
     flow: {
@@ -409,16 +410,6 @@ export const ru = {
       orientationMarkInvitation: 'Получили стипендию? Расскажите — и он появится.',
       onlyYou: (country: string, year: string) =>
         `${country}: пока только ваша анкета в наборе ${year}.`,
-    },
-    competitionNeighbourhood: {
-      title: 'Вокруг вашего результата',
-      distanceHigher: (delta: string) => `До ближайшего результата выше: ${delta} ${points(delta)}`,
-      distanceLower: (delta: string) => `До ближайшего результата ниже: ${delta} ${points(delta)}`,
-      withinOnePoint: (count: string) => `В пределах ±1 балла: ${count} ${participants(count)}`,
-      tied: (count: string) => `Совпадающих результатов: ${count}`,
-      dense: 'Вы в плотной части группы.',
-      moderate: 'Вы в умеренно плотной части группы.',
-      sparse: 'Вы в менее плотной части группы.',
     },
   },
 } satisfies Messages;

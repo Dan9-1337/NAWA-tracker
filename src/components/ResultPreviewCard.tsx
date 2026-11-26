@@ -76,7 +76,7 @@ export function ResultPreviewCard() {
           onStep={(steps) => applyAverage(stepAverage(average, steps, DEMO_PROFILE.maximumGrade))}
         />
       </div>
-      <p className="-mt-1 text-center text-[13px] text-[var(--text-secondary)]">{t.start.previewTapeHint}</p>
+      <p className="-mt-1 text-center text-sm text-[var(--text-secondary)]">{t.start.previewTapeHint}</p>
     </section>
   );
 }

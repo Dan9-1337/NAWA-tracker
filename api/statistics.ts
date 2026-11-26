@@ -1,9 +1,8 @@
 import { statisticsRequestSchema, statisticsResultSchema } from '../shared/validation.js';
-import { currentIntakeYear } from '../shared/season.js';
 import { unauthorized } from './_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
 import { assertSameOrigin } from './_lib/origin.js';
-import { assertRpcSucceeded, parseStatistics, type RpcClient } from './_lib/questionnaire.js';
+import { assertRpcSucceeded, parseStatistics, readActiveIntakeYear, type RpcClient } from './_lib/questionnaire.js';
 import { hashIdentity } from './_lib/identity.js';
 import { requireTelegramIdentity, type VerifiedTelegramIdentity } from './_lib/telegram-auth.js';
 import { getSupabaseAdmin } from './_lib/supabase-admin.js';
@@ -40,7 +39,7 @@ export function createStatisticsHandler(overrides: Partial<StatisticsDependencie
       const client = dependencies.getClient();
       const statisticsResult = await client.rpc('get_current_statistics', {
         p_identity_hash: dependencies.hashIdentity(identity),
-        p_intake_year: currentIntakeYear,
+        p_intake_year: await readActiveIntakeYear(client),
       });
       assertRpcSucceeded(statisticsResult.error);
       if (statisticsResult.data === null) throw unauthorized();

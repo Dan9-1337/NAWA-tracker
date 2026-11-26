@@ -7,6 +7,7 @@ import { getUniversityById } from '../../../shared/universities';
 import { CountryFlag } from '../../components/CountryFlag';
 import { DashboardCard } from '../../components/DashboardCard';
 import { SearchableSelect } from '../../components/SearchableSelect';
+import { SkeletonBlock, SkeletonStatus } from '../../components/Skeleton';
 import { useI18n } from '../../i18n/context';
 import { formatCountryLabel } from '../../lib/country-label';
 import type { ScholarshipReportSummaryState } from './useScholarshipReport';
@@ -130,9 +131,14 @@ export function ScholarshipReportResults({
       ) : null}
 
       {summary.status === 'loading' || summary.status === 'idle' ? (
-        <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status">
-          {copy.loading}
-        </p>
+        <SkeletonStatus label={copy.loading}>
+          <DashboardCard tone="muted" className="space-y-3">
+            <SkeletonBlock className="h-5 w-2/5" />
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-4/5" />
+          </DashboardCard>
+        </SkeletonStatus>
       ) : null}
 
       {ready && data.total === 0 ? (
@@ -231,7 +237,7 @@ export function ScholarshipReportResults({
             </DashboardCard>
           ) : null}
 
-          <p className="px-1 text-[13px] text-[var(--text-secondary)]">{copy.caption}</p>
+          <p className="px-1 text-sm text-[var(--text-secondary)]">{copy.caption}</p>
         </>
       ) : null}
     </div>

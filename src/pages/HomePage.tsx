@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { MiniAppShell } from '../components/MiniAppShell';
 import { SettingsSheet } from '../components/SettingsSheet';
+import { SkeletonBlock, SkeletonStatus } from '../components/Skeleton';
 import { TelegramGate } from '../components/TelegramGate';
 import { CreateProfileFlow } from '../features/CreateProfileFlow';
 import { ProfileDashboard } from '../features/ProfileDashboard';
@@ -57,9 +58,10 @@ function LoadingState({ error }: { error: string | null }) {
           <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]">{t.home.loadErrorHint}</p>
         </div>
       ) : (
-        <p className="text-sm text-[var(--tg-theme-subtitle-text-color)]" role="status" aria-live="polite">
-          {t.home.loading}
-        </p>
+        <SkeletonStatus label={t.home.loading} className="space-y-4">
+          <SkeletonBlock className="mx-1 h-6 w-2/3" />
+          <SkeletonBlock className="h-44 w-full rounded-2xl" />
+        </SkeletonStatus>
       )}
     </section>
   );

@@ -37,7 +37,7 @@ implementing task is not done yet.
 | # | Convention | Status | Source |
 | --- | --- | --- | --- |
 | D1 | One survey per Telegram account per intake year. A new intake opens new records, and past years stay as an archive. There is no freeze. | current | [product-flow](product-flow.md) |
-| D2 | The working intake is 2026. The maintainer closes 2026 before 2027 starts. | current | maintainer, 2026-11-22 |
+| D2 | The working intake is 2026. The maintainer closes 2026 before 2027 starts. The active year is read from `season_config.active_intake_year` only; the client and API take it from there, not from a code constant. | current; source of the year decided (task 034) | maintainer, 2026-11-22; [0018](adr/0018-intake-year-from-the-database.md) |
 | D3 | The comparison cohort is the valid surveys of the same citizenship country, track and intake. No country groups, no whole-track fallback. | decided (task 013); today the app still uses the country → group → track ladder from 10 responses | [0015](adr/0015-compare-within-citizenship-country-without-minimum.md) |
 | D4 | No minimum number of responses for the comparison. The full position is shown from 2 surveys in the country. With 0–1, the card says `<Страна>: пока только ваша анкета в наборе 2026.` | decided (task 013) | [0015](adr/0015-compare-within-citizenship-country-without-minimum.md) |
 | D5 | Scholarship-holder results: a separate page, only for holders who answered, all countries by default with a filter by citizenship, every count from 1. Exception: holder scores, as the ориентир (D12). | decided (task 012) | [0016](adr/0016-scholarship-holder-results-page-without-minimum.md) |
@@ -81,6 +81,7 @@ statuses (retired by [0008](adr/0008-refocus-on-score-comparison.md)). Source: [
 | C4 | One term per concept per locale. Country names are never declined (sentences are built as `<Страна>: …`). Neutral forms are used instead of gendered ones where possible. | [0010](adr/0010-locale-glossary-and-english-api-errors.md) |
 | C5 | API error messages are in English. User-facing errors are localized on the client by error code. | [0010](adr/0010-locale-glossary-and-english-api-errors.md) |
 | C6 | Requirements change as the product learns. A changed decision gets a new ADR, and an old ADR is context, not a constraint. | maintainer, 2026-11-22 |
+| C7 | No text is smaller than 14px, except ruler and chart labels and short badges (12px). Decided, task 040. | [0019](adr/0019-minimum-text-size-14px.md) |
 
 ## 7. Known places where docs or copy may not match these assumptions
 

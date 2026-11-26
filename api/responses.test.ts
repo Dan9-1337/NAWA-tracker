@@ -175,10 +175,18 @@ function responsesDependencies(
     if (name === 'get_current_statistics') return { data: statistics, error: null };
     throw new Error(`Unexpected RPC: ${name}`);
   },
+  /** The year `season_config` holds; the handler reads it through `get_active_intake_year` (ADR 0018). */
+  activeIntakeYear = 2026,
 ): ResponsesHandlerDependencies {
   return {
     getClient: vi.fn(() => ({
-      rpc: vi.fn((name, parameters) => Promise.resolve(rpcImplementation(name, parameters))),
+      rpc: vi.fn((name, parameters) =>
+        Promise.resolve(
+          name === 'get_active_intake_year'
+            ? { data: activeIntakeYear, error: null }
+            : rpcImplementation(name, parameters),
+        ),
+      ),
     })),
     deleteProfile: vi.fn(async () => 1),
     hashIdentity: vi.fn(() => IDENTITY_HASH),
@@ -290,6 +298,51 @@ describe('POST /api/responses', () => {
     };
     expect(state.body).toEqual(body);
     expect(apiErrorSchema.parse(state.body)).toEqual(body);
+  });
+
+  it('accepts the year the database holds, whatever year the code was built for (ADR 0018)', async () => {
+    const calls: Array<[string, Record<string, unknown>]> = [];
+    const dependencies = responsesDependencies((name, parameters) => {
+      calls.push([name, parameters]);
+      return { data: { created: true, statistics }, error: null };
+    }, 2027);
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(
+      request('POST', { response: { ...validForm, intakeYear: 2027 } }),
+      response,
+    );
+
+    expect(state.status).toBe(201);
+    expect(calls.map(([name]) => name)).toEqual(['create_response_for_identity']);
+    expect(calls[0]?.[1]).toMatchObject({ p_intake_year: 2027 });
+  });
+
+  it('rejects a create for a year other than the active one with INVALID_INTAKE_YEAR', async () => {
+    const calls: string[] = [];
+    const dependencies = responsesDependencies((name) => {
+      calls.push(name);
+      return { data: { created: true, statistics }, error: null };
+    }, 2027);
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
+
+    expect(state.status).toBe(400);
+    expect(state.body).toMatchObject({ error: { code: 'INVALID_INTAKE_YEAR' } });
+    expect(calls).toEqual([]);
+  });
+
+  it('fails with INTERNAL_ERROR when the active year cannot be read', async () => {
+    const dependencies = responsesDependencies();
+    dependencies.getClient = vi.fn(() => ({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
+    }));
+    const { response, state } = createResponseDouble();
+
+    await createResponsesHandler(dependencies)(request('POST', { response: validForm }), response);
+
+    expect(state.status).toBe(500);
   });
 });
 
@@ -413,6 +466,28 @@ describe('PUT /api/responses', () => {
     expect(state.body).toEqual({ updated: true, statistics });
   });
 
+  it('checks an edit against the year the database holds', async () => {
+    const calls: Array<[string, Record<string, unknown>]> = [];
+    const dependencies = responsesDependencies((name, parameters) => {
+      calls.push([name, parameters]);
+      return { data: { updated: true, statistics }, error: null };
+    }, 2027);
+
+    const accepted = createResponseDouble();
+    await createResponsesHandler(dependencies)(
+      request('PUT', { response: { ...validForm, intakeYear: 2027 } }),
+      accepted.response,
+    );
+    expect(accepted.state.status).toBe(200);
+    expect(calls.map(([name]) => name)).toEqual(['update_current_response']);
+
+    const rejected = createResponseDouble();
+    await createResponsesHandler(dependencies)(request('PUT', { response: validForm }), rejected.response);
+    expect(rejected.state.status).toBe(400);
+    expect(rejected.state.body).toMatchObject({ error: { code: 'INVALID_INTAKE_YEAR' } });
+    expect(calls).toHaveLength(1);
+  });
+
   it('returns 429 EDIT_LIMIT_REACHED with the retry time when the limit blocks an edit', async () => {
     const retryAt = '2026-11-23T14:05:00Z';
     const dependencies = responsesDependencies(() => ({
@@ -452,14 +527,16 @@ describe('POST /api/responses/current', () => {
     expect(state.status).toBe(403);
   });
 
-  it('loads the owned profile for the Telegram user', async () => {
+  /** An RPC double that answers the year lookup like the database does and records every other call. */
+  function currentHandler(activeIntakeYear: number) {
+    const calls: Array<[string, Record<string, unknown>]> = [];
+    const rpc = vi.fn((name: string, parameters: Record<string, unknown>) => {
+      if (name === 'get_active_intake_year') return Promise.resolve({ data: activeIntakeYear, error: null });
+      calls.push([name, parameters]);
+      return Promise.resolve({ data: { ...validForm, intakeYear: activeIntakeYear }, error: null });
+    });
     const handler = createCurrentResponseHandler({
-      getClient: vi.fn(() => ({
-        rpc: vi.fn().mockResolvedValue({
-          data: validForm,
-          error: null,
-        }),
-      })),
+      getClient: vi.fn(() => ({ rpc })),
       assertSameOrigin: vi.fn(),
       hashIdentity: vi.fn(() => IDENTITY_HASH),
       requireTelegramIdentity: vi.fn(() => ({
@@ -467,12 +544,29 @@ describe('POST /api/responses/current', () => {
         authDate: 1_700_000_000,
       })),
     });
+    return { handler, calls };
+  }
+
+  it('loads the owned profile for the Telegram user', async () => {
+    const { handler, calls } = currentHandler(2026);
     const { response, state } = createResponseDouble();
 
     await handler(request('POST'), response);
 
     expect(state.status).toBe(200);
     expect(state.body).toEqual({ response: validForm });
+    expect(calls).toEqual([['get_current_response', { p_identity_hash: IDENTITY_HASH, p_intake_year: 2026 }]]);
+  });
+
+  it('queries the year the database holds, not a year from the code (ADR 0018)', async () => {
+    const { handler, calls } = currentHandler(2027);
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(200);
+    expect(calls[0]?.[1]).toMatchObject({ p_intake_year: 2027 });
+    expect(state.body).toMatchObject({ response: { intakeYear: 2027 } });
   });
 });
 
@@ -492,11 +586,15 @@ describe('POST /api/statistics', () => {
     expect(state.status).toBe(403);
   });
 
-  it('returns owned statistics for the Telegram user', async () => {
+  function statisticsHandler(activeIntakeYear: number) {
+    const calls: Array<[string, Record<string, unknown>]> = [];
+    const rpc = vi.fn((name: string, parameters: Record<string, unknown>) => {
+      if (name === 'get_active_intake_year') return Promise.resolve({ data: activeIntakeYear, error: null });
+      calls.push([name, parameters]);
+      return Promise.resolve({ data: statistics, error: null });
+    });
     const handler = createStatisticsHandler({
-      getClient: vi.fn(() => ({
-        rpc: vi.fn().mockResolvedValue({ data: statistics, error: null }),
-      })),
+      getClient: vi.fn(() => ({ rpc })),
       assertSameOrigin: vi.fn(),
       hashIdentity: vi.fn(() => IDENTITY_HASH),
       requireTelegramIdentity: vi.fn(() => ({
@@ -504,11 +602,27 @@ describe('POST /api/statistics', () => {
         authDate: 1_700_000_000,
       })),
     });
+    return { handler, calls };
+  }
+
+  it('returns owned statistics for the Telegram user', async () => {
+    const { handler, calls } = statisticsHandler(2026);
     const { response, state } = createResponseDouble();
 
     await handler(request('POST'), response);
 
     expect(state.status).toBe(200);
     expect(state.body).toEqual(statistics);
+    expect(calls).toEqual([['get_current_statistics', { p_identity_hash: IDENTITY_HASH, p_intake_year: 2026 }]]);
+  });
+
+  it('scopes statistics to the year the database holds, not a year from the code (ADR 0018)', async () => {
+    const { handler, calls } = statisticsHandler(2027);
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(200);
+    expect(calls[0]?.[1]).toMatchObject({ p_intake_year: 2027 });
   });
 });

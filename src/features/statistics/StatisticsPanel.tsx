@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { OrientationMarkResult, ResponseFormInput, StatisticsResult } from '../../../shared/contracts';
-import { isIntakeOpen, season2026 } from '../../../shared/season';
+import { isIntakeOpen, seasonForYear } from '../../../shared/season';
+import { SkeletonBlock, SkeletonStatus } from '../../components/Skeleton';
 import { useI18n } from '../../i18n/context';
 import { cohortLabel } from '../../lib/cohort-label';
 import { formatDate } from '../../lib/format';
@@ -67,9 +68,12 @@ export function StatisticsPanel({ state, profile, userScore, orientation, onOrie
     rankingCountry: profile.rankingCountry,
   });
 
-  const seasonLabel = isIntakeOpen()
-    ? t.scoreScreen.seasonOpen(formatDate(season2026.documentsTo, locale))
-    : t.scoreScreen.seasonClosed(String(season2026.year));
+  // The year is the one the server reported for this survey (ADR 0018). A year without announced dates reads as closed.
+  const season = seasonForYear(profile.intakeYear);
+  const seasonLabel =
+    season?.documentsTo && isIntakeOpen(new Date(), season)
+      ? t.scoreScreen.seasonOpen(formatDate(season.documentsTo, locale))
+      : t.scoreScreen.seasonClosed(String(profile.intakeYear));
 
   let body: ReactNode = null;
   let caption: string | null = null;
@@ -82,14 +86,11 @@ export function StatisticsPanel({ state, profile, userScore, orientation, onOrie
     );
   } else if (state.status === 'loading') {
     body = (
-      <p
-        className="text-sm text-[var(--tg-theme-subtitle-text-color)]"
-        role="status"
-        aria-label={t.stats.loadingAriaLabel}
-        aria-live="polite"
-      >
-        {t.stats.loading}
-      </p>
+      <SkeletonStatus label={t.stats.loadingAriaLabel} text={t.stats.loading} className="space-y-3">
+        <SkeletonBlock className="h-4 w-3/4" />
+        <SkeletonBlock className="h-16 w-full" />
+        <SkeletonBlock className="h-4 w-1/2" />
+      </SkeletonStatus>
     );
   } else if (state.status === 'error') {
     body = (
