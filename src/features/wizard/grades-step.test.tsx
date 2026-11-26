@@ -114,6 +114,27 @@ describe('GradesStep score preview', () => {
     expect(screen.getByText(/Ориентировочный балл: 90,00/)).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
+
+  it.each(['ru', 'uk', 'be', 'pl', 'en'] as Locale[])('explains the score in plain words without the legal citation (%s)', async (locale) => {
+    const user = userEvent.setup();
+    renderStep(locale);
+    await user.type(screen.getByLabelText(messages[locale].labels.averageGrade), '12');
+    const note = screen.getByText(messages[locale].nawaScore.previewNote);
+    expect(note.textContent).not.toContain('Ogłoszenie');
+  });
+
+  it('uses the intended ru score note (A1)', () => {
+    expect(messages.ru.nawaScore.previewNote).toBe(
+      'Считаем по правилам NAWA: оценки — до 90 баллов + бонус 0/5/10 за польскую школу. Это не официальный результат NAWA.',
+    );
+  });
+
+  it('shows the Belarus notice in plain words without the legal citation (A2)', () => {
+    renderStep('ru', { rankingCountry: 'BY', schoolCountry: 'BY' });
+    const notice = screen.getByText('По правилам NAWA бонус за польскую школу не начисляется гражданам Беларуси.');
+    expect(notice.textContent).not.toContain('Ogłoszenie');
+    expect(notice.textContent).toBe(messages.ru.wizard.belarusPoloniaBonusNotice);
+  });
 });
 
 describe('GradesStep low grades score warning', () => {

@@ -26,7 +26,10 @@ function toIsoDay(now: Date): string {
   return now.toISOString().slice(0, 10);
 }
 
-/** Every reminder the calendar implies, in the order they fall due. Seasons without dates yield nothing. */
+/**
+ * Every reminder the calendar implies, in the order they fall due. Seasons without dates yield nothing, and the two
+ * results reminders wait for the season's `resultsRemindersEnabled` flag, because the date alone cannot confirm results.
+ */
 export function remindersForSeasons(seasons: readonly SeasonCalendar[]): Reminder[] {
   const reminders: Reminder[] = [];
 
@@ -40,7 +43,7 @@ export function remindersForSeasons(seasons: readonly SeasonCalendar[]): Reminde
         expiresOn: season.documentsTo,
       });
     }
-    if (season.resultsBy) {
+    if (season.resultsBy && season.resultsRemindersEnabled === true) {
       reminders.push({
         key: `${season.year}:results_soon`,
         kind: 'results_soon',

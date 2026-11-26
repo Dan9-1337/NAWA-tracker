@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCountryLabel } from './country-label';
+import { formatCountryLabel, getCountrySearchNames } from './country-label';
 
 describe('formatCountryLabel', () => {
   it('localizes ISO country codes', () => {
@@ -14,5 +14,12 @@ describe('formatCountryLabel', () => {
     expect(formatCountryLabel('OTHER', 'pl')).toBe('—');
     expect(formatCountryLabel('PL', 'pl')).toBe('—');
     expect(formatCountryLabel(null, 'pl')).toBe('—');
+  });
+
+  it('lists the ISO code and the names in all five languages for search', () => {
+    const names = getCountrySearchNames('UA');
+
+    expect(names).toEqual(expect.arrayContaining(['UA', 'Ukraina', 'Ukraine', 'Украина', 'Україна', 'Украіна']));
+    expect(new Set(names).size).toBe(names.length);
   });
 });

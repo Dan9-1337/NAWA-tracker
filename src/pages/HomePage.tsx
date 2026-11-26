@@ -39,11 +39,14 @@ type AuthenticatedState = {
   statistics: StatisticsState;
   actionError: string | null;
   pending: 'update' | null;
+  /** Shown above the dashboard when a create found the survey already saved on another device. */
+  alreadySaved?: boolean;
 };
 
 type HomeState =
   | { mode: 'loading'; error: string | null }
   | { mode: 'gate' }
+  | { mode: 'sessionExpired' }
   | { mode: 'create'; pending: boolean; actionError?: string }
   | AuthenticatedState;
 
@@ -65,6 +68,28 @@ function LoadingState({ error }: { error: string | null }) {
       )}
     </section>
   );
+}
+
+function SessionExpiredState() {
+  const { t } = useI18n();
+
+  return (
+    <section role="alert" className="space-y-4">
+      <p className="text-sm font-medium">{t.home.sessionExpired}</p>
+      <button
+        type="button"
+        className="min-h-11 rounded-xl bg-[var(--tg-theme-button-color)] px-4 text-sm font-medium text-[var(--tg-theme-button-text-color)]"
+        onClick={() => window.location.reload()}
+      >
+        {t.home.sessionExpiredAction}
+      </button>
+    </section>
+  );
+}
+
+/** Missing, invalid or expired Telegram authentication; a missing survey is a 404, never a 401. */
+function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiClientError && error.status === 401;
 }
 
 export function HomePage() {
@@ -108,8 +133,12 @@ export function HomePage() {
           ? { ...active, statistics: statisticsStateFromResult(result) }
           : active,
       );
-    } catch {
+    } catch (error) {
       if (!isCurrent(id)) return;
+      if (isUnauthorized(error)) {
+        setState({ mode: 'sessionExpired' });
+        return;
+      }
       setState((active) =>
         active.mode === 'authenticated' ? { ...active, statistics: { status: 'error' } } : active,
       );
@@ -120,6 +149,11 @@ export function HomePage() {
     if (isBusy()) return;
     const id = beginEpoch();
     setState({ mode: 'loading', error: null });
+    await openCurrentSurvey(id, false);
+  }
+
+  /** Loads the saved survey for the epoch `id`; `alreadySaved` adds the other-device line above the dashboard. */
+  async function openCurrentSurvey(id: number, alreadySaved: boolean) {
     try {
       const current = await getCurrentResponse();
       if (!isCurrent(id)) return;
@@ -129,12 +163,15 @@ export function HomePage() {
         statistics: { status: 'loading' },
         actionError: null,
         pending: null,
+        ...(alreadySaved ? { alreadySaved } : {}),
       });
       void loadStatistics(id);
     } catch (error) {
       if (!isCurrent(id)) return;
-      if (error instanceof ApiClientError && error.status === 401) {
+      if (error instanceof ApiClientError && error.status === 404 && error.code === 'PROFILE_NOT_FOUND') {
         setState({ mode: 'create', pending: false });
+      } else if (isUnauthorized(error)) {
+        setState({ mode: 'sessionExpired' });
       } else {
         setState({ mode: 'loading', error: t.home.loadError });
       }
@@ -157,7 +194,17 @@ export function HomePage() {
       });
     } catch (error) {
       if (isCurrent(id)) {
-        setState({ mode: 'create', pending: false, actionError: saveErrorMessage(error, t.form.saveError) });
+        if (isUnauthorized(error)) {
+          setState({ mode: 'sessionExpired' });
+        } else if (error instanceof ApiClientError && error.status === 409 && error.code === 'PROFILE_EXISTS') {
+          // The account already has a survey (second device, or a lost response after a saved create): show it.
+          clearWizardDraft();
+          setState({ mode: 'loading', error: null });
+          await openCurrentSurvey(id, true);
+          return;
+        } else {
+          setState({ mode: 'create', pending: false, actionError: saveErrorMessage(error, t.form.saveError) });
+        }
       }
       throw new Error('create failed');
     } finally {
@@ -182,6 +229,10 @@ export function HomePage() {
       });
     } catch (error) {
       if (isCurrent(id)) {
+        if (isUnauthorized(error)) {
+          setState({ mode: 'sessionExpired' });
+          throw error;
+        }
         const restartStatistics = snapshot.statistics.status === 'loading';
         const statisticsId = restartStatistics ? beginEpoch() : id;
         setState({ ...snapshot, pending: null, actionError: saveErrorMessage(error, t.home.actionError) });
@@ -202,6 +253,12 @@ export function HomePage() {
       clearWizardDraft();
       setSettingsOpen(false);
       setState({ mode: 'create', pending: false });
+    } catch (error) {
+      if (isUnauthorized(error)) {
+        setSettingsOpen(false);
+        setState({ mode: 'sessionExpired' });
+      }
+      throw error;
     } finally {
       releaseMutation('delete');
     }
@@ -230,6 +287,10 @@ export function HomePage() {
       return <LoadingState error={state.error} />;
     }
 
+    if (state.mode === 'sessionExpired') {
+      return <SessionExpiredState />;
+    }
+
     if (state.mode === 'create') {
       return (
         <CreateProfileFlow
@@ -242,16 +303,23 @@ export function HomePage() {
     }
 
     return (
-      <ProfileDashboard
-        current={state.current}
-        statistics={state.statistics}
-        onSubmit={update}
-        disabled={state.pending !== null}
-        actionError={state.actionError}
-        chromeSuspended={settingsOpen}
-        editRequestNonce={editRequestNonce}
-        onStatsUpdatedAt={setStatsUpdatedAt}
-      />
+      <>
+        {state.alreadySaved ? (
+          <p className="rounded-2xl bg-[var(--tg-theme-secondary-bg-color)] px-4 py-3 text-sm" role="status">
+            {t.home.alreadySaved}
+          </p>
+        ) : null}
+        <ProfileDashboard
+          current={state.current}
+          statistics={state.statistics}
+          onSubmit={update}
+          disabled={state.pending !== null}
+          actionError={state.actionError}
+          chromeSuspended={settingsOpen}
+          editRequestNonce={editRequestNonce}
+          onStatsUpdatedAt={setStatsUpdatedAt}
+        />
+      </>
     );
   })();
 
@@ -261,7 +329,10 @@ export function HomePage() {
       subtitle={statsSubtitle}
       onOpenSettings={
         !settingsOpen &&
-        (state.mode === 'authenticated' || state.mode === 'create' || state.mode === 'gate')
+        (state.mode === 'authenticated' ||
+          state.mode === 'create' ||
+          state.mode === 'gate' ||
+          state.mode === 'sessionExpired')
           ? () => setSettingsOpen(true)
           : undefined
       }

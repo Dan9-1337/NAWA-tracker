@@ -12,7 +12,7 @@ function subscriber(id: number, overrides: Partial<Subscription> = {}): Subscrip
   return { telegramUserId: id, chatId: id, locale: 'pl', lastReminder: null, ...overrides };
 }
 
-function setup(subscribers: Subscription[], results: Record<number, SendResult> = {}, now = '2026-11-19T13:00:00Z') {
+function setup(subscribers: Subscription[], results: Record<number, SendResult> = {}, now = '2026-05-15T13:00:00Z') {
   const removed: number[] = [];
   const reminded: Array<[number, string]> = [];
   const sent: SendMessageInput[] = [];
@@ -72,14 +72,14 @@ describe('GET /api/cron/reminders', () => {
     expect(state.body).toEqual({ ok: true, sent: 1, removed: 0, failed: 0 });
     expect(sent[0]).toMatchObject({
       chatId: 1,
-      text: botMessages.uk.reminders.results_out('2026'),
+      text: botMessages.uk.reminders.intake_open('2026'),
       webApp: { text: botMessages.uk.openApp, url: APP_URL },
     });
-    expect(reminded).toEqual([[1, '2026:results_out']]);
+    expect(reminded).toEqual([[1, '2026:intake_open']]);
   });
 
   it('does not send the same reminder twice', async () => {
-    const { run, sent, state } = setup([subscriber(1, { lastReminder: '2026:results_out' })]);
+    const { run, sent, state } = setup([subscriber(1, { lastReminder: '2026:intake_open' })]);
 
     await run();
 
@@ -97,6 +97,16 @@ describe('GET /api/cron/reminders', () => {
     expect(late.sent).toEqual([]);
   });
 
+  it('sends no results reminder while the season flag is off, however late it is', async () => {
+    for (const now of ['2026-09-28T13:00:00Z', '2026-10-01T13:00:00Z', '2026-11-19T13:00:00Z']) {
+      const { run, sent, reminded, state } = setup([subscriber(1), subscriber(2, { lastReminder: '2026:intake_open' })], {}, now);
+      await run();
+      expect(sent, now).toEqual([]);
+      expect(reminded, now).toEqual([]);
+      expect(state.body, now).toEqual({ ok: true, sent: 0, removed: 0, failed: 0 });
+    }
+  });
+
   it('removes subscribers who blocked the bot and keeps counting failures separately', async () => {
     const { run, state, removed, reminded } = setup(
       [subscriber(1), subscriber(2), subscriber(3)],
@@ -107,7 +117,7 @@ describe('GET /api/cron/reminders', () => {
 
     expect(state.body).toEqual({ ok: true, sent: 1, removed: 1, failed: 1 });
     expect(removed).toEqual([1]);
-    expect(reminded).toEqual([[3, '2026:results_out']]);
+    expect(reminded).toEqual([[3, '2026:intake_open']]);
   });
 
   it('caps the number of messages per run', async () => {

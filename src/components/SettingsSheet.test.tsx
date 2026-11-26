@@ -86,6 +86,21 @@ describe('SettingsSheet', () => {
     }
   });
 
+  it('shows the exact rules source line in About and in Help (A3)', async () => {
+    const user = userEvent.setup();
+    renderSheet();
+
+    expect(pl.about.rulesSource).toContain('Ogłoszenie nr 13/2026');
+    expect(pl.about.rulesSource).toContain('2.7');
+
+    await user.click(screen.getByRole('button', { name: new RegExp(`^${pl.about.title}`) }));
+    expect(screen.getByText(pl.about.rulesSource)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: pl.settings.back }));
+    await user.click(screen.getByRole('button', { name: new RegExp(`^${pl.settings.help}`) }));
+    expect(screen.getByText(pl.about.rulesSource)).toBeInTheDocument();
+  });
+
   it('offers editing and viewing data only when a profile exists', () => {
     const { rerender } = renderSheet();
     expect(screen.queryByRole('button', { name: new RegExp(pl.settings.viewData) })).not.toBeInTheDocument();

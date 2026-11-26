@@ -94,6 +94,15 @@ function localIsoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/** The server's answer for an account without a survey (task 062); a 401 now means the session expired. */
+function notFound() {
+  return new ApiClientError(404, 'PROFILE_NOT_FOUND', 'No survey was found for this Telegram account.');
+}
+
+function unauthorized() {
+  return new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized');
+}
+
 beforeEach(async () => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -158,7 +167,7 @@ const seededDraft: WizardDraft = {
 
 /** Creates a new user, starts the wizard, fills education and stops on the grades step. */
 async function openCreateGradesStep() {
-  api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+  api.getCurrentResponse.mockRejectedValue(notFound());
   const user = userEvent.setup();
   render(<HomePage />);
 
@@ -200,7 +209,7 @@ describe('HomePage', () => {
   });
 
   it('opens create mode with start screen when no profile exists', async () => {
-    api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+    api.getCurrentResponse.mockRejectedValue(notFound());
     render(<HomePage />);
     expect(await screen.findByText(pl.start.title)).toBeInTheDocument();
   });
@@ -229,7 +238,7 @@ describe('HomePage', () => {
   it(
     'records no wizard_education_completed while the education step is invalid',
     async () => {
-      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      api.getCurrentResponse.mockRejectedValue(notFound());
       const user = userEvent.setup();
       render(<HomePage />);
 
@@ -255,7 +264,7 @@ describe('HomePage', () => {
         `${DRAFT_STORAGE_KEY_PREFIX}:${userId}`,
         JSON.stringify({ version: 2, draft: seededDraft, screen: 'confirm', stepIndex: 0 }),
       );
-      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      api.getCurrentResponse.mockRejectedValue(notFound());
       api.createResponse.mockResolvedValue({ created: true, statistics: statistics(12) });
 
       const user = userEvent.setup();
@@ -285,7 +294,7 @@ describe('HomePage', () => {
         `${DRAFT_STORAGE_KEY_PREFIX}:${userId}`,
         JSON.stringify({ version: 2, draft: seededDraft, screen: 'confirm', stepIndex: 0 }),
       );
-      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      api.getCurrentResponse.mockRejectedValue(notFound());
 
       const user = userEvent.setup();
       render(<HomePage />);
@@ -753,7 +762,7 @@ describe('HomePage save flow returns to the dashboard', () => {
       await openEditFromSettings(user);
       view.unmount();
 
-      api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+      api.getCurrentResponse.mockRejectedValue(notFound());
       render(<HomePage />);
 
       expect(await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
@@ -851,6 +860,88 @@ describe('HomePage new-survey wizard product events for validation and save erro
       await waitFor(() => expect(api.createResponse).toHaveBeenCalledTimes(2), { timeout: UI_TIMEOUT });
       await waitFor(() => expect(countTracked('wizard_save_failed')).toBe(2), { timeout: UI_TIMEOUT });
       expect(countTracked('wizard_completed')).toBe(0);
+    },
+    TEST_TIMEOUT,
+  );
+});
+
+describe('HomePage session and duplicate-create handling (task 062)', () => {
+  it('opens the start screen on 404 PROFILE_NOT_FOUND (A3)', async () => {
+    api.getCurrentResponse.mockRejectedValue(notFound());
+    render(<HomePage />);
+
+    expect(await screen.findByText(pl.start.title, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+    expect(screen.queryByText(pl.home.sessionExpired)).not.toBeInTheDocument();
+  });
+
+  it('shows the session-expired state on a 401 load, not the wizard, and reloads on the button (A4)', async () => {
+    api.getCurrentResponse.mockRejectedValue(unauthorized());
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    try {
+      const user = userEvent.setup();
+      render(<HomePage />);
+
+      const alert = await screen.findByRole('alert', {}, { timeout: UI_TIMEOUT });
+      expect(alert).toHaveTextContent(pl.home.sessionExpired);
+      expect(screen.queryByText(pl.start.title)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: pl.settings.open })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: pl.home.sessionExpiredAction }));
+      expect(reload).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it(
+    'loads the saved survey and clears the draft when create returns 409 PROFILE_EXISTS (A5)',
+    async () => {
+      api.getCurrentResponse.mockRejectedValueOnce(notFound());
+      api.createResponse.mockRejectedValue(new ApiClientError(409, 'PROFILE_EXISTS', 'exists'));
+      api.getStatistics.mockResolvedValue(statistics(12));
+      const user = await openCreateGradesStep();
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+      api.getCurrentResponse.mockResolvedValue({ response: currentResponse });
+
+      await clickMain(user);
+
+      expect(await screen.findByText(pl.home.alreadySaved, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(await screen.findByTestId('saved-score-value', {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(api.createResponse).toHaveBeenCalledTimes(1);
+      expect(
+        Object.keys(localStorage).filter((key) => key.startsWith(DRAFT_STORAGE_KEY_PREFIX)),
+      ).toEqual([]);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'shows the session-expired state, not the save error, when create returns 401 (A6)',
+    async () => {
+      api.createResponse.mockRejectedValue(unauthorized());
+      const user = await openCreateGradesStep();
+      await user.type(screen.getByLabelText(pl.labels.averageGrade), '4.5');
+
+      await clickMain(user);
+
+      expect(await screen.findByText(pl.home.sessionExpired, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.queryByText(pl.form.saveError)).not.toBeInTheDocument();
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
+    'shows the session-expired state, not the action error, when update returns 401 (A6)',
+    async () => {
+      const { user } = await renderReturningUser();
+      api.updateResponse.mockRejectedValue(unauthorized());
+      await openEditFromSettings(user);
+
+      await saveEditFromFirstStep(user);
+
+      expect(await screen.findByText(pl.home.sessionExpired, {}, { timeout: UI_TIMEOUT })).toBeInTheDocument();
+      expect(screen.queryByText(pl.home.actionError)).not.toBeInTheDocument();
     },
     TEST_TIMEOUT,
   );

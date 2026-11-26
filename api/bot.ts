@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 
 import { botMessages, resolveBotLocale } from '../shared/bot-messages.js';
-import { isCountryCode } from '../shared/countries.js';
+import { getCountryDisplayName, isCountryCode } from '../shared/countries.js';
 import { HttpError } from './_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from './_lib/http.js';
 import { loadServerEnv } from './_lib/env.js';
@@ -115,9 +115,11 @@ export function createBotHandler(overrides: Partial<BotDependencies> = {}) {
           } else {
             const country = payload.startsWith('c_') ? payload.slice(2).toUpperCase() : '';
             const known = isCountryCode(country);
+            // The greeting names the country in the user's language; without a name it falls back to the plain welcome.
+            const countryName = known ? getCountryDisplayName(country, locale) : null;
             await send({
               chatId,
-              text: known ? copy.welcomeCountry(country) : copy.welcome,
+              text: countryName ? copy.welcomeCountry(countryName) : copy.welcome,
               webApp: { text: copy.openApp, url: known ? `${appUrl}/?c=${country}` : appUrl },
             });
           }

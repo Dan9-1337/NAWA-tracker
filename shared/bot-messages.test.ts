@@ -22,12 +22,13 @@ describe('bot messages', () => {
     }
   });
 
-  it('resolves Telegram language codes and falls back to Polish', () => {
+  it('resolves Telegram language codes, falling back to Russian for the region and English elsewhere', () => {
     expect(resolveBotLocale('uk')).toBe('uk');
     expect(resolveBotLocale('be-BY')).toBe('be');
     expect(resolveBotLocale('ru')).toBe('ru');
     expect(resolveBotLocale('en-US')).toBe('en');
-    expect(resolveBotLocale('de')).toBe('pl');
-    expect(resolveBotLocale(undefined)).toBe('pl');
+    expect(resolveBotLocale('kk')).toBe('ru');
+    expect(resolveBotLocale('de')).toBe('en');
+    expect(resolveBotLocale(undefined)).toBe('en');
   });
 });

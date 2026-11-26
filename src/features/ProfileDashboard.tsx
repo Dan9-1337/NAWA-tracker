@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ResponseFormInput } from '../../shared/contracts';
 import { calculateNawaOrientationScore } from '../../shared/nawa-score';
 import {
@@ -13,7 +13,12 @@ import { trackProductEvent } from '../lib/product-events';
 import { canShowScoreDistribution } from '../lib/score-buckets';
 import { useGuardedSubmit } from '../lib/useGuardedSubmit';
 import { useMiniAppChrome, type MiniAppChromeConfig } from '../lib/useMiniAppChrome';
-import { scrollAppToTop, useScrollIntoViewWhenShown, useScrollToTopOnChange } from '../lib/useScrollToTop';
+import {
+  restoreAppScroll,
+  scrollAppToTop,
+  useRememberedAppScroll,
+  useScrollIntoViewWhenShown,
+} from '../lib/useScrollToTop';
 import {
   canAdvanceWizardStep,
   ResponseWizardSteps,
@@ -31,10 +36,16 @@ import {
   StatisticsPanel,
   type StatisticsState,
 } from './statistics/StatisticsPanel';
+import { DashboardPage } from './dashboard/DashboardPage';
+import { HubLink } from './dashboard/HubLink';
 import { useOrientationMark } from './dashboard/useOrientationMark';
 import { useWizardSteps } from './useWizardSteps';
 
-type View = 'dashboard' | 'edit-wizard';
+/** The hub, its two pages (ADR 0020) and the edit wizard. Pages are views held here, not URL routes. */
+type View = 'hub' | 'what-if' | 'profile' | 'edit-wizard';
+
+/** Where Back from the first step of the edit wizard goes: the Profile page that opened it, or the hub. */
+type EditReturn = 'hub' | 'profile';
 
 type ProfileDashboardProps = {
   current: ResponseFormInput;
@@ -58,7 +69,8 @@ export function ProfileDashboard({
   onStatsUpdatedAt,
 }: ProfileDashboardProps) {
   const { t, locale } = useI18n();
-  const [view, setView] = useState<View>('dashboard');
+  const [view, setView] = useState<View>('hub');
+  const [editReturn, setEditReturn] = useState<EditReturn>('hub');
   const [editDraft, setEditDraft] = useState<WizardDraft>(() => responseToDraft(current));
   const {
     stepIndex: editStepIndex,
@@ -96,9 +108,6 @@ export function ProfileDashboard({
   useEffect(() => {
     onStatsUpdatedAt?.(statsUpdatedAt);
   }, [onStatsUpdatedAt, statsUpdatedAt]);
-
-  // A new view, wizard step or tab starts at its top.
-  useScrollToTopOnChange(view, editStepIndex);
 
   // The saved confirmation sits at the top of the dashboard, so bring it into view.
   useEffect(() => {
@@ -153,8 +162,21 @@ export function ProfileDashboard({
   const orientation = orientationMark.data;
   const orientationInvite = scholarshipReportEligible ? scholarship.openFlow : undefined;
 
-  // A new report view or flow step also starts at the top.
-  useScrollToTopOnChange(scholarship.mode, scholarship.stepIndex);
+  // A page, a wizard step and a holder flow step or results open at their top. The hub comes back at the scroll
+  // position the user left it at (ADR 0020).
+  const screen =
+    scholarship.mode === 'flow'
+      ? `holder-flow:${scholarship.stepIndex}`
+      : scholarship.mode === 'results'
+        ? 'holder-results'
+        : view === 'edit-wizard'
+          ? `edit-wizard:${editStepIndex}`
+          : view;
+  const hubScroll = useRememberedAppScroll(screen === 'hub');
+  useLayoutEffect(() => {
+    if (screen === 'hub') restoreAppScroll(hubScroll.current);
+    else scrollAppToTop();
+  }, [hubScroll, screen]);
 
   const submitEdit = useCallback(async () => {
     if (disabled || !canAdvanceWizardStep('grades', editDraft)) return;
@@ -166,16 +188,20 @@ export function ProfileDashboard({
     await runGuarded(async () => {
       await onSubmit(next);
       void trackProductEvent({ name: 'survey_updated' });
-      setView('dashboard');
+      // The saved line sits at the top of the hub, so the hub opens at its top after a save (task 027).
+      hubScroll.current = 0;
+      setView('hub');
       setCohortWarning(false);
       setSaved(true);
     });
-  }, [cohortWarning, current, disabled, editDraft, onSubmit, runGuarded]);
+  }, [cohortWarning, current, disabled, editDraft, hubScroll, onSubmit, runGuarded]);
 
+  // Only the Profile page's rows open the wizard at a step, so Back from that step returns to the Profile page.
   const openEditAt = useCallback(
     (section: WizardStep) => {
       setEditDraft(responseToDraft(current));
       setCohortWarning(false);
+      setEditReturn('profile');
       setView('edit-wizard');
       jumpToEditStep(section);
     },
@@ -186,6 +212,7 @@ export function ProfileDashboard({
     setEditDraft(responseToDraft(current));
     resetEditSteps();
     setCohortWarning(false);
+    setEditReturn('hub');
     setView('edit-wizard');
   }, [current, resetEditSteps]);
 
@@ -207,8 +234,10 @@ export function ProfileDashboard({
       cancelCohortWarning();
       return;
     }
-    goEditBack(() => setView('dashboard'));
-  }, [cancelCohortWarning, cohortWarning, goEditBack]);
+    goEditBack(() => setView(editReturn));
+  }, [cancelCohortWarning, cohortWarning, editReturn, goEditBack]);
+
+  const backToHub = useCallback(() => setView('hub'), []);
 
   function chromeConfig(): MiniAppChromeConfig {
     if (chromeSuspended) return {};
@@ -233,7 +262,12 @@ export function ProfileDashboard({
       return { back: { visible: true, onClick: scholarship.closeResults } };
     }
 
-    if (view === 'dashboard') {
+    // The pages have no main button yet (task 048 adds the invite to the What-if page).
+    if (view === 'what-if' || view === 'profile') {
+      return { back: { visible: true, onClick: backToHub } };
+    }
+
+    if (view === 'hub') {
       return {
         main: {
           text: t.settings.invite,
@@ -312,6 +346,42 @@ export function ProfileDashboard({
     );
   }
 
+  const dashboardError = actionError ? (
+    <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
+      {actionError}
+    </p>
+  ) : null;
+
+  if (view === 'what-if') {
+    return (
+      <DashboardPage title={t.dashboard.pages.whatIf}>
+        <ScoreScreen
+          current={current}
+          statistics={statistics}
+          orientationMark={orientation?.mark ?? null}
+          onWhatIfUsed={noteWhatIfUsed}
+        />
+        {/* Task 052 removes the distribution; until then it stays below the what-if. */}
+        <StatisticsDistribution
+          state={statistics}
+          profile={current}
+          userScore={userOrientationScore}
+          orientationScores={orientation?.scores ?? null}
+        />
+        {dashboardError}
+      </DashboardPage>
+    );
+  }
+
+  if (view === 'profile') {
+    return (
+      <DashboardPage title={t.dashboard.pages.profile}>
+        <ProfileDetails current={current} onEditSection={openEditAt} />
+        {dashboardError}
+      </DashboardPage>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {saved ? (
@@ -327,26 +397,13 @@ export function ProfileDashboard({
         orientation={orientation}
         onOrientationInvite={orientationInvite}
       />
-      <ScoreScreen
-        current={current}
-        statistics={statistics}
-        orientationMark={orientation?.mark ?? null}
-        onWhatIfUsed={noteWhatIfUsed}
-      />
-      <StatisticsDistribution
-        state={statistics}
-        profile={current}
-        userScore={userOrientationScore}
-        orientationScores={orientation?.scores ?? null}
-      />
       {scholarshipReportEligible ? <ScholarshipReportCard controller={scholarship} /> : null}
-      <ProfileDetails current={current} onEditSection={openEditAt} />
+      <div className="space-y-2">
+        <HubLink label={t.dashboard.pages.whatIf} onClick={() => setView('what-if')} />
+        <HubLink label={t.dashboard.pages.profile} onClick={() => setView('profile')} />
+      </div>
 
-      {actionError ? (
-        <p className="text-sm text-[var(--tg-theme-destructive-text-color)]" role="alert">
-          {actionError}
-        </p>
-      ) : null}
+      {dashboardError}
     </div>
   );
 }

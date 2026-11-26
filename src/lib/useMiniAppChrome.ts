@@ -22,6 +22,22 @@ export type MiniAppChromeConfig = {
   closingConfirmation?: boolean;
 };
 
+let openBackLayers = 0;
+
+/**
+ * An overlay (a bottom sheet) that owns the Telegram Back button while it is open: screen handlers registered
+ * through `useMiniAppChrome` ignore Back until the returned release function is called.
+ */
+export function holdBackButton(): () => void {
+  openBackLayers += 1;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    openBackLayers -= 1;
+  };
+}
+
 export function useMiniAppChrome(config: MiniAppChromeConfig): void {
   const mainClickRef = useRef(config.main?.onClick);
   const secondaryClickRef = useRef(config.secondary?.onClick);
@@ -42,7 +58,9 @@ export function useMiniAppChrome(config: MiniAppChromeConfig): void {
 
     const mainHandler = () => mainClickRef.current?.();
     const secondaryHandler = () => secondaryClickRef.current?.();
-    const backHandler = () => backClickRef.current?.();
+    const backHandler = () => {
+      if (openBackLayers === 0) backClickRef.current?.();
+    };
 
     if (main) {
       app.mainButton.setText(main.text);

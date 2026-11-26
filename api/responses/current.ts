@@ -1,5 +1,5 @@
 import { currentResponseRequestSchema, currentResponseResultSchema } from '../../shared/validation.js';
-import { unauthorized } from '../_lib/errors.js';
+import { profileNotFound } from '../_lib/errors.js';
 import { assertMethod, parseJsonBody, sendError, type HttpResponse } from '../_lib/http.js';
 import { assertSameOrigin } from '../_lib/origin.js';
 import {
@@ -47,7 +47,7 @@ export function createCurrentResponseHandler(overrides: Partial<CurrentDependenc
         p_intake_year: await readActiveIntakeYear(client),
       });
       assertRpcSucceeded(currentResult.error);
-      if (currentResult.data === null) throw unauthorized();
+      if (currentResult.data === null) throw profileNotFound();
       const result = currentResponseResultSchema.parse({
         response: parseCurrentResponse(currentResult.data),
       });

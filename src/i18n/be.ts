@@ -59,12 +59,16 @@ export const be = {
       'Увядзіце сярэдні бал атэстата. Максімальная адзнака шкалы вызначаецца паводле краіны, дзе вы скончылі сярэднюю школу.',
     rankingCountryHint: 'Вызначае вашу групу параўнання — вас параўноўваюць з кандыдатамі з гэтай краіны.',
     schoolCountryHint: 'Ад гэтага залежыць шкала адзнак (напрыклад, 12-бальная ва Украіне або 5-бальная ў Казахстане).',
+    scaleLockedByCountry: (max: string) => `Шкала да ${max} · па краіне школы`,
+    scaleLockedStudent: (max: string) => `Шкала да ${max} · для студэнтаў у Польшчы`,
+    otherCase: 'Іншы выпадак',
+    studentInPolandToggle: 'Я студэнт у Польшчы',
     maximumGradeLockedHint: 'Шкала задана паводле краіны заканчэння сярэдняй школы.',
     averageAboveMaximum: 'Ого, сярэдні бал вышэйшы за максімум шкалы! Падобна на памылку — праверце значэнне.',
     averageBelowThreshold: (max: string, score: string) =>
       `Праверце сярэдні бал: па шкале да ${max} гэта ${score} ${forNumber(score, POINTS)} з 90, ніжэй за парог 60. Магчыма, бал уведзены па іншай шкале.`,
     belarusPoloniaBonusNotice:
-      'Паводле документа Ogłoszenie nr 13/2026, пункт 2.7 (крытэрый 2), бонус за польскую школу не датычыцца грамадзян Беларусі.',
+      'Па правілах NAWA бонус за польскую школу не налічваецца грамадзянам Беларусі.',
     summaryTitle: 'Падсумаванне',
     summaryDescription: 'Праверце, з кім вас будуць параўноўваць і што будзе захавана.',
     cohortTitle: 'Вас будуць параўноўваць з кандыдатамі:',
@@ -111,6 +115,7 @@ export const be = {
     gradeBasis: 'Па якіх адзнаках вы паказалі сярэдні бал?',
     applicantKind: 'Хто вы як заяўнік?',
     averageGradePlaceholder: 'напр. 4,82',
+    averageGradePlaceholderExample: (example: string) => `напр. ${example}`,
     maximumGradePlaceholder: 'напр. 5,00',
   },
   choices: {
@@ -138,11 +143,14 @@ export const be = {
     placeholder: 'Абярыце краіну',
     searchPlaceholder: 'Пошук краіны…',
     popular: 'Папулярныя',
+    noResults: 'Нічога не знойдзена',
+    close: 'Закрыць',
   },
   nawaScore: {
     preview: (score: string) => `Арыентыровачны бал: ${score}`,
+    previewEmpty: 'Увядзіце сярэдні бал — тут з’явіцца разлік',
     previewNote:
-      'Арыентыровачны бал па формуле з документа Ogłoszenie nr 13/2026, пункт 2.7 (крытэрый 2): адзнакі 0–90 балаў + бонус за польскую школу 0/5/10. Гэта не афіцыйны вынік NAWA.',
+      'Лічым па правілах NAWA: адзнакі — да 90 балаў + бонус 0/5/10 за польскую школу. Гэта не афіцыйны вынік NAWA.',
   },
   stats: {
     heroLabel: 'Ваш вынік',
@@ -313,6 +321,7 @@ export const be = {
       'Ваша пазіцыя і працэнтыль лічацца толькі па адказах з вашай краіны грамадзянства.',
     authorTitle: 'Пра аўтара',
     authorBody: 'Незалежны праект, створаны, каб дапамагчы кандыдатам зразумець кантэкст конкурсу.',
+    rulesSource: 'Крыніца правілаў: Ogłoszenie nr 13/2026, п. 2.7 (крытэрый 2).',
     version: (version: string) => `Версія праграмы: ${version}`,
   },
   telegram: {
@@ -335,6 +344,9 @@ export const be = {
     retry: 'Паспрабаваць яшчэ раз',
     actionError: 'Не атрымалася выканаць гэта дзеянне.',
     offline: 'Няма злучэння з інтэрнэтам. Праверце сетку і паспрабуйце яшчэ раз.',
+    sessionExpired: 'Сесія скончылася. Адкрыйце праграму зноў.',
+    sessionExpiredAction: 'Адкрыць зноў',
+    alreadySaved: 'Анкета ўжо захавана на іншай прыладзе — паказваем яе.',
   },
   language: {
     label: 'Мова',
@@ -387,6 +399,10 @@ export const be = {
     formulaDisclaimer: 'Пераадоленне парога не гарантуе стыпендыі: месцы размяркоўваюцца па квотах краін.',
   },
   dashboard: {
+    pages: {
+      whatIf: 'А калі сярэдні бал іншы?',
+      profile: 'Мая анкета і формула',
+    },
     position: {
       title: 'Пазіцыя ў групе',
       rankLine: (rank: string, total: string, country: string) =>

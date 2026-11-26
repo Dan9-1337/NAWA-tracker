@@ -3,6 +3,7 @@ import { be } from './be';
 import { pl } from './pl';
 import { ru } from './ru';
 import { uk } from './uk';
+import { resolveLocaleFromTags, supportedLocaleFromTag } from '../../shared/locale-fallback';
 import { getTelegramLanguageCode } from '../lib/telegram';
 import type { Locale, Messages } from './types';
 
@@ -20,8 +21,7 @@ export function isLocale(value: string): value is Locale {
 
 /** Maps an IETF language tag ("uk-UA", "be", ...) to a supported locale. */
 export function localeFromLanguageTag(tag: string | null | undefined): Locale | null {
-  const prefix = tag?.toLowerCase().split(/[-_]/)[0];
-  return prefix && isLocale(prefix) ? prefix : null;
+  return supportedLocaleFromTag(tag);
 }
 
 export function resolveInitialLocale(): Locale {
@@ -29,13 +29,8 @@ export function resolveInitialLocale(): Locale {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (stored && isLocale(stored)) return stored;
   }
-  const fromTelegram = localeFromLanguageTag(getTelegramLanguageCode());
-  if (fromTelegram) return fromTelegram;
-  if (typeof navigator !== 'undefined') {
-    const fromBrowser = localeFromLanguageTag(navigator.language);
-    if (fromBrowser) return fromBrowser;
-  }
-  return 'pl';
+  // A supported Telegram or browser language wins; otherwise Russian for the region's languages, else English.
+  return resolveLocaleFromTags([getTelegramLanguageCode(), typeof navigator !== 'undefined' ? navigator.language : null]);
 }
 
 let activeLocale: Locale = resolveInitialLocale();

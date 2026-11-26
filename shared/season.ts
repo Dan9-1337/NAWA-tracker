@@ -6,6 +6,8 @@ export const season2026 = {
   documentsFrom: '2026-03-31',
   documentsTo: '2026-07-09',
   resultsBy: '2026-09-30',
+  /** Off until the maintainer confirms the results are out or the publication date (assumption D17). */
+  resultsRemindersEnabled: false,
 } as const;
 
 /** Official dates of one intake; null while NAWA has not announced them. */
@@ -14,6 +16,11 @@ export type SeasonCalendar = {
   documentsFrom: string | null;
   documentsTo: string | null;
   resultsBy: string | null;
+  /**
+   * The maintainer's gate for the two "results" bot reminders (`results_soon`, `results_out`). Absent means off:
+   * set it to true only once the results are really out or the publication date is confirmed (assumption D17).
+   */
+  resultsRemindersEnabled?: boolean;
 };
 
 /** Known intakes, oldest first. The next intake is added with its dates once NAWA publishes the call. */

@@ -3,15 +3,30 @@ import { pickDueReminder, remindersForSeasons } from './reminders';
 import { seasons } from './season';
 
 const day = (iso: string) => new Date(`${iso}T12:00:00Z`);
-const reminders = remindersForSeasons(seasons);
+// The 2026 season keeps the results reminders off, so the picking tests below use it with the flag switched on.
+const resultsOn = seasons.map((season) => ({ ...season, resultsRemindersEnabled: true }));
+const reminders = remindersForSeasons(resultsOn);
 
 describe('remindersForSeasons', () => {
-  it('derives reminders from the official 2026 dates and skips seasons without dates', () => {
+  it('creates only the intake reminder for 2026 while the results flag is off', () => {
+    expect(remindersForSeasons(seasons).map((reminder) => [reminder.key, reminder.dueOn])).toEqual([
+      ['2026:intake_open', '2026-03-31'],
+    ]);
+    const flagAbsent = seasons.map(({ resultsRemindersEnabled: _flag, ...season }) => season);
+    expect(remindersForSeasons(flagAbsent).map((reminder) => reminder.key)).toEqual(['2026:intake_open']);
+  });
+
+  it('returns both results reminders with the same dates once the flag is on, and skips seasons without dates', () => {
     expect(reminders.map((reminder) => [reminder.key, reminder.dueOn])).toEqual([
       ['2026:intake_open', '2026-03-31'],
       ['2026:results_soon', '2026-09-27'],
       ['2026:results_out', '2026-10-01'],
     ]);
+  });
+
+  it('yields nothing for a season without dates, even with the flag on', () => {
+    const tba = { year: 2027, documentsFrom: null, documentsTo: null, resultsBy: null, resultsRemindersEnabled: true };
+    expect(remindersForSeasons([tba])).toEqual([]);
   });
 
   it('lets the results reminder expire after 90 days', () => {

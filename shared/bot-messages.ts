@@ -1,3 +1,4 @@
+import { resolveLocaleFromTags } from './locale-fallback';
 import type { ReminderKind } from './reminders';
 
 export const botLocales = ['pl', 'en', 'ru', 'uk', 'be'] as const;
@@ -22,7 +23,7 @@ export const botMessages: Record<BotLocale, BotMessages> = {
       `NAWAmeter to nieoficjalny tracker kandydatów Anders NAWA. ${country}: kraj jest już wybrany. Otwórz aplikację i podaj swój wynik. /subscribe włącza przypomnienia, /stop je wyłącza.`,
     openApp: 'Otwórz NAWAmeter',
     subscribed:
-      'Przypomnienia włączone. Twój Telegram ID zapisujemy osobno od ankiety, dopóki ich nie wyłączysz (/stop).',
+      'Przypomnę, kiedy ruszy nabór wniosków. Wyłączysz to poleceniem /stop. Twój Telegram ID zapisujemy osobno od ankiety.',
     alreadySubscribed: 'Przypomnienia są już włączone. Wyłączysz je poleceniem /stop.',
     unsubscribed: 'Przypomnienia wyłączone, a Twój Telegram ID został usunięty z listy.',
     help: '/start — otwórz aplikację\n/subscribe — włącz przypomnienia\n/stop — wyłącz przypomnienia',
@@ -39,7 +40,7 @@ export const botMessages: Record<BotLocale, BotMessages> = {
       `NAWAmeter is an unofficial tracker for Anders NAWA candidates. ${country} is already selected: open the app and add your score. /subscribe turns reminders on, /stop turns them off.`,
     openApp: 'Open NAWAmeter',
     subscribed:
-      'Reminders are on. Your Telegram ID is stored separately from your survey until you turn them off (/stop).',
+      'I will remind you when applications open. Turn it off with /stop. Your Telegram ID is stored separately from your survey.',
     alreadySubscribed: 'Reminders are already on. Turn them off with /stop.',
     unsubscribed: 'Reminders are off, and your Telegram ID has been removed from the list.',
     help: '/start — open the app\n/subscribe — turn reminders on\n/stop — turn reminders off',
@@ -56,7 +57,7 @@ export const botMessages: Record<BotLocale, BotMessages> = {
       `NAWAmeter — неофициальный трекер кандидатов Anders NAWA. ${country}: страна уже выбрана. Откройте приложение и укажите свой балл. /subscribe включает напоминания, /stop выключает.`,
     openApp: 'Открыть NAWAmeter',
     subscribed:
-      'Напоминания включены. Ваш Telegram ID хранится отдельно от анкеты, пока вы не выключите напоминания (/stop).',
+      'Напомню, когда начнётся приём заявок. Выключить — /stop. Ваш Telegram ID хранится отдельно от анкеты.',
     alreadySubscribed: 'Напоминания уже включены. Выключить можно командой /stop.',
     unsubscribed: 'Напоминания выключены, а ваш Telegram ID удалён из списка.',
     help: '/start — открыть приложение\n/subscribe — включить напоминания\n/stop — выключить напоминания',
@@ -73,7 +74,7 @@ export const botMessages: Record<BotLocale, BotMessages> = {
       `NAWAmeter — неофіційний трекер кандидатів Anders NAWA. ${country}: країну вже обрано. Відкрийте застосунок і вкажіть свій бал. /subscribe вмикає нагадування, /stop вимикає.`,
     openApp: 'Відкрити NAWAmeter',
     subscribed:
-      'Нагадування ввімкнено. Ваш Telegram ID зберігається окремо від анкети, доки ви не вимкнете нагадування (/stop).',
+      'Нагадаю, коли розпочнеться прийом заяв. Вимкнути — /stop. Ваш Telegram ID зберігається окремо від анкети.',
     alreadySubscribed: 'Нагадування вже ввімкнено. Вимкнути можна командою /stop.',
     unsubscribed: 'Нагадування вимкнено, а ваш Telegram ID видалено зі списку.',
     help: '/start — відкрити застосунок\n/subscribe — увімкнути нагадування\n/stop — вимкнути нагадування',
@@ -90,7 +91,7 @@ export const botMessages: Record<BotLocale, BotMessages> = {
       `NAWAmeter — неафіцыйны трэкер кандыдатаў Anders NAWA. ${country}: краіна ўжо абрана. Адкрыйце праграму і пакажыце свой бал. /subscribe уключае напаміны, /stop выключае.`,
     openApp: 'Адкрыць NAWAmeter',
     subscribed:
-      'Напаміны ўключаны. Ваш Telegram ID захоўваецца асобна ад анкеты, пакуль вы не выключыце напаміны (/stop).',
+      'Нагадаю, калі пачнецца прыём заяў. Выключыць — /stop. Ваш Telegram ID захоўваецца асобна ад анкеты.',
     alreadySubscribed: 'Напаміны ўжо ўключаны. Выключыць можна камандай /stop.',
     unsubscribed: 'Напаміны выключаны, а ваш Telegram ID выдалены са спісу.',
     help: '/start — адкрыць праграму\n/subscribe — уключыць напаміны\n/stop — выключыць напаміны',
@@ -102,8 +103,10 @@ export const botMessages: Record<BotLocale, BotMessages> = {
   },
 };
 
-/** Maps a Telegram `language_code` ("uk", "be-BY", ...) to a bot locale; unknown languages get Polish, like the app. */
+/**
+ * Maps a Telegram `language_code` ("uk", "be-BY", ...) to a bot locale, with the same fallback as the app
+ * (`shared/locale-fallback.ts`): Russian for the region's other languages, English for everything else.
+ */
 export function resolveBotLocale(languageCode: string | null | undefined): BotLocale {
-  const prefix = languageCode?.toLowerCase().split(/[-_]/)[0];
-  return (botLocales as readonly string[]).includes(prefix ?? '') ? (prefix as BotLocale) : 'pl';
+  return resolveLocaleFromTags([languageCode]);
 }

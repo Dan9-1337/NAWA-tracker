@@ -52,12 +52,16 @@ export const pl = {
       'Podaj średnią ocen ze świadectwa. Maksymalną ocenę w skali ustawiamy według kraju ukończenia szkoły.',
     rankingCountryHint: 'To ustawia Twoją grupę porównawczą. Będziemy Cię porównywać z kandydatami z tego kraju.',
     schoolCountryHint: 'Od tego zależy skala ocen przy obliczaniu wyniku (np. 12-punktowa na Ukrainie lub 5-punktowa w Kazachstanie).',
+    scaleLockedByCountry: (max: string) => `Skala do ${max} · według kraju szkoły`,
+    scaleLockedStudent: (max: string) => `Skala do ${max} · dla studentów w Polsce`,
+    otherCase: 'Inna sytuacja',
+    studentInPolandToggle: 'Jestem studentem w Polsce',
     maximumGradeLockedHint: 'Skala jest ustawiona według kraju ukończenia szkoły.',
     averageAboveMaximum: 'Ups — średnia jest wyższa niż maksimum skali. Chyba wkradła się pomyłka — sprawdź wartość.',
     averageBelowThreshold: (max: string, score: string) =>
       `Sprawdź średnią: w skali do ${max} daje to ${score} pkt z 90, poniżej progu 60. Możliwe, że ocena została wpisana w innej skali.`,
     belarusPoloniaBonusNotice:
-      'Zgodnie z Ogłoszeniem nr 13/2026, pkt 2.7 (kryterium 2) bonus za ukończenie polskiej szkoły nie dotyczy obywateli Białorusi.',
+      'Zgodnie z zasadami NAWA bonus za polską szkołę nie przysługuje obywatelom Białorusi.',
     summaryTitle: 'Podsumowanie',
     summaryDescription: 'Sprawdź, z jaką grupą Cię porównamy i co zostanie zapisane.',
     cohortTitle: 'Porównamy Cię z kandydatami:',
@@ -104,6 +108,7 @@ export const pl = {
     gradeBasis: 'Z jakich ocen podajesz średnią?',
     applicantKind: 'W jakim charakterze składasz wniosek?',
     averageGradePlaceholder: 'np. 4,82',
+    averageGradePlaceholderExample: (example: string) => `np. ${example}`,
     maximumGradePlaceholder: 'np. 5,00',
   },
   choices: {
@@ -131,11 +136,14 @@ export const pl = {
     placeholder: 'Wybierz kraj',
     searchPlaceholder: 'Szukaj kraju…',
     popular: 'Popularne',
+    noResults: 'Nic nie znaleziono',
+    close: 'Zamknij',
   },
   nawaScore: {
     preview: (score: string) => `Wynik orientacyjny: ${score} pkt`,
+    previewEmpty: 'Wpisz średnią — tutaj pojawi się wynik',
     previewNote:
-      'Wynik orientacyjny według formuły z Ogłoszenia nr 13/2026, pkt 2.7 (kryterium 2): oceny 0–90 pkt + bonus za polską szkołę 0/5/10 pkt. To nie jest oficjalny wynik NAWA.',
+      'Liczymy według zasad NAWA: oceny — do 90 pkt + bonus 0/5/10 pkt za polską szkołę. To nie jest oficjalny wynik NAWA.',
   },
   stats: {
     heroLabel: 'Twój wynik',
@@ -305,6 +313,7 @@ export const pl = {
       'Pozycję i percentyl liczymy tylko wśród odpowiedzi z Twojego kraju obywatelstwa.',
     authorTitle: 'O autorze',
     authorBody: 'Niezależny projekt, który ma pomóc kandydatom lepiej rozumieć kontekst naboru.',
+    rulesSource: 'Źródło zasad: Ogłoszenie nr 13/2026, pkt 2.7 (kryterium 2).',
     version: (version: string) => `Wersja aplikacji: ${version}`,
   },
   telegram: {
@@ -327,6 +336,9 @@ export const pl = {
     retry: 'Spróbuj ponownie',
     actionError: 'Nie udało się wykonać tej operacji.',
     offline: 'Brak połączenia z internetem. Sprawdź sieć i spróbuj ponownie.',
+    sessionExpired: 'Sesja wygasła. Otwórz aplikację ponownie.',
+    sessionExpiredAction: 'Otwórz ponownie',
+    alreadySaved: 'Ankieta została już zapisana na innym urządzeniu — pokazujemy ją.',
   },
   language: {
     label: 'Język',
@@ -379,6 +391,10 @@ export const pl = {
     formulaDisclaimer: 'Przekroczenie progu nie gwarantuje stypendium — miejsca są dzielone według limitów dla krajów.',
   },
   dashboard: {
+    pages: {
+      whatIf: 'A gdyby średnia była inna?',
+      profile: 'Moja ankieta i wzór',
+    },
     position: {
       title: 'Miejsce w grupie',
       rankLine: (rank: string, total: string, country: string) =>

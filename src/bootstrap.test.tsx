@@ -39,7 +39,7 @@ describe('bootstrapApplication', () => {
   });
 
   it('initializes Telegram WebApp and probes the current profile', async () => {
-    api.getCurrentResponse.mockRejectedValue(new ApiClientError(401, 'UNAUTHORIZED', 'unauthorized'));
+    api.getCurrentResponse.mockRejectedValue(new ApiClientError(404, 'PROFILE_NOT_FOUND', 'No survey was found for this Telegram account.'));
     const { bootstrapApplication } = await import('./bootstrap');
     const { initializeTelegramWebApp } = await import('./lib/telegram');
     let root!: ReturnType<typeof bootstrapApplication>;

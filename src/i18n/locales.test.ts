@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { formatScore } from '../lib/format';
-import { isLocale, localeFromLanguageTag, localeOrder, messages } from './index';
+import { isLocale, localeFromLanguageTag, localeOrder, LOCALE_STORAGE_KEY, messages } from './index';
 
 type Leaf = string | ((...args: never[]) => string) | readonly unknown[];
 
@@ -136,6 +136,52 @@ describe('locale detection', () => {
   it('knows every supported locale', () => {
     for (const locale of localeOrder) expect(isLocale(locale)).toBe(true);
     expect(isLocale('de')).toBe(false);
+  });
+});
+
+describe('initial locale', () => {
+  afterEach(() => {
+    vi.doUnmock('../lib/telegram');
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  /** Loads a fresh copy of the i18n module with the given stored choice, Telegram language and browser language. */
+  async function initialLocale(input: { stored?: string; telegram?: string | null; browser?: string }) {
+    vi.resetModules();
+    vi.doMock('../lib/telegram', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../lib/telegram')>();
+      return { ...actual, getTelegramLanguageCode: () => input.telegram ?? null };
+    });
+    vi.spyOn(window.navigator, 'language', 'get').mockReturnValue(input.browser ?? '');
+    localStorage.clear();
+    if (input.stored) localStorage.setItem(LOCALE_STORAGE_KEY, input.stored);
+    const fresh = await import('./index');
+    return fresh.resolveInitialLocale();
+  }
+
+  it('lets a stored choice win over a different Telegram language (A4)', async () => {
+    expect(await initialLocale({ stored: 'be', telegram: 'uk', browser: 'de-DE' })).toBe('be');
+    expect(await initialLocale({ stored: 'en', telegram: 'kk' })).toBe('en');
+  });
+
+  it('maps Telegram languages of the region to Russian and unknown ones to English (A1, A2)', async () => {
+    for (const code of ['kk', 'ka', 'az', 'hy', 'uz', 'ro']) expect(await initialLocale({ telegram: code })).toBe('ru');
+    for (const code of ['de', 'fr', 'ja', 'tr', '']) expect(await initialLocale({ telegram: code })).toBe('en');
+  });
+
+  it('keeps supported Telegram languages as before (A3)', async () => {
+    const expected = { ru: 'ru', 'uk-UA': 'uk', be: 'be', 'pl-PL': 'pl', 'en-GB': 'en' } as const;
+    for (const [code, locale] of Object.entries(expected)) expect(await initialLocale({ telegram: code })).toBe(locale);
+  });
+
+  it('falls back to English with no Telegram data and a browser language of an unsupported kind (A5)', async () => {
+    expect(await initialLocale({ telegram: null, browser: 'de-DE' })).toBe('en');
+    expect(await initialLocale({ telegram: null, browser: '' })).toBe('en');
+  });
+
+  it('uses a supported browser language when Telegram gives none', async () => {
+    expect(await initialLocale({ telegram: null, browser: 'uk-UA' })).toBe('uk');
   });
 });
 

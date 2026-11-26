@@ -53,12 +53,16 @@ export const en = {
       'Enter the average grade from your certificate. The maximum grade is set by the country where you completed secondary school.',
     rankingCountryHint: 'Sets your comparison group. You will be compared with candidates from this country.',
     schoolCountryHint: 'Sets the grading scale used in the calculation (for example, a 12-point scale in Ukraine or a 5-point scale in Kazakhstan).',
+    scaleLockedByCountry: (max: string) => `Scale up to ${max} · set by your school country`,
+    scaleLockedStudent: (max: string) => `Scale up to ${max} · for students in Poland`,
+    otherCase: 'Other situation',
+    studentInPolandToggle: 'I am a student in Poland',
     maximumGradeLockedHint: 'The scale is set by the country where you completed secondary school.',
     averageAboveMaximum: 'That average is above the top of the scale — looks like a typo. Please check it.',
     averageBelowThreshold: (max: string, score: string) =>
       `Check your average: on a scale up to ${max} it gives ${score} of 90 points, below the threshold of 60. It may have been entered on a different scale.`,
     belarusPoloniaBonusNotice:
-      'Under Ogłoszenie nr 13/2026, section 2.7 (criterion 2), the bonus for a Polish school does not apply to citizens of Belarus.',
+      'Under NAWA rules, the Polish-school bonus does not apply to citizens of Belarus.',
     summaryTitle: 'Summary',
     summaryDescription: 'Check which group you will be compared with and what will be saved.',
     cohortTitle: 'You will be compared with candidates:',
@@ -105,6 +109,7 @@ export const en = {
     gradeBasis: 'Which grades is your average based on?',
     applicantKind: 'What is your applicant status?',
     averageGradePlaceholder: 'e.g. 4.82',
+    averageGradePlaceholderExample: (example: string) => `e.g. ${example}`,
     maximumGradePlaceholder: 'e.g. 5.00',
   },
   choices: {
@@ -132,11 +137,14 @@ export const en = {
     placeholder: 'Select a country',
     searchPlaceholder: 'Search for a country…',
     popular: 'Popular',
+    noResults: 'Nothing found',
+    close: 'Close',
   },
   nawaScore: {
     preview: (score: string) => `Estimated score: ${score} pts`,
+    previewEmpty: 'Enter your average — your estimate will appear here',
     previewNote:
-      'Estimated score using the formula from Ogłoszenie nr 13/2026, section 2.7 (criterion 2): grades 0–90 pts + bonus of 0, 5 or 10 pts for a Polish community (Polonia) school. This is not an official NAWA result.',
+      'We calculate by NAWA rules: grades — up to 90 pts + a bonus of 0, 5 or 10 pts for a Polish school. This is not an official NAWA result.',
   },
   stats: {
     heroLabel: 'Your result',
@@ -306,6 +314,7 @@ export const en = {
       'Your position and percentile are based only on responses from your country of citizenship.',
     authorTitle: 'About the author',
     authorBody: 'An independent project to help candidates understand the context of the competition.',
+    rulesSource: 'Source of the rules: Ogłoszenie nr 13/2026, section 2.7 (criterion 2).',
     version: (version: string) => `App version: ${version}`,
   },
   telegram: {
@@ -328,6 +337,9 @@ export const en = {
     retry: 'Try again',
     actionError: 'Could not complete this action.',
     offline: 'No internet connection. Check your network and try again.',
+    sessionExpired: 'Your session has expired. Open the app again.',
+    sessionExpiredAction: 'Open again',
+    alreadySaved: 'Your survey was already saved on another device — showing it.',
   },
   language: {
     label: 'Language',
@@ -380,6 +392,10 @@ export const en = {
     formulaDisclaimer: 'Passing the threshold does not guarantee a scholarship: places are allocated by country limits.',
   },
   dashboard: {
+    pages: {
+      whatIf: 'What if your average were different?',
+      profile: 'My survey and the formula',
+    },
     position: {
       title: 'Position in group',
       rankLine: (rank: string, total: string, country: string) =>

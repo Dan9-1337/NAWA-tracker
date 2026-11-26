@@ -41,7 +41,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | --- | --- | --- | --- |
 | `/api/responses` | POST | initData + Origin | Create profile (once per Telegram user) |
 | `/api/responses` | PUT | initData + Origin | Update owned profile |
-| `/api/responses/current` | POST | initData | Load owned profile |
+| `/api/responses/current` | POST | initData | Load owned profile. 404 `PROFILE_NOT_FOUND` when the account has no survey for the active intake year; 401 `UNAUTHORIZED` only for missing, invalid or expired (over 24 hours) Telegram authentication |
 | `/api/statistics` | POST | initData | Privacy-safe aggregates for owned profile |
 | `/api/intake-summary` | POST | initData | Landing counter: valid responses of the active intake (hidden below the cohort floor), and the active `intakeYear` the client saves new surveys with |
 | `/api/orientation-mark` | GET | initData | The caller's country `ориентир 2026`: `{ mark, n }`; `?distribution=1` adds the ascending holder score list for the dots |
@@ -50,7 +50,7 @@ The browser never receives `SUPABASE_SERVICE_ROLE_KEY` or talks to Supabase dire
 | `/api/scholarship-report` | PUT | initData + Origin | Replace the answers and refresh the score snapshot |
 | `/api/scholarship-report` | DELETE | initData + Origin | Delete the report; the survey stays |
 | `/api/bot` | POST | `X-Telegram-Bot-Api-Secret-Token` | Telegram webhook: `/start` (with `c_<ISO>` or `subscribe` payload), `/subscribe`, `/stop`, `/help`, and `my_chat_member` (blocked bot) |
-| `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`results_soon`, `results_out`, `intake_open`) |
+| `/api/cron/reminders` | GET | `Authorization: Bearer CRON_SECRET` | Daily reminders for subscribers (`intake_open`; `results_soon` and `results_out` only for a season with `resultsRemindersEnabled: true`) |
 | `/api/cron/keep-alive` | GET | `Authorization: Bearer CRON_SECRET` | Daily Supabase activity ping (Vercel Cron) |
 
 Removed from the anonymous POC: `/api/session/restore`, `/api/session/logout`, `/api/recovery/rotate`.
@@ -241,6 +241,8 @@ order by r.ranking_country, sr.score_snapshot;
 
 **Hosting:** CSP allows Telegram embedding (`frame-ancestors` includes `https://web.telegram.org`). `X-Frame-Options: DENY` is removed.
 
+**Images:** the CSP is `img-src 'self' data: blob:`, so every image must come from the app's own origin. Country flags are static SVGs in `public/flags/<code>.svg` (from the MIT-licensed [circle-flags](https://github.com/HatScripts/circle-flags) project, release v2.8.0; licence in `public/flags/LICENSE.md`), and `CountryFlag` passes `cdnUrl="/flags/"` to `react-circle-flags`, whose default host (`react-circle-flags.pages.dev`) would be blocked and would expose the visitor's IP. Adding a country to `shared/countries.ts` requires adding its SVG; `src/components/country-flag.test.tsx` fails otherwise.
+
 ### Keeping `IDENTITY_PEPPER`
 
 Every survey is keyed by `HMAC-SHA256(IDENTITY_PEPPER, telegram id)` ([ADR 0002](adr/0002-pseudonymous-identity.md)). If the pepper is lost or changed, every stored profile is orphaned: users can no longer reach their surveys, and the statistics fill with duplicates as they answer again. There is no way to recompute the old hashes without the old value.
@@ -269,8 +271,9 @@ Only `nawa_director` is writable (the API rejects other tracks); `health_ministe
 Records are keyed by `(identity_hash, intake_year)` and every statistic is scoped to `season_config.active_intake_year`. When
 NAWA publishes a new call:
 
-1. Add its dates to `seasons` in `shared/season.ts` (the reminder cron derives `intake_open`, `results_soon` and
-   `results_out` from them) and check the copy that mentions dates.
+1. Add its dates to `seasons` in `shared/season.ts` (the reminder cron derives `intake_open` from them, and `results_soon` and
+   `results_out` only when the season sets `resultsRemindersEnabled: true`, which stays off until the results are
+   really out or their date is confirmed) and check the copy that mentions dates.
 2. Run `update public.season_config set intake_opens_on = '<documentsFrom>'` for the new intake, so the first seven
    days after it are quiet for spike flags. Set `season_config.public_launch_date` on launch day only; while it is
    null nothing is flagged.
@@ -290,6 +293,10 @@ Supabase free-tier projects pause after roughly seven days without database acti
 The database also erases the score-change trail every hour. Migration `202611280001` enables `pg_cron` when `pg_available_extensions` lists it and schedules `select public.purge_score_change_log()` at minute 0 (`0 * * * *`). After deploy, `select * from cron.job` shows the hourly `purge-score-change-log` job; if the extension was not enabled on the project, enable it and run the migration's schedule statement manually.
 
 ## Architecture changelog
+
+### 2026-12-05 — Country flags from our own domain
+
+- Flags were requested from `react-circle-flags.pages.dev`, which the production CSP (`img-src 'self'`) blocks. They are now served from `/flags/<code>.svg` (`public/flags/`); the CSP is unchanged.
 
 ### 2026-12-04 — Active intake year from the database
 
@@ -371,7 +378,7 @@ The database also erases the score-change trail every hour. Migration `202611280
 
 - Migration `202611230001`: `bot_subscriptions`.
 - `POST /api/bot` verifies the webhook secret in constant time, ignores everything except private-chat commands and `my_chat_member`, and never echoes user input (country payloads are validated against the country list).
-- `GET /api/cron/reminders` plans reminders from `shared/season.ts` (`shared/reminders.ts`): one reminder per subscriber at a time, never a backlog, expiring after a window; capped at 200 sends per run.
+- `GET /api/cron/reminders` plans reminders from `shared/season.ts` (`shared/reminders.ts`): one reminder per subscriber at a time, never a backlog, expiring after a window; capped at 200 sends per run. The two results reminders (`results_soon`, `results_out`) are created only for a season with `resultsRemindersEnabled: true`; the 2026 season has it off until the maintainer confirms the results are out or the publication date.
 - The Mini App reads `start_param` (`c_UA`) or `?c=UA` and preselects the country of citizenship; Settings gained "Reminders in the bot" and "Invite people from my country".
 - Bot texts live in `shared/bot-messages.ts` (pl, en, ru, uk, be).
 

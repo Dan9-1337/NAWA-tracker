@@ -168,7 +168,7 @@ Intentionally still out of scope (confirm OK): Karta Polaka / attachments, forma
 The bot is how reminders and country invitations work; the app itself stays a Mini App.
 
 - `/start` opens the app; `/start c_UA` opens it with Ukraine preselected as the country of citizenship (also `https://t.me/<bot>?startapp=c_UA` when the Main Mini App is set up). Settings → "Invite people from my country" shares exactly that link.
-- `/subscribe` (or Settings → "Reminders in the bot") opts in; `/stop` opts out. Reminders are derived from the season calendar: a few days before the results, the day after, and when a new intake opens. Each subscriber gets at most one at a time and never a backlog.
+- `/subscribe` (or Settings → "Reminders in the bot") opts in; `/stop` opts out. Reminders are derived from the season calendar: when a new intake opens, and, only for a season whose `resultsRemindersEnabled` flag the maintainer has switched on, a few days before the results and the day after. The flag is off for 2026 until the results are really out or their date is confirmed. Each subscriber gets at most one at a time and never a backlog.
 - Opting in stores the Telegram id in `bot_subscriptions`, separate from the answers; it is removed on `/stop`, when the bot is blocked, and when the survey is deleted.
 
 ## Changelog

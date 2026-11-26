@@ -2,6 +2,9 @@ import { CircleFlag } from 'react-circle-flags';
 import { isCountryCode } from '../../shared/countries';
 import { GlobeIcon } from './icons';
 
+/** Flag SVGs are static files in `public/flags/` so they load under the production `img-src 'self'` policy. */
+export const FLAGS_BASE_URL = '/flags/';
+
 type CountryFlagProps = {
   code: string;
   size?: number;
@@ -27,7 +30,14 @@ export function CountryFlag({ code, size = 20, className }: CountryFlagProps) {
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <CircleFlag countryCode={code.toLowerCase()} height={size} width={size} alt="" title="" />
+      <CircleFlag
+        cdnUrl={FLAGS_BASE_URL}
+        countryCode={code.toLowerCase()}
+        height={size}
+        width={size}
+        alt=""
+        title=""
+      />
     </span>
   );
 }

@@ -78,6 +78,17 @@ describe('rankSearchMatches', () => {
     expect(labels(rankSearchMatches(matches, 'in'))).toEqual(['Ukraina', 'Indie', 'Gwinea']);
   });
 
+  it('ranks an option by its best name across aliases (A2)', () => {
+    const matches = [
+      { label: 'Gwatemala', aliases: ['Guatemala', 'GT'] },
+      { label: 'Ukraina', aliases: ['Ukraine', 'Украина', 'UA'] },
+    ];
+
+    expect(labels(rankSearchMatches(matches, 'ua'))).toEqual(['Ukraina', 'Gwatemala']);
+    expect(labels(rankSearchMatches(matches, 'ukraine'))[0]).toBe('Ukraina');
+    expect(labels(rankSearchMatches(matches, 'УКРАИНА'))[0]).toBe('Ukraina');
+  });
+
   it('returns the same set of options', () => {
     const matches = opts('B informatyka', 'Informatyka', 'Cinformatyka');
     const ranked = rankSearchMatches(matches, 'informatyka');

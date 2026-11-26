@@ -47,6 +47,17 @@ function isValidHostname(hostname: string): boolean {
   );
 }
 
+/**
+ * Server secret for the signed share-card URL (task 066 spike). Read on its own so the image route needs no
+ * Supabase or Telegram configuration; returns null when unset or shorter than 32 characters.
+ */
+export function loadShareCardSecret(
+  source: Readonly<Record<string, string | undefined>> = process.env,
+): string | null {
+  const result = nonEmptySecret.safeParse(source.SHARE_CARD_SECRET);
+  return result.success ? result.data : null;
+}
+
 export function loadServerEnv(
   source: Readonly<Record<string, string | undefined>> = process.env,
 ): ServerEnv {

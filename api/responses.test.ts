@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fineBuckets } from '../shared/test-statistics';
 import { apiErrorSchema } from '../shared/validation';
 import { HttpError } from './_lib/errors';
-import { signTelegramInitData } from './_lib/telegram-auth';
+import { readInitDataFromRequest, signTelegramInitData, verifyTelegramInitData } from './_lib/telegram-auth';
 import {
   createDeleteProfile,
   createResponsesHandler,
@@ -556,6 +556,57 @@ describe('POST /api/responses/current', () => {
     expect(state.status).toBe(200);
     expect(state.body).toEqual({ response: validForm });
     expect(calls).toEqual([['get_current_response', { p_identity_hash: IDENTITY_HASH, p_intake_year: 2026 }]]);
+  });
+
+  it('answers 404 PROFILE_NOT_FOUND when the account has no survey for the active year', async () => {
+    const rpc = vi.fn((name: string) =>
+      Promise.resolve({ data: name === 'get_active_intake_year' ? 2026 : null, error: null }),
+    );
+    const handler = createCurrentResponseHandler({
+      getClient: vi.fn(() => ({ rpc })),
+      assertSameOrigin: vi.fn(),
+      hashIdentity: vi.fn(() => IDENTITY_HASH),
+      requireTelegramIdentity: vi.fn(() => ({ user: { id: USER_ID }, authDate: 1_700_000_000 })),
+    });
+    const { response, state } = createResponseDouble();
+
+    await handler(request('POST'), response);
+
+    expect(state.status).toBe(404);
+    expect(apiErrorSchema.parse(state.body).error.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  describe('Telegram authentication failures stay 401 UNAUTHORIZED', () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const user = JSON.stringify({ id: USER_ID, username: 'tester' });
+    const signed = (botToken: string, authDate: number) =>
+      signTelegramInitData({ user }, botToken, authDate);
+    const cases: Array<[string, Record<string, string>]> = [
+      ['missing initData', {}],
+      ['malformed initData', { authorization: 'tma not-init-data' }],
+      ['a wrong signature', { authorization: `tma ${signed('another-bot-token-of-sufficient-length', nowSeconds)}` }],
+      ['initData older than 24 hours', { authorization: `tma ${signed(BOT_TOKEN, nowSeconds - 86_401)}` }],
+    ];
+
+    it.each(cases)('rejects %s without querying the database', async (_name, headers) => {
+      const rpc = vi.fn();
+      const handler = createCurrentResponseHandler({
+        getClient: vi.fn(() => ({ rpc })),
+        assertSameOrigin: vi.fn(),
+        requireTelegramIdentity: (incoming) =>
+          verifyTelegramInitData(readInitDataFromRequest(incoming), BOT_TOKEN),
+      });
+      const { response, state } = createResponseDouble();
+
+      await handler(
+        { method: 'POST', body: {}, headers: { origin: 'https://tracker.example', ...headers } },
+        response,
+      );
+
+      expect(state.status).toBe(401);
+      expect(apiErrorSchema.parse(state.body).error.code).toBe('UNAUTHORIZED');
+      expect(rpc).not.toHaveBeenCalled();
+    });
   });
 
   it('queries the year the database holds, not a year from the code (ADR 0018)', async () => {

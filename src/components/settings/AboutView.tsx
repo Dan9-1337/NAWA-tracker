@@ -21,6 +21,7 @@ export function AboutView() {
           <p>{body}</p>
         </section>
       ))}
+      <p className="text-sm text-[var(--text-helper)]">{t.about.rulesSource}</p>
       <p className="text-sm text-[var(--text-helper)]">{t.about.version(getAppVersion())}</p>
     </div>
   );

@@ -108,7 +108,34 @@ describe('POST /api/bot', () => {
     await post(textUpdate('/start c_UA', 'ru'));
 
     expect(sent[0]?.webApp?.url).toBe(`${APP_URL}/?c=UA`);
-    expect(sent[0]?.text).toBe(botMessages.ru.welcomeCountry('UA'));
+    expect(sent[0]?.text).toBe(botMessages.ru.welcomeCountry('Украина'));
+    expect(sent[0]?.text).toContain('Украина');
+    expect(sent[0]?.text).not.toContain('UA:');
+  });
+
+  it.each([
+    ['uk', 'Україна'],
+    ['be', 'Украіна'],
+    ['pl', 'Ukraina'],
+    ['en', 'Ukraine'],
+  ] as const)('names the invited country in %s', async (locale, name) => {
+    const { post, sent } = setup();
+
+    await post(textUpdate('/start c_UA', locale));
+
+    expect(sent[0]?.text).toBe(botMessages[locale].welcomeCountry(name));
+    expect(sent[0]?.text).not.toContain('UA:');
+    expect(sent[0]?.webApp?.url).toBe(`${APP_URL}/?c=UA`);
+  });
+
+  it('sends the plain welcome for an unknown country code or no payload', async () => {
+    const { post, sent } = setup();
+
+    await post(textUpdate('/start c_XX', 'ru'));
+    await post(textUpdate('/start', 'ru'));
+
+    expect(sent.map((message) => message.text)).toEqual([botMessages.ru.welcome, botMessages.ru.welcome]);
+    expect(sent.map((message) => message.webApp?.url)).toEqual([APP_URL, APP_URL]);
   });
 
   it('ignores unknown start payloads instead of echoing them', async () => {
@@ -131,6 +158,58 @@ describe('POST /api/bot', () => {
     expect(sent[1]?.text).toBe(botMessages.be.alreadySubscribed);
   });
 
+  it.each([
+    ['pl', 'Przypomnę, kiedy ruszy nabór wniosków. Wyłączysz to poleceniem /stop.', /wynik/i],
+    ['en', 'I will remind you when applications open. Turn it off with /stop.', /result/i],
+    ['ru', 'Напомню, когда начнётся приём заявок. Выключить — /stop.', /результат/i],
+    ['uk', 'Нагадаю, коли розпочнеться прийом заяв. Вимкнути — /stop.', /результат/i],
+    ['be', 'Нагадаю, калі пачнецца прыём заяў. Выключыць — /stop.', /вынік/i],
+  ] as const)('the %s /subscribe reply promises only the application-start reminder and the /stop way out', async (locale, promise, resultsWord) => {
+    const { post, sent } = setup();
+
+    await post(textUpdate('/subscribe', locale));
+
+    expect(sent[0]?.text).toContain(promise);
+    expect(sent[0]?.text).toContain('Telegram ID');
+    expect(sent[0]?.text).not.toMatch(resultsWord);
+  });
+
+  it.each([
+    ['kk', 'ru'],
+    ['ka', 'ru'],
+    ['az', 'ru'],
+    ['hy', 'ru'],
+    ['uz', 'ru'],
+    ['ro', 'ru'],
+    ['de', 'en'],
+    ['fr', 'en'],
+    ['ja', 'en'],
+    ['tr', 'en'],
+    ['', 'en'],
+    ['ru', 'ru'],
+    ['uk-UA', 'uk'],
+    ['be', 'be'],
+    ['pl-PL', 'pl'],
+    ['en-GB', 'en'],
+  ] as const)('answers a user with language_code "%s" in %s', async (languageCode, locale) => {
+    const { post, sent, store } = setup();
+
+    await post(textUpdate('/subscribe', languageCode));
+
+    expect(sent[0]?.text).toBe(botMessages[locale].subscribed);
+    expect(store.rows.get(700000001)?.locale).toBe(locale);
+  });
+
+  it('answers in English when Telegram sends no language_code', async () => {
+    const { post, sent } = setup();
+    const update = textUpdate('/start', 'x');
+    delete (update.message.from as { language_code?: string }).language_code;
+
+    await post(update);
+
+    expect(sent[0]?.text).toBe(botMessages.en.welcome);
+  });
+
   it('unsubscribes on /stop and confirms removal', async () => {
     const store = memoryStore([700000001]);
     const { post, sent } = setup({ store });
@@ -138,7 +217,7 @@ describe('POST /api/bot', () => {
     await post(textUpdate('/stop', 'en@'));
 
     expect(store.rows.has(700000001)).toBe(false);
-    expect(sent[0]?.text).toBe(botMessages.pl.unsubscribed);
+    expect(sent[0]?.text).toBe(botMessages.en.unsubscribed);
   });
 
   it('accepts commands addressed to the bot by name', async () => {

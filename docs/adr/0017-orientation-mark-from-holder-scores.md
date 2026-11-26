@@ -1,7 +1,8 @@
 # 0017. "Ориентир 2026": the lowest reported holder score per country, shown to everyone
 
 Status: Accepted. Changes point 4 of [0016](0016-scholarship-holder-results-page-without-minimum.md) (only contributors
-see the results) for holder scores only.
+see the results) for holder scores only. The holder dots in the full distribution (point 2) are removed by
+[0020](0020-dashboard-hub-and-pages.md); the mark, the result-card line and the ruler mark stay.
 
 ## Context
 
